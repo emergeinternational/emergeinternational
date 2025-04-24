@@ -23,8 +23,9 @@ const Landing = () => {
         <div className="emerge-container relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-8">
             <h1 className="emerge-heading text-5xl md:text-6xl mb-6 relative">
-              <span className="relative z-10">
-                Welcome{userPreferences.country ? ` from ${userPreferences.country}` : ''} to Emerge International
+              <span className="relative z-10 whitespace-nowrap">
+                Welcome{userPreferences.country ? ` from ${userPreferences.country}` : ''} to 
+                <span className="block mt-2 text-emerge-gold">Emerge International</span>
               </span>
             </h1>
             
