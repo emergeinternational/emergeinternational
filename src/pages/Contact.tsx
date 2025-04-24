@@ -1,8 +1,45 @@
+
+import React, { useState } from 'react';
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const { toast } = useToast();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Basic form validation
+    if (!name || !email || !message) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Simulate form submission (replace with actual form submission logic)
+    toast({
+      title: "Message Sent",
+      description: "We'll get back to you soon!",
+      variant: "default"
+    });
+
+    // Reset form after submission
+    setName('');
+    setEmail('');
+    setMessage('');
+  };
+
   return (
     <MainLayout>
       <div className="emerge-container py-16">
@@ -96,6 +133,57 @@ const Contact = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* New Contact Form */}
+          <div className="bg-emerge-lightCream p-8 rounded-lg shadow-sm">
+            <h2 className="text-2xl font-serif text-emerge-darkBg mb-6">Send Us a Message</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Name
+                </label>
+                <Input 
+                  id="name"
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <Input 
+                  id="email"
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <Textarea 
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Write your message here..."
+                  className="w-full min-h-[150px]"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full bg-emerge-gold hover:bg-emerge-darkGold text-white"
+              >
+                Send Message
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </MainLayout>
@@ -103,3 +191,4 @@ const Contact = () => {
 };
 
 export default Contact;
+
