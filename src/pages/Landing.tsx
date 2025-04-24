@@ -1,3 +1,4 @@
+
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +24,7 @@ const Landing = () => {
           <div className="max-w-3xl mx-auto text-center space-y-8">
             <h1 className="emerge-heading text-4xl md:text-6xl mb-6 relative">
               <span className="relative z-10">
-                Welcome{userPreferences.country ? ` to ${userPreferences.country}` : ''} 
+                Welcome To {userPreferences.country ? `${userPreferences.country}` : ''}
                 <span className="block mt-2 text-emerge-gold text-4xl md:text-6xl whitespace-normal">Emerge International</span>
               </span>
             </h1>
