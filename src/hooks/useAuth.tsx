@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (event === 'PASSWORD_RECOVERY') {
           console.log('Password recovery detected');
+          // When password recovery link is clicked, we should redirect to a dedicated password reset page
           navigate('/profile');
           toast({
             title: "Password reset requested",

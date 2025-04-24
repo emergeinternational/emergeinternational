@@ -74,7 +74,7 @@ const EmailLogin = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-        // Navigate is handled by onAuthStateChange in useAuth.tsx
+        // Navigation is handled by onAuthStateChange in useAuth.tsx
       } else {
         await signUp(email, password);
         toast({
