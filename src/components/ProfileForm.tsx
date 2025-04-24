@@ -62,7 +62,10 @@ const ProfileForm = () => {
           favorite_brands: data.favorite_brands || [],
           linkedin_url: data.linkedin_url || "",
           preferred_shopping_locations: data.preferred_shopping_locations || [],
-          size_preferences: data.size_preferences || {}
+          // Fix the type issue by ensuring size_preferences is always an object
+          size_preferences: typeof data.size_preferences === 'object' && data.size_preferences !== null 
+            ? data.size_preferences 
+            : {}
         });
       }
     };
