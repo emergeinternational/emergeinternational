@@ -1,4 +1,3 @@
-
 import MainLayout from "@/layouts/MainLayout";
 import { CalendarPlus, Calendar, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Events = () => {
   const [selectedTickets, setSelectedTickets] = useState<{ [key: number]: string }>({});
   const [isProcessing, setIsProcessing] = useState<{ [key: number]: boolean }>({});
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const events = [
     {
@@ -77,25 +78,31 @@ const Events = () => {
       return;
     }
 
-    // Set processing state for this specific event
     setIsProcessing(prev => ({ ...prev, [eventId]: true }));
 
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const event = events.find(e => e.id === eventId);
+      const selectedTicket = event?.tickets.find(t => t.type === selectedTickets[eventId]);
       
-      // Here you would normally redirect to a payment gateway or process the payment
-      toast({
-        title: "Payment successful!",
-        description: `Your ${selectedTickets[eventId]} ticket has been confirmed.`,
+      if (!event || !selectedTicket) {
+        throw new Error("Invalid event or ticket selection");
+      }
+
+      const priceValue = parseInt(selectedTicket.price.replace("ETB ", ""), 10);
+
+      navigate('/payment', {
+        state: {
+          amount: priceValue,
+          description: `${event.name} - ${selectedTicket.type} Ticket`,
+          eventId: eventId,
+          ticketType: selectedTickets[eventId]
+        }
       });
 
-      // In a real implementation, you would redirect to a payment page:
-      // window.location.href = "/payment?eventId=" + eventId + "&ticketType=" + selectedTickets[eventId];
     } catch (error) {
       toast({
-        title: "Payment failed",
-        description: "There was an error processing your payment. Please try again.",
+        title: "Processing Error",
+        description: "There was an error processing your request. Please try again.",
         variant: "destructive"
       });
     } finally {
