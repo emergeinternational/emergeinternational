@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from './useSupabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useProfile = () => {
   const [isLoading, setIsLoading] = useState(false);
