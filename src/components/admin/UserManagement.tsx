@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { User } from "@supabase/supabase-js";
 import { 
   Check, 
   X, 
@@ -43,16 +42,16 @@ import {
 
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
-interface ExtendedUser extends User {
-  role?: UserRole;
-  profile?: {
-    full_name: string | null;
-  };
+interface UserWithRole {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
   loading?: boolean;
 }
 
 const UserManagement = () => {
-  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -63,10 +62,12 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Get all users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      // Instead of using the admin API, we'll fetch from profiles and user_roles tables
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name');
       
-      if (authError) throw authError;
+      if (profilesError) throw profilesError;
       
       // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -75,24 +76,15 @@ const UserManagement = () => {
       
       if (rolesError) throw rolesError;
       
-      // Get profiles for additional info
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name');
-      
-      if (profilesError) throw profilesError;
-      
-      // Map roles to users
-      const enhancedUsers = authUsers.users.map(user => {
-        const userRole = userRoles?.find(ur => ur.user_id === user.id);
-        const profile = profiles?.find(p => p.id === user.id);
+      // Map roles to profiles
+      const enhancedUsers: UserWithRole[] = profiles.map(profile => {
+        const userRole = userRoles?.find(ur => ur.user_id === profile.id);
         
         return {
-          ...user,
-          role: (userRole?.role as UserRole) || 'user',
-          profile: {
-            full_name: profile?.full_name
-          }
+          id: profile.id,
+          email: profile.email || 'No Email',
+          full_name: profile.full_name,
+          role: (userRole?.role as UserRole) || 'user'
         };
       });
       
@@ -238,7 +230,7 @@ const UserManagement = () => {
               <TableRow key={user.id}>
                 <TableCell>
                   <div className="font-medium">
-                    {user.profile?.full_name || 'Unnamed User'}
+                    {user.full_name || 'Unnamed User'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {user.id.slice(0, 8)}...
