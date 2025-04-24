@@ -38,6 +38,7 @@ const EmailLogin = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
+        navigate("/profile");
       } else {
         await signUp(email, password);
         toast({
