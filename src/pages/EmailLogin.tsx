@@ -10,12 +10,14 @@ const EmailLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     if (!email.trim()) {
       toast({
@@ -23,6 +25,7 @@ const EmailLogin = () => {
         description: "Please enter your email address.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -32,6 +35,7 @@ const EmailLogin = () => {
         description: "Please enter your password.",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -42,10 +46,9 @@ const EmailLogin = () => {
       } else {
         await signUp(email, password);
         toast({
-          title: "Success",
-          description: "Account created! Please complete your profile.",
+          title: "Account created",
+          description: "Please check your email to verify your account.",
         });
-        navigate("/profile");
       }
     } catch (error) {
       toast({
@@ -53,6 +56,8 @@ const EmailLogin = () => {
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,6 +90,7 @@ const EmailLogin = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="emerge-input"
               placeholder="your@email.com"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -99,6 +105,7 @@ const EmailLogin = () => {
               onChange={(e) => setPassword(e.target.value)}
               className="emerge-input"
               placeholder="••••••••"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -110,8 +117,12 @@ const EmailLogin = () => {
             </div>
           )}
 
-          <button type="submit" className="emerge-button-primary w-full">
-            {isLogin ? "Sign In" : "Create Account"}
+          <button 
+            type="submit" 
+            className="emerge-button-primary w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
           </button>
         </form>
 
@@ -119,6 +130,7 @@ const EmailLogin = () => {
           <button 
             onClick={() => setIsLogin(!isLogin)} 
             className="text-emerge-gold hover:underline"
+            disabled={isSubmitting}
           >
             {isLogin 
               ? "Don't have an account? Sign Up" 
