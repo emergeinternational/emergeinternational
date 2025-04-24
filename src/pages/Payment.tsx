@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera } from "lucide-react";
+import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import Logo from "../components/Logo";
+import { QRCodeSVG } from "qrcode.react";
 
 const Payment = () => {
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -16,15 +19,44 @@ const Payment = () => {
     eventId: null,
     ticketType: null
   };
-  
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setScreenshot(reader.result as string);
+          toast({
+            title: "Screenshot uploaded",
+            description: "Your payment screenshot has been uploaded successfully.",
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload an image file.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleUploadScreenshot = () => {
-    toast({
-      title: "Upload feature",
-      description: "In a real app, this would open your camera or file picker.",
-    });
+    fileInputRef.current?.click();
   };
 
   const handleConfirmPurchase = () => {
+    if ((paymentMethod === "telebirr" || paymentMethod === "cbebirr") && !screenshot) {
+      toast({
+        title: "Screenshot required",
+        description: "Please upload your payment confirmation screenshot.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     toast({
       title: "Purchase confirmed",
       description: `Your ${paymentMethod} payment for ${paymentDetails.description} has been initiated.`,
@@ -33,6 +65,10 @@ const Payment = () => {
     setTimeout(() => {
       navigate('/events');
     }, 2000);
+  };
+
+  const getQRValue = () => {
+    return `EMG-PAY-${paymentDetails.eventId}-${paymentDetails.amount}-${Date.now()}`;
   };
 
   return (
@@ -50,7 +86,6 @@ const Payment = () => {
 
         <h1 className="text-3xl font-semibold mb-6">Confirm Your Payment</h1>
 
-        {/* Payment Method Tabs */}
         <div className="flex mb-8">
           <button 
             onClick={() => setPaymentMethod("telebirr")}
@@ -96,13 +131,50 @@ const Payment = () => {
 
         {(paymentMethod === "telebirr" || paymentMethod === "cbebirr") ? (
           <div className="space-y-6">
-            <button 
-              onClick={handleUploadScreenshot}
-              className="w-full border-2 border-gray-300 py-4 rounded flex items-center justify-center space-x-3"
-            >
-              <Camera size={24} />
-              <span>Upload Payment Screenshot</span>
-            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileUpload}
+            />
+            
+            <div className="border border-gray-300 p-4 rounded">
+              {screenshot ? (
+                <div className="relative">
+                  <img 
+                    src={screenshot} 
+                    alt="Payment confirmation" 
+                    className="w-full h-48 object-cover rounded"
+                  />
+                  <button 
+                    onClick={handleUploadScreenshot}
+                    className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                  >
+                    <Upload size={20} />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={handleUploadScreenshot}
+                  className="w-full border-2 border-dashed border-gray-300 py-12 rounded flex flex-col items-center justify-center space-y-2 hover:border-emerge-gold transition-colors"
+                >
+                  <Camera size={32} className="text-gray-400" />
+                  <span className="text-gray-600">Upload Payment Screenshot</span>
+                </button>
+              )}
+            </div>
+
+            <div className="border border-gray-300 p-4 rounded flex flex-col items-center space-y-4">
+              <QRCodeSVG
+                value={getQRValue()}
+                size={200}
+                level="H"
+                includeMargin
+                className="max-w-full"
+              />
+              <p className="text-sm text-gray-600">Scan QR Code to Pay</p>
+            </div>
 
             <button 
               onClick={handleConfirmPurchase}
@@ -110,14 +182,6 @@ const Payment = () => {
             >
               CONFIRM PURCHASE
             </button>
-
-            <div className="border border-gray-300 p-2 rounded flex justify-center mt-6">
-              <div className="w-32 h-32 bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-600">QR Code</span>
-              </div>
-            </div>
-            
-            <p className="text-center text-gray-600">Scan QR Code to Pay</p>
           </div>
         ) : (
           <div className="space-y-6">
