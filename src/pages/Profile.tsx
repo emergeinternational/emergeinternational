@@ -1,8 +1,9 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import ProfileForm from "@/components/ProfileForm";
+import ShippingAddresses from "@/components/profile/ShippingAddresses";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,7 @@ const Profile = () => {
     <div className="min-h-screen bg-emerge-darkBg">
       <Navigation variant="dark" />
       <div className="emerge-container pt-24 pb-16">
-        <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg shadow-lg">
+        <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg space-y-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-serif text-white">Your Profile</h1>
             <Button
@@ -83,6 +84,7 @@ const Profile = () => {
               Sign out
             </Button>
           </div>
+          
           <div className="mb-6 text-center text-white">
             <p>Signed in as: <span className="font-bold">{user.email}</span></p>
             <button 
@@ -94,6 +96,10 @@ const Profile = () => {
           </div>
           
           <ProfileForm />
+          
+          <div className="border-t border-white/10 pt-8">
+            <ShippingAddresses />
+          </div>
         </div>
       </div>
     </div>
