@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { AlertTriangle, Calendar, Heart, Settings, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -10,25 +9,6 @@ import StatsCard from "../../components/admin/StatsCard";
 import PaymentsTable from "../../components/admin/PaymentsTable";
 import EventsSection from "../../components/admin/EventsSection";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import { 
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl
-} from "@/components/ui/form";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 
 interface Payment {
@@ -49,12 +29,9 @@ const Dashboard = () => {
   const { user, userRole, hasRole } = useAuth();
   const { toast } = useToast();
   
-  // Stats data query
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: async () => {
-      // In a real app, you'd fetch this from Supabase
-      // Placeholder for demo
       return [
         { label: "Total Users", value: "1,245", change: "+12%" },
         { label: "Active Subscriptions", value: "348", change: "+5%" },
@@ -64,12 +41,10 @@ const Dashboard = () => {
     }
   });
 
-  // Get user count
   const { data: userCount, isLoading: usersLoading } = useQuery({
     queryKey: ['admin', 'user-count'],
     queryFn: async () => {
       try {
-        // In a real app, you'd fetch this from Supabase
         return { count: 26 };
       } catch (error) {
         console.error('Error fetching user count:', error);
@@ -78,12 +53,9 @@ const Dashboard = () => {
     }
   });
 
-  // Payments data query
   const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = useQuery({
     queryKey: ['admin', 'payments'],
     queryFn: async () => {
-      // In a real app, you'd fetch this from Supabase
-      // Example for demonstrating functionality
       return [
         { id: "10472", name: "Abeba K.", city: "Addis Ababa", status: "pending" },
         { id: "10463", name: "Kifle M.", city: "Dire Dawa", status: "pending" },
@@ -91,11 +63,9 @@ const Dashboard = () => {
     }
   });
 
-  // Events data query
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ['admin', 'events'],
     queryFn: async () => {
-      // In a real app, you'd fetch this from Supabase
       return [
         { id: 1, name: "Emerge Addis Fashion Show", date: "June 12, 2025", registrations: 45 },
         { id: 2, name: "Designer Workshop", date: "July 8, 2025", registrations: 23 },
@@ -105,7 +75,6 @@ const Dashboard = () => {
 
   const handleActivatePayment = async (id: string) => {
     try {
-      // In a real app, you'd update the payment status in Supabase
       toast({
         title: "Payment Activated",
         description: `Payment ${id} has been activated successfully.`
@@ -120,7 +89,6 @@ const Dashboard = () => {
     }
   };
 
-  // Event form schema
   const eventFormSchema = z.object({
     name: z.string().min(3, "Event name must be at least 3 characters"),
     date: z.string().min(3, "Please provide a valid date"),
@@ -136,7 +104,6 @@ const Dashboard = () => {
 
   const handleAddEvent = async (values: z.infer<typeof eventFormSchema>) => {
     try {
-      // In a real app, you'd add the event to Supabase
       toast({
         title: "Event Added",
         description: `${values.name} has been added successfully.`
@@ -151,7 +118,7 @@ const Dashboard = () => {
       });
     }
   };
-  
+
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
@@ -161,30 +128,16 @@ const Dashboard = () => {
             <span className="text-sm text-gray-500">
               Logged in as: {user?.email} ({userRole})
             </span>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Settings className="h-4 w-4 mr-1" />
-                  Settings
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Admin Settings</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                  <p className="text-sm text-muted-foreground">
-                    Configure admin panel settings here.
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Link to="/admin/settings">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1" />
+                Settings
+              </Button>
+            </Link>
           </div>
         </div>
         
-        {/* Quick Access Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {/* Users Management Card */}
           {hasRole('admin') && (
             <Card>
               <CardHeader className="pb-2">
@@ -208,7 +161,6 @@ const Dashboard = () => {
             </Card>
           )}
           
-          {/* Events Card */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
@@ -230,7 +182,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
-          {/* Donations Card */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
@@ -253,7 +204,6 @@ const Dashboard = () => {
           </Card>
         </div>
         
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statsLoading ? (
             Array(4).fill(0).map((_, i) => (
@@ -266,7 +216,6 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* CBEBirr Payments */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">CBEBirr Payments</h2>
           
@@ -289,7 +238,6 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* Events */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Events</h2>
           
@@ -357,7 +305,6 @@ const Dashboard = () => {
           )}
         </div>
         
-        {/* Recent Activity */}
         <div>
           <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
           <div className="bg-white p-5 rounded shadow">
