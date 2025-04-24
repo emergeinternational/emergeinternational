@@ -60,7 +60,7 @@ const Landing = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">Cultural Expression</h3>
-                <p className="text-gray-600">Elevating African fashion as a powerful medium of cultural storytelling and global dialogue</p>
+                <p className="text-gray-600">Elevating fashion as a powerful medium of cultural storytelling and global dialogue</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
