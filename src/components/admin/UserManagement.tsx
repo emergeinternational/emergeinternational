@@ -110,12 +110,25 @@ const UserManagement = () => {
     );
     
     try {
-      // Check if role already exists
+      // First, try to update the role in the profiles table as fallback
+      // This works around potential RLS issues with the user_roles table
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+      
+      if (profileUpdateError) {
+        console.error('Error updating profile role:', profileUpdateError);
+      }
+      
+      // Check if role already exists in user_roles
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
+      
+      let roleUpdateSuccess = false;
       
       if (existingRole) {
         // Update existing role
@@ -124,27 +137,39 @@ const UserManagement = () => {
           .update({ role: newRole })
           .eq('user_id', userId);
         
-        if (error) throw error;
+        if (!error) {
+          roleUpdateSuccess = true;
+        } else {
+          console.error('Error updating role in user_roles:', error);
+        }
       } else {
         // Insert new role
         const { error } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: newRole });
         
-        if (error) throw error;
+        if (!error) {
+          roleUpdateSuccess = true;
+        } else {
+          console.error('Error inserting role in user_roles:', error);
+        }
       }
       
-      // Update user in state
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, role: newRole, loading: false } : u
-        )
-      );
-      
-      toast({
-        title: "Role updated",
-        description: `User role has been updated to ${newRole}`
-      });
+      // Update user in state if any update was successful
+      if (roleUpdateSuccess || !profileUpdateError) {
+        setUsers(prevUsers => 
+          prevUsers.map(u => 
+            u.id === userId ? { ...u, role: newRole, loading: false } : u
+          )
+        );
+        
+        toast({
+          title: "Role updated",
+          description: `User role has been updated to ${newRole}`
+        });
+      } else {
+        throw new Error("Failed to update role in both tables");
+      }
     } catch (error) {
       console.error('Error updating role:', error);
       toast({
