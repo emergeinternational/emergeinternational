@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,26 +114,8 @@ const Contact = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <MessageCircle className="text-emerge-gold mt-1" />
-                  <div>
-                    <h3 className="font-medium mb-2">Live Chat</h3>
-                    <p className="text-gray-600">
-                      Chat with our team in real-time for immediate assistance
-                    </p>
-                    <button className="text-emerge-gold hover:underline">
-                      Start Chat
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* New Contact Form */}
           <div className="bg-emerge-lightCream p-8 rounded-lg shadow-sm">
             <h2 className="text-2xl font-serif text-emerge-darkBg mb-6">Send Us a Message</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -191,4 +172,3 @@ const Contact = () => {
 };
 
 export default Contact;
-
