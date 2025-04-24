@@ -8,6 +8,7 @@ type CartItem = {
   price: string;
   image: string;
   quantity: number;
+  shippingAddressId?: string; // Added shippingAddressId as optional property
 };
 
 type CartContextType = {
