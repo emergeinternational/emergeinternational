@@ -2,7 +2,7 @@
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Hanger } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -12,8 +12,12 @@ const Landing = () => {
     <MainLayout>
       <div className="min-h-[80vh] flex items-center relative overflow-hidden">
         {/* Fashion Watermark */}
-        <div className="absolute top-0 right-0 opacity-10 transform rotate-12 translate-x-1/4 -translate-y-1/4">
-          <Hanger size={400} className="text-emerge-gold" />
+        <div className="absolute top-0 right-0 opacity-5 transform rotate-12 translate-x-1/4 -translate-y-1/4">
+          <ShoppingBag 
+            size={500} 
+            className="text-emerge-darkBg/10 stroke-[0.5]" 
+            strokeWidth={1} 
+          />
         </div>
 
         <div className="emerge-container relative z-10">
@@ -71,3 +75,4 @@ const Landing = () => {
 };
 
 export default Landing;
+
