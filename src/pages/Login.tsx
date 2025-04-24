@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -15,11 +16,11 @@ const Login = () => {
   const languages = ["English", "Amharic", "French", "Swahili"];
 
   const handleContinueWithoutAccount = () => {
-    if (rememberInfo && country.trim()) {
-      // Store user preferences if remember is checked and country is provided
+    // Always allow continuing without an account, but optionally save preferences
+    if (rememberInfo && (country.trim() || city.trim())) {
       localStorage.setItem('userPreferences', JSON.stringify({
-        country,
-        city,
+        country: country.trim() || null,
+        city: city.trim() || null,
         language: selectedLanguage
       }));
     }
