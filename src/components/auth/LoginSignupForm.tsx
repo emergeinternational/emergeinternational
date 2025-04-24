@@ -1,8 +1,9 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { OTPVerification } from "./OTPVerification";
 
 interface LoginSignupFormProps {
   isLogin: boolean;
@@ -19,6 +20,7 @@ export const LoginSignupForm = ({
 }: LoginSignupFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
   const { toast } = useToast();
   const { signIn } = useAuth();
 
@@ -70,6 +72,14 @@ export const LoginSignupForm = ({
     }
   };
 
+  const handleOTPVerificationSuccess = () => {
+    setShowOTPDialog(false);
+    toast({
+      title: "Verification successful",
+      description: "You can now set a new password.",
+    });
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
@@ -103,14 +113,35 @@ export const LoginSignupForm = ({
       </div>
 
       {isLogin && (
-        <div className="text-right">
+        <div className="flex justify-between items-center text-sm">
           <button 
             type="button"
             onClick={onForgotPassword}
-            className="text-emerge-gold text-sm hover:underline"
+            className="text-emerge-gold hover:underline"
           >
-            Forgot password?
+            Reset via Email
           </button>
+          
+          <Dialog open={showOTPDialog} onOpenChange={setShowOTPDialog}>
+            <DialogTrigger asChild>
+              <button 
+                type="button"
+                className="text-emerge-gold hover:underline"
+              >
+                Reset via OTP
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-emerge-darkBg border border-emerge-gold/50">
+              <DialogHeader>
+                <DialogTitle className="text-white">Reset Password with OTP</DialogTitle>
+              </DialogHeader>
+              <OTPVerification
+                email={email}
+                isSubmitting={isSubmitting}
+                onVerificationSuccess={handleOTPVerificationSuccess}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
