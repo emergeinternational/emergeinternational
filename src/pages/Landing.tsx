@@ -30,10 +30,10 @@ const Landing = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              Discover a curated collection of fashion that bridges cultures and celebrates creativity. 
-              With a special focus on Africa's vibrant influence, we bring you worldwide design excellence 
-              through our innovative fashion shows featuring emerging and established models, designer workshops, 
-              and inspiring events.
+              Discover a curated platform that unites African fashion talent - from innovative designers 
+              and professional models to creative photographers and industry experts. Experience our 
+              groundbreaking fashion shows, collaborative workshops, and inspiring events that showcase 
+              the diverse talents shaping the future of fashion.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -56,18 +56,18 @@ const Landing = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">Global Fashion</h3>
-                <p className="text-gray-600">Curated collections and runway shows featuring diverse talent from around the world</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">Fashion Ecosystem</h3>
+                <p className="text-gray-600">Uniting designers, models, photographers, and industry professionals in collaborative showcases</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">African Heritage</h3>
-                <p className="text-gray-600">Celebrating Africa's rich fashion influence through our designers and models</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">African Talent</h3>
+                <p className="text-gray-600">Celebrating Africa's diverse fashion professionals through our innovative platform</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">Sustainable Future</h3>
-                <p className="text-gray-600">Committed to ethical fashion and nurturing emerging talent</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">Industry Growth</h3>
+                <p className="text-gray-600">Nurturing the next generation of fashion professionals through mentorship and opportunities</p>
               </div>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 
@@ -12,14 +11,14 @@ const Index = () => {
             EMERGE INTERNATIONAL
           </h1>
           <p className="text-lg md:text-xl mb-8 max-w-2xl text-center">
-            Supporting emerging fashion talent across Africa through education, resources, and global market access.
+            Supporting emerging fashion talent across Africa - from visionary designers and runway models to creative photographers and industry professionals - through education, resources, and global market access.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link to="/shop" className="emerge-button-primary">
-              Shop Collection
+              Shop Designer Collections
             </Link>
             <Link to="/education" className="emerge-button-secondary">
-              Explore Education
+              Industry Education
             </Link>
           </div>
         </div>
@@ -28,13 +27,13 @@ const Index = () => {
       {/* Featured Products */}
       <section className="py-16">
         <div className="emerge-container">
-          <h2 className="emerge-heading text-3xl mb-8">Featured Products</h2>
+          <h2 className="emerge-heading text-3xl mb-8">Featured Designer Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { id: 1, name: "Emerge T-Shirt", price: "ETB 4,800", image: "/placeholder.svg" },
-              { id: 2, name: "Designer Earrings", price: "ETB 12,500", image: "/placeholder.svg" },
-              { id: 3, name: "Leather Bag", price: "ETB 4,800", image: "/placeholder.svg" },
-              { id: 4, name: "Tailored Coat", price: "ETB 12,500", image: "/placeholder.svg" }
+              { id: 1, name: "Designer Collection: Emerge Series", price: "ETB 4,800", image: "/placeholder.svg" },
+              { id: 2, name: "Runway Accessories", price: "ETB 12,500", image: "/placeholder.svg" },
+              { id: 3, name: "Catwalk Collection", price: "ETB 4,800", image: "/placeholder.svg" },
+              { id: 4, name: "Editorial Pieces", price: "ETB 12,500", image: "/placeholder.svg" }
             ].map(product => (
               <Link to={`/shop/product/${product.id}`} key={product.id} className="group">
                 <div className="bg-gray-100 aspect-square mb-4 overflow-hidden">
@@ -51,7 +50,7 @@ const Index = () => {
           </div>
           <div className="mt-8 text-center">
             <Link to="/shop" className="emerge-button-primary">
-              View All Products
+              View All Collections
             </Link>
           </div>
         </div>
@@ -60,12 +59,12 @@ const Index = () => {
       {/* Education Section */}
       <section className="py-16 bg-emerge-cream">
         <div className="emerge-container">
-          <h2 className="emerge-heading text-3xl mb-8">Education & Workshops</h2>
+          <h2 className="emerge-heading text-3xl mb-8">Industry Education & Workshops</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { id: 1, name: "Fashion Design 101", level: "Beginner", image: "/placeholder.svg" },
-              { id: 2, name: "Fashion Marketing Basics", level: "Intermediate", image: "/placeholder.svg" },
-              { id: 3, name: "Sustainable Fashion Practices", level: "Advanced", image: "/placeholder.svg" }
+              { id: 1, name: "Fashion Design & Model Collaboration", level: "Beginner", image: "/placeholder.svg" },
+              { id: 2, name: "Fashion Photography Essentials", level: "Intermediate", image: "/placeholder.svg" },
+              { id: 3, name: "Runway & Editorial Excellence", level: "Advanced", image: "/placeholder.svg" }
             ].map(course => (
               <Link to={`/education/course/${course.id}`} key={course.id} className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="aspect-video overflow-hidden">
@@ -94,10 +93,10 @@ const Index = () => {
       <section className="py-16 bg-emerge-darkBg text-white">
         <div className="emerge-container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="emerge-heading text-3xl mb-4">Support Emerging Designers</h2>
+            <h2 className="emerge-heading text-3xl mb-4">Support Emerging Fashion Talent</h2>
             <p className="mb-8">
               Your donations directly fund scholarships, resources, and opportunities for talented 
-              fashion designers across Africa.
+              fashion designers, models, photographers, and industry professionals across Africa.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mb-8">
               <Link 
@@ -130,9 +129,9 @@ const Index = () => {
       <section className="py-16">
         <div className="emerge-container">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="emerge-heading text-3xl mb-4">Join Our Community</h2>
+            <h2 className="emerge-heading text-3xl mb-4">Join Our Fashion Community</h2>
             <p className="mb-6">
-              Stay updated on new collections, workshops, and designer features.
+              Stay updated on new designer collections, model castings, photography exhibitions, and industry workshops.
             </p>
             <form className="flex flex-col sm:flex-row gap-2 w-full max-w-md mx-auto">
               <input
