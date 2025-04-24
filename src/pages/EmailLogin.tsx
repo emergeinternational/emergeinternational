@@ -49,7 +49,7 @@ const EmailLogin = () => {
           title: "Account created",
           description: "Please complete your profile.",
         });
-        // Explicitly navigate to profile page after signup
+        // For signups, explicitly navigate to profile since the session might not be immediately available
         navigate("/profile");
       }
     } catch (error) {

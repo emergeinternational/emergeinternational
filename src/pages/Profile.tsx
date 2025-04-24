@@ -11,6 +11,7 @@ const Profile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If not loading and no user, redirect to login
     if (!isLoading && !user) {
       console.log("No authenticated user found in Profile page, redirecting to login");
       navigate("/login");
@@ -19,6 +20,7 @@ const Profile = () => {
     }
   }, [user, isLoading, navigate]);
 
+  // Show loading state while authentication is being checked
   if (isLoading) {
     return (
       <div className="min-h-screen bg-emerge-darkBg flex items-center justify-center">
@@ -27,20 +29,22 @@ const Profile = () => {
     );
   }
 
+  // If there's no user and we're not loading, the useEffect will redirect
+  // But just in case, return null
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-emerge-darkBg">
       <Navigation variant="dark" />
       <div className="emerge-container pt-24 pb-16">
         <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg shadow-lg">
           <h1 className="text-2xl font-serif text-white mb-6 text-center">Your Profile</h1>
-          {user && (
-            <>
-              <div className="mb-6 text-center text-white">
-                <p>Signed in as: <span className="font-bold">{user.email}</span></p>
-              </div>
-              <ProfileForm />
-            </>
-          )}
+          <div className="mb-6 text-center text-white">
+            <p>Signed in as: <span className="font-bold">{user.email}</span></p>
+          </div>
+          <ProfileForm />
         </div>
       </div>
     </div>

@@ -24,12 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // First set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (event === 'SIGNED_IN') {
+          console.log('User signed in:', session?.user?.email);
           navigate('/profile');
           toast({
             title: "Welcome back!",
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
         if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
           navigate('/login');
           toast({
             title: "Signed out",
@@ -47,16 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session on load
+    // Then check for existing session
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // If there's already a session, don't redirect right away
-          // This prevents issues with the initial loading
-          console.log("User is already authenticated", session.user);
+          console.log("User is already authenticated", session.user.email);
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Navigation happens in onAuthStateChange
     } catch (error) {
       throw error;
     } finally {
@@ -84,8 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Using current window location for redirect
       const currentOrigin = window.location.origin;
+      console.log("Sign up with redirect to:", `${currentOrigin}/profile`);
+      
       const { error } = await supabase.auth.signUp({ 
         email, 
         password,
