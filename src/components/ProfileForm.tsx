@@ -1,11 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import BasicInfoSection from "./profile/BasicInfoSection";
-import CareerSection from "./profile/CareerSection";
-import FashionSection from "./profile/FashionSection";
 import ContactSection from "./profile/ContactSection";
 import AvatarUpload from "./profile/AvatarUpload";
 
@@ -22,13 +21,6 @@ const ProfileForm = () => {
     phone_number: "",
     social_media_handle: "",
     telegram_name: "",
-    profession: "",
-    industry: "",
-    fashion_style: "",
-    favorite_brands: [] as string[],
-    linkedin_url: "",
-    preferred_shopping_locations: [] as string[],
-    size_preferences: {} as Record<string, any>,
     avatar_url: ""
   });
 
@@ -57,15 +49,6 @@ const ProfileForm = () => {
           phone_number: data.phone_number || "",
           social_media_handle: data.social_media_handle || "",
           telegram_name: data.telegram_name || "",
-          profession: data.profession || "",
-          industry: data.industry || "",
-          fashion_style: data.fashion_style || "",
-          favorite_brands: data.favorite_brands || [],
-          linkedin_url: data.linkedin_url || "",
-          preferred_shopping_locations: data.preferred_shopping_locations || [],
-          size_preferences: typeof data.size_preferences === 'object' && data.size_preferences !== null 
-            ? data.size_preferences 
-            : {},
           avatar_url: data.avatar_url || ""
         });
       }
@@ -115,8 +98,6 @@ const ProfileForm = () => {
       />
       
       <BasicInfoSection formData={formData} onChange={handleChange} />
-      <CareerSection formData={formData} onChange={handleChange} />
-      <FashionSection formData={formData} onChange={handleChange} />
       <ContactSection formData={formData} onChange={handleChange} />
 
       <button 
