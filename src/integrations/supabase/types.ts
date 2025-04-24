@@ -16,10 +16,17 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
+          fashion_style: string | null
+          favorite_brands: string[] | null
           full_name: string | null
           id: string
+          industry: string | null
           language: string | null
+          linkedin_url: string | null
           phone_number: string | null
+          preferred_shopping_locations: string[] | null
+          profession: string | null
+          size_preferences: Json | null
           social_media_handle: string | null
           telegram_name: string | null
           updated_at: string
@@ -30,10 +37,17 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          fashion_style?: string | null
+          favorite_brands?: string[] | null
           full_name?: string | null
           id: string
+          industry?: string | null
           language?: string | null
+          linkedin_url?: string | null
           phone_number?: string | null
+          preferred_shopping_locations?: string[] | null
+          profession?: string | null
+          size_preferences?: Json | null
           social_media_handle?: string | null
           telegram_name?: string | null
           updated_at?: string
@@ -44,10 +58,17 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
+          fashion_style?: string | null
+          favorite_brands?: string[] | null
           full_name?: string | null
           id?: string
+          industry?: string | null
           language?: string | null
+          linkedin_url?: string | null
           phone_number?: string | null
+          preferred_shopping_locations?: string[] | null
+          profession?: string | null
+          size_preferences?: Json | null
           social_media_handle?: string | null
           telegram_name?: string | null
           updated_at?: string
@@ -67,10 +88,17 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
+          fashion_style: string | null
+          favorite_brands: string[] | null
           full_name: string | null
           id: string
+          industry: string | null
           language: string | null
+          linkedin_url: string | null
           phone_number: string | null
+          preferred_shopping_locations: string[] | null
+          profession: string | null
+          size_preferences: Json | null
           social_media_handle: string | null
           telegram_name: string | null
           updated_at: string
