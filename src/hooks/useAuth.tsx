@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
+type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -13,6 +15,8 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (password: string) => Promise<void>;
   isLoading: boolean;
+  userRole: UserRole | null;
+  hasRole: (requiredRole: UserRole | UserRole[]) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,8 +25,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      // Fetch the user's role from the profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
+
+      if (data?.role) {
+        setUserRole(data.role as UserRole);
+      } else {
+        // Default role if not set
+        setUserRole('user');
+      }
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+    }
+  };
+
+  // Function to check if user has the required role(s)
+  const hasRole = (requiredRole: UserRole | UserRole[]): boolean => {
+    if (!user || !userRole) return false;
+
+    if (Array.isArray(requiredRole)) {
+      return requiredRole.includes(userRole);
+    }
+
+    return userRole === requiredRole;
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -31,6 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setSession(session);
         setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+          }, 0);
+        } else {
+          setUserRole(null);
+        }
         
         if (event === 'SIGNED_IN') {
           console.log('User signed in:', session?.user?.email);
@@ -50,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (event === 'PASSWORD_RECOVERY') {
           console.log('Password recovery detected');
-          // Don't navigate, as EmailLogin component will handle this
           toast({
             title: "Password reset requested",
             description: "Please enter a new password."
@@ -68,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           console.log("User is already authenticated", session.user.email);
+          await fetchUserRole(session.user.id);
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -130,7 +179,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "Your password has been updated successfully."
       });
       
-      // Sign out after successful password reset to force re-authentication
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error) {
@@ -159,7 +207,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, signIn, signUp, signOut, resetPassword, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      signIn, 
+      signUp, 
+      signOut, 
+      resetPassword, 
+      isLoading,
+      userRole,
+      hasRole
+    }}>
       {children}
     </AuthContext.Provider>
   );

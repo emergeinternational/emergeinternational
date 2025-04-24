@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
+import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 
 // Import all page components
 import Landing from "./pages/Landing";
@@ -65,9 +67,30 @@ const App = () => (
               <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
               <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
               <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
-              <Route path="/admin" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              
+              {/* Admin Routes - Require specific roles */}
+              <Route path="/admin" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
+                  <Dashboard />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/events" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                  <Dashboard />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/users" element={
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  <Dashboard />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/donations" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                  <Dashboard />
+                </RoleBasedRoute>
+              } />
               
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>

@@ -1,46 +1,185 @@
-import { AlertTriangle } from "lucide-react";
+
+import { useEffect, useState } from "react";
+import { AlertTriangle, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "../../layouts/AdminLayout";
 import StatsCard from "../../components/admin/StatsCard";
 import PaymentsTable from "../../components/admin/PaymentsTable";
 import EventsSection from "../../components/admin/EventsSection";
+import { Button } from "@/components/ui/button";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { 
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
+
+interface Payment {
+  id: string;
+  name: string;
+  city: string;
+  status: string;
+}
+
+interface Event {
+  id: number;
+  name: string;
+  date: string;
+  registrations: number;
+}
 
 const Dashboard = () => {
-  // Mock data
-  const stats = [
-    { label: "Total Users", value: "1,245", change: "+12%" },
-    { label: "Active Subscriptions", value: "348", change: "+5%" },
-    { label: "Monthly Donations", value: "ETB 45,600", change: "+18%" },
-    { label: "Products Sold", value: "89", change: "+7%" },
-  ];
+  const { user, userRole } = useAuth();
+  const { toast } = useToast();
   
-  const recentPayments = [
-    { id: "10472", name: "Abeba K.", city: "Addis Ababa", status: "pending" },
-    { id: "10463", name: "Kifle M.", city: "Dire Dawa", status: "pending" },
-  ];
-  
-  const upcomingEvents = [
-    { id: 1, name: "Emerge Addis Fashion Show", date: "June 12, 2025", registrations: 45 },
-    { id: 2, name: "Designer Workshop", date: "July 8, 2025", registrations: 23 },
-  ];
+  // Stats data query
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: async () => {
+      // In a real app, you'd fetch this from Supabase
+      // Placeholder for demo
+      return [
+        { label: "Total Users", value: "1,245", change: "+12%" },
+        { label: "Active Subscriptions", value: "348", change: "+5%" },
+        { label: "Monthly Donations", value: "ETB 45,600", change: "+18%" },
+        { label: "Products Sold", value: "89", change: "+7%" },
+      ];
+    }
+  });
 
-  const handleActivatePayment = (id: string) => {
-    console.log(`Activating payment ${id}`);
-    // Add activation logic here
+  // Payments data query
+  const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = useQuery({
+    queryKey: ['admin', 'payments'],
+    queryFn: async () => {
+      // In a real app, you'd fetch this from Supabase
+      // Example for demonstrating functionality
+      return [
+        { id: "10472", name: "Abeba K.", city: "Addis Ababa", status: "pending" },
+        { id: "10463", name: "Kifle M.", city: "Dire Dawa", status: "pending" },
+      ] as Payment[];
+    }
+  });
+
+  // Events data query
+  const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
+    queryKey: ['admin', 'events'],
+    queryFn: async () => {
+      // In a real app, you'd fetch this from Supabase
+      return [
+        { id: 1, name: "Emerge Addis Fashion Show", date: "June 12, 2025", registrations: 45 },
+        { id: 2, name: "Designer Workshop", date: "July 8, 2025", registrations: 23 },
+      ] as Event[];
+    }
+  });
+
+  const handleActivatePayment = async (id: string) => {
+    try {
+      // In a real app, you'd update the payment status in Supabase
+      toast({
+        title: "Payment Activated",
+        description: `Payment ${id} has been activated successfully.`
+      });
+      await refetchPayments();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to activate payment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
+  // Event form schema
+  const eventFormSchema = z.object({
+    name: z.string().min(3, "Event name must be at least 3 characters"),
+    date: z.string().min(3, "Please provide a valid date"),
+  });
+
+  const eventForm = useForm<z.infer<typeof eventFormSchema>>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      name: "",
+      date: "",
+    },
+  });
+
+  const handleAddEvent = async (values: z.infer<typeof eventFormSchema>) => {
+    try {
+      // In a real app, you'd add the event to Supabase
+      toast({
+        title: "Event Added",
+        description: `${values.name} has been added successfully.`
+      });
+      eventForm.reset();
+      await refetchEvents();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add event. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">
+              Logged in as: {user?.email} ({userRole})
+            </span>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings className="h-4 w-4 mr-1" />
+                  Settings
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Admin Settings</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Configure admin panel settings here.
+                  </p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
         
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => (
-            <StatsCard key={index} {...stat} />
-          ))}
+          {statsLoading ? (
+            Array(4).fill(0).map((_, i) => (
+              <div key={i} className="bg-white p-5 rounded-lg shadow-sm animate-pulse h-24"></div>
+            ))
+          ) : (
+            statsData?.map((stat, index) => (
+              <StatsCard key={index} {...stat} />
+            ))
+          )}
         </div>
         
-        {/* TeleBirr Payments */}
+        {/* CBEBirr Payments */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">CBEBirr Payments</h2>
           
@@ -50,17 +189,85 @@ const Dashboard = () => {
           </div>
           
           <div className="bg-white rounded shadow overflow-hidden">
-            <PaymentsTable 
-              payments={recentPayments}
-              onActivate={handleActivatePayment}
-            />
+            {paymentsLoading ? (
+              <div className="p-8 text-center">Loading payments...</div>
+            ) : payments && payments.length > 0 ? (
+              <PaymentsTable 
+                payments={payments}
+                onActivate={handleActivatePayment}
+              />
+            ) : (
+              <div className="p-8 text-center">No pending payments found</div>
+            )}
           </div>
         </div>
         
         {/* Events */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Events</h2>
-          <EventsSection events={upcomingEvents} />
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="bg-emerge-cream p-4 rounded mb-5">
+                <div className="flex justify-between items-center">
+                  <button className="flex items-center text-emerge-gold">
+                    <span>ADD NEW EVENT</span>
+                  </button>
+                  <button className="bg-emerge-gold px-6 py-1 text-black rounded">
+                    MANAGE
+                  </button>
+                </div>
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Event</DialogTitle>
+              </DialogHeader>
+              <Form {...eventForm}>
+                <form onSubmit={eventForm.handleSubmit(handleAddEvent)} className="space-y-4">
+                  <FormField
+                    control={eventForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter event name" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={eventForm.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event Date</FormLabel>
+                        <FormControl>
+                          <Input placeholder="E.g. June 12, 2025" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full">Add Event</Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+          
+          {eventsLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {Array(2).fill(0).map((_, i) => (
+                <div key={i} className="bg-white p-5 rounded shadow animate-pulse h-32"></div>
+              ))}
+            </div>
+          ) : events && events.length > 0 ? (
+            <EventsSection events={events} />
+          ) : (
+            <div className="bg-white p-8 text-center rounded shadow">
+              No events found. Add your first event.
+            </div>
+          )}
         </div>
         
         {/* Recent Activity */}
