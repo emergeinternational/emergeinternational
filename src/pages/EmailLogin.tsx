@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
@@ -15,8 +15,18 @@ const EmailLogin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const [isResetLinkSent, setIsResetLinkSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if this is a recovery link
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setIsForgotPassword(true);
+    }
+  }, []);
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -36,14 +46,14 @@ const EmailLogin = () => {
       
       if (error) throw error;
       
-      setShowOTP(true);
+      setIsResetLinkSent(true);
       toast({
-        title: "Code sent",
-        description: "Check your email for the verification code.",
+        title: "Reset link sent",
+        description: "Check your email for the password reset link.",
       });
     } catch (error) {
       toast({
-        title: "Error sending code",
+        title: "Error sending reset link",
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
@@ -58,6 +68,7 @@ const EmailLogin = () => {
       setIsForgotPassword(false);
     } else if (isForgotPassword) {
       setIsForgotPassword(false);
+      setIsResetLinkSent(false);
     } else {
       navigate("/login");
     }
@@ -95,7 +106,7 @@ const EmailLogin = () => {
             {showOTP 
               ? "Enter Verification Code" 
               : isForgotPassword 
-                ? "Set New Password" 
+                ? (isResetLinkSent ? "Check Your Email" : location.hash.includes('type=recovery') ? "Set New Password" : "Reset Password") 
                 : isLogin 
                   ? "Welcome Back" 
                   : "Create Account"}
@@ -109,17 +120,54 @@ const EmailLogin = () => {
             onVerificationSuccess={handleOTPSuccess}
           />
         ) : isForgotPassword ? (
-          <PasswordResetForm
-            isSubmitting={isSubmitting}
-            onResetSuccess={handleResetSuccess}
-          />
+          location.hash.includes('type=recovery') ? (
+            <PasswordResetForm
+              isSubmitting={isSubmitting}
+              onResetSuccess={handleResetSuccess}
+            />
+          ) : isResetLinkSent ? (
+            <div className="text-center">
+              <p className="mb-4">
+                We've sent a password reset link to <strong>{email}</strong>.
+              </p>
+              <p className="mb-4">
+                Click the link in the email to reset your password.
+              </p>
+              <p className="text-sm text-gray-400">
+                If you don't see the email, check your spam folder.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-gray-300 text-sm">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="emerge-input"
+                  placeholder="Enter your email"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <button 
+                onClick={handleForgotPassword}
+                className="emerge-button-primary w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Sending..." : "Send Reset Link"}
+              </button>
+            </div>
+          )
         ) : (
           <LoginSignupForm
             isLogin={isLogin}
             isSubmitting={isSubmitting}
             onForgotPassword={() => {
               setIsForgotPassword(true);
-              handleForgotPassword();
             }}
             onToggleMode={() => setIsLogin(!isLogin)}
           />

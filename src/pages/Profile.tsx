@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -5,13 +6,14 @@ import ProfileForm from "@/components/ProfileForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [showPasswordReset, setShowPasswordReset] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [isResetting, setIsResetting] = useState(false);
+  const { toast } = useToast();
   
   useEffect(() => {
     // If not loading and no user, redirect to login
@@ -44,22 +46,24 @@ const Profile = () => {
     return null;
   }
   
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPassword.trim()) {
-      return;
-    }
-    
-    setIsResetting(true);
+  const handleRequestPasswordReset = async () => {
     try {
-      const { resetPassword } = useAuth();
-      await resetPassword(newPassword);
-      setShowPasswordReset(false);
-      setNewPassword("");
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
+        redirectTo: `${window.location.origin}/profile`
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for the password reset link."
+      });
     } catch (error) {
-      console.error("Password reset error:", error);
-    } finally {
-      setIsResetting(false);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Could not send reset email",
+        variant: "destructive"
+      });
     }
   };
 
@@ -81,58 +85,15 @@ const Profile = () => {
           </div>
           <div className="mb-6 text-center text-white">
             <p>Signed in as: <span className="font-bold">{user.email}</span></p>
-            {!showPasswordReset && (
-              <button 
-                onClick={() => setShowPasswordReset(true)}
-                className="text-emerge-gold text-sm hover:underline mt-2"
-              >
-                Change Password
-              </button>
-            )}
+            <button 
+              onClick={handleRequestPasswordReset}
+              className="text-emerge-gold text-sm hover:underline mt-2"
+            >
+              Change Password
+            </button>
           </div>
           
-          {showPasswordReset ? (
-            <div className="mb-8 bg-white/5 p-4 rounded-lg">
-              <h2 className="text-xl font-serif text-white mb-4">Reset Password</h2>
-              <form onSubmit={handlePasswordReset} className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="newPassword" className="block text-gray-300 text-sm">
-                    New Password
-                  </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="emerge-input"
-                    placeholder="••••••••"
-                    disabled={isResetting}
-                  />
-                </div>
-                <div className="flex space-x-4">
-                  <button 
-                    type="submit" 
-                    className="emerge-button-primary"
-                    disabled={isResetting}
-                  >
-                    {isResetting ? "Updating..." : "Update Password"}
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setShowPasswordReset(false);
-                      setNewPassword("");
-                    }}
-                    className="emerge-button-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <ProfileForm />
-          )}
+          <ProfileForm />
         </div>
       </div>
     </div>

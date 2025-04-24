@@ -32,12 +32,6 @@ export const PasswordResetForm = ({
     try {
       setIsSubmitting(true);
       await resetPassword(newPassword);
-      
-      toast({
-        title: "Password Reset Successful",
-        description: "You can now log in with your new password.",
-      });
-
       onResetSuccess();
     } catch (error) {
       toast({
