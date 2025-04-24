@@ -5,7 +5,7 @@ import { useToast } from "../hooks/use-toast";
 import Logo from "../components/Logo";
 
 const Payment = () => {
-  const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "mpesa">("telebirr");
+  const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -29,9 +29,7 @@ const Payment = () => {
       title: "Purchase confirmed",
       description: `Your ${paymentMethod} payment for ${paymentDetails.description} has been initiated.`,
     });
-    // In a real app, you would handle the actual payment processing here
     
-    // Navigate back to events page after successful payment
     setTimeout(() => {
       navigate('/events');
     }, 2000);
@@ -65,14 +63,14 @@ const Payment = () => {
             TeleBirr
           </button>
           <button 
-            onClick={() => setPaymentMethod("mpesa")}
+            onClick={() => setPaymentMethod("cbebirr")}
             className={`flex-1 py-3 text-center ${
-              paymentMethod === "mpesa" 
+              paymentMethod === "cbebirr" 
                 ? "bg-emerge-cream text-black border-b-2 border-emerge-gold" 
                 : "bg-white text-gray-500"
             }`}
           >
-            M-Pesa
+            CBEBirr
           </button>
           <button 
             onClick={() => setPaymentMethod("card")}
@@ -91,12 +89,12 @@ const Payment = () => {
           <p className="text-gray-600">
             {paymentDetails.description}<br />
             {paymentMethod === "telebirr" && "Expected within 8 hours"}
-            {paymentMethod === "mpesa" && "Pay with M-Pesa"}
+            {paymentMethod === "cbebirr" && "Pay with CBEBirr"}
             {paymentMethod === "card" && "Secure card payment"}
           </p>
         </div>
 
-        {(paymentMethod === "telebirr" || paymentMethod === "mpesa") ? (
+        {(paymentMethod === "telebirr" || paymentMethod === "cbebirr") ? (
           <div className="space-y-6">
             <button 
               onClick={handleUploadScreenshot}
