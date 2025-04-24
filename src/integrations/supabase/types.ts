@@ -15,9 +15,13 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           language: string | null
+          phone_number: string | null
+          social_media_handle: string | null
+          telegram_name: string | null
           updated_at: string
         }
         Insert: {
@@ -25,9 +29,13 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id: string
           language?: string | null
+          phone_number?: string | null
+          social_media_handle?: string | null
+          telegram_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -35,9 +43,13 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           language?: string | null
+          phone_number?: string | null
+          social_media_handle?: string | null
+          telegram_name?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -54,9 +66,13 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           language: string | null
+          phone_number: string | null
+          social_media_handle: string | null
+          telegram_name: string | null
           updated_at: string
         }
       }
