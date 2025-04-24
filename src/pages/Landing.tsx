@@ -31,7 +31,8 @@ const Landing = () => {
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
               Discover a curated collection of fashion that bridges cultures and celebrates creativity. 
-              With a special focus on Africa's vibrant influence, we bring you worldwide design excellence.
+              With a special focus on Africa's vibrant influence, we bring you worldwide design excellence 
+              through our innovative fashion shows, designer workshops, and inspiring events.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
