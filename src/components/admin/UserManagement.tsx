@@ -110,53 +110,56 @@ const UserManagement = () => {
     );
     
     try {
-      // First, try to update the role in the profiles table as fallback
-      // This works around potential RLS issues with the user_roles table
-      const { error: profileUpdateError } = await supabase
+      // Use a stored procedure approach via a serverless function or RPC
+      // For now, we'll use a simple approach by updating both tables individually
+      
+      // 1. Update profiles table first (this should have less restrictive RLS)
+      const { error: profilesError } = await supabase
         .from('profiles')
         .update({ role: newRole })
         .eq('id', userId);
-      
-      if (profileUpdateError) {
-        console.error('Error updating profile role:', profileUpdateError);
+        
+      if (profilesError) {
+        console.error("Error updating profile role:", profilesError);
+        // Don't throw yet, try updating user_roles
       }
       
-      // Check if role already exists in user_roles
+      // 2. Check if entry exists in user_roles
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+        
+      let userRolesSuccess = false;
       
-      let roleUpdateSuccess = false;
-      
+      // 3. Either update or insert into user_roles
       if (existingRole) {
-        // Update existing role
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('user_roles')
           .update({ role: newRole })
           .eq('user_id', userId);
-        
-        if (!error) {
-          roleUpdateSuccess = true;
+          
+        if (!updateError) {
+          userRolesSuccess = true;
         } else {
-          console.error('Error updating role in user_roles:', error);
+          console.error("Error updating user_roles:", updateError);
         }
       } else {
-        // Insert new role
-        const { error } = await supabase
+        const { error: insertError } = await supabase
           .from('user_roles')
           .insert({ user_id: userId, role: newRole });
-        
-        if (!error) {
-          roleUpdateSuccess = true;
+          
+        if (!insertError) {
+          userRolesSuccess = true;
         } else {
-          console.error('Error inserting role in user_roles:', error);
+          console.error("Error inserting into user_roles:", insertError);
         }
       }
       
-      // Update user in state if any update was successful
-      if (roleUpdateSuccess || !profileUpdateError) {
+      // 4. If either update was successful, update UI
+      if (!profilesError || userRolesSuccess) {
+        // Update local state
         setUsers(prevUsers => 
           prevUsers.map(u => 
             u.id === userId ? { ...u, role: newRole, loading: false } : u
@@ -164,19 +167,16 @@ const UserManagement = () => {
         );
         
         toast({
-          title: "Role updated",
-          description: `User role has been updated to ${newRole}`
+          title: "Role updated successfully",
+          description: `User role has been updated to ${newRole}`,
+          duration: 3000
         });
       } else {
+        // Both updates failed
         throw new Error("Failed to update role in both tables");
       }
     } catch (error) {
       console.error('Error updating role:', error);
-      toast({
-        title: "Error updating role",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive"
-      });
       
       // Reset loading state
       setUsers(prevUsers => 
@@ -184,6 +184,14 @@ const UserManagement = () => {
           u.id === userId ? { ...u, loading: false } : u
         )
       );
+      
+      // Show error toast
+      toast({
+        title: "Error updating role",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+        duration: 5000
+      });
     }
   };
   
