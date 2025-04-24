@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
@@ -17,7 +18,7 @@ const Footer = () => {
     {
       title: "Education",
       links: [
-        { label: "Workshops", href: "/education/workshops" },
+        // Removed "Workshops" link
         { label: "Courses", href: "/education/courses" },
         { label: "Events", href: "/events" }
       ]
