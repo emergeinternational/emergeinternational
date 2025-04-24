@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
@@ -20,8 +19,9 @@ const EmailLogin = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
   const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,11 +38,10 @@ const EmailLogin = () => {
       return;
     }
 
-    // If we're in forgot password mode, handle password reset
     if (isForgotPassword) {
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/profile`,
+          redirectTo: `${window.location.origin}/email-login`
         });
         
         if (error) throw error;
@@ -115,11 +114,13 @@ const EmailLogin = () => {
 
       if (error) throw error;
 
+      setShowOTP(false);
+      setIsForgotPassword(true);
+      
       toast({
         title: "Code verified",
-        description: "You can now set a new password.",
+        description: "Please enter your new password.",
       });
-      navigate('/profile');
     } catch (error) {
       toast({
         title: "Verification error",
@@ -131,9 +132,48 @@ const EmailLogin = () => {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword.trim()) {
+      toast({
+        title: "New Password is required",
+        description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Successful",
+        description: "You can now log in with your new password.",
+      });
+
+      setIsForgotPassword(false);
+      setShowOTP(false);
+      setEmail("");
+      setNewPassword("");
+    } catch (error) {
+      toast({
+        title: "Password Reset Error",
+        description: error instanceof Error ? error.message : "Could not reset password",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleBackClick = () => {
     if (showOTP) {
       setShowOTP(false);
+      setIsForgotPassword(false);
     } else if (isForgotPassword) {
       setIsForgotPassword(false);
     } else {
@@ -154,7 +194,13 @@ const EmailLogin = () => {
         <div className="mb-12 text-center">
           <Logo className="mx-auto mb-2" />
           <h2 className="text-2xl font-serif mt-6">
-            {showOTP ? "Enter Verification Code" : isForgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
+            {showOTP 
+              ? "Enter Verification Code" 
+              : isForgotPassword 
+                ? "Set New Password" 
+                : isLogin 
+                  ? "Welcome Back" 
+                  : "Create Account"}
           </h2>
         </div>
 
@@ -189,6 +235,30 @@ const EmailLogin = () => {
               {isSubmitting ? "Verifying..." : "Verify Code"}
             </button>
           </div>
+        ) : isForgotPassword ? (
+          <form onSubmit={handlePasswordReset} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="newPassword" className="block text-gray-300 text-sm">
+                New Password
+              </label>
+              <input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="emerge-input"
+                placeholder="Enter new password"
+                disabled={isSubmitting}
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="emerge-button-primary w-full"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Updating..." : "Reset Password"}
+            </button>
+          </form>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
