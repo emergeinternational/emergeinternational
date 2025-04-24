@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -125,7 +124,6 @@ const Education = () => {
       </section>
 
       <div className="emerge-container py-12">
-        {/* Level Filter */}
         <div className="mb-12 flex overflow-x-auto pb-2 hide-scrollbar">
           <button
             onClick={() => setActiveLevel("all")}
@@ -152,7 +150,6 @@ const Education = () => {
           ))}
         </div>
         
-        {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {filteredCourses.map(course => (
             <CourseCard
@@ -163,10 +160,8 @@ const Education = () => {
           ))}
         </div>
         
-        {/* Upcoming Workshops */}
         <UpcomingWorkshops workshops={upcomingWorkshops} />
         
-        {/* Certifications */}
         <section>
           <h2 className="emerge-heading text-2xl mb-6">Internationally Certified Courses</h2>
           <div className="bg-white border p-8 max-w-3xl">
@@ -189,9 +184,6 @@ const Education = () => {
                 <span className="text-sm text-gray-600 text-center">Global Design Institute</span>
               </div>
             </div>
-            <Link to="/education/certifications" className="text-emerge-gold hover:underline inline-flex items-center">
-              Learn more about our certifications
-            </Link>
           </div>
         </section>
       </div>
