@@ -26,6 +26,7 @@ export type Database = {
           phone_number: string | null
           preferred_shopping_locations: string[] | null
           profession: string | null
+          role: string | null
           size_preferences: Json | null
           social_media_handle: string | null
           telegram_name: string | null
@@ -47,6 +48,7 @@ export type Database = {
           phone_number?: string | null
           preferred_shopping_locations?: string[] | null
           profession?: string | null
+          role?: string | null
           size_preferences?: Json | null
           social_media_handle?: string | null
           telegram_name?: string | null
@@ -68,6 +70,7 @@ export type Database = {
           phone_number?: string | null
           preferred_shopping_locations?: string[] | null
           profession?: string | null
+          role?: string | null
           size_preferences?: Json | null
           social_media_handle?: string | null
           telegram_name?: string | null
@@ -140,6 +143,7 @@ export type Database = {
           phone_number: string | null
           preferred_shopping_locations: string[] | null
           profession: string | null
+          role: string | null
           size_preferences: Json | null
           social_media_handle: string | null
           telegram_name: string | null

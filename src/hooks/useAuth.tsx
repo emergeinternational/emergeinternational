@@ -40,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user role:', error);
+        setUserRole('user'); // Default to user role on error
         return;
       }
 
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
+      setUserRole('user'); // Default to user role on error
     }
   };
 
