@@ -1,168 +1,50 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { OTPVerification } from "@/components/auth/OTPVerification";
+import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
+import { LoginSignupForm } from "@/components/auth/LoginSignupForm";
 
 const EmailLogin = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
-  const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
+  const handleForgotPassword = async () => {
     if (!email.trim()) {
       toast({
         title: "Email is required",
         description: "Please enter your email address.",
         variant: "destructive",
       });
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (isForgotPassword) {
-      try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/email-login`
-        });
-        
-        if (error) throw error;
-        
-        setShowOTP(true);
-        toast({
-          title: "Code sent",
-          description: "Check your email for the verification code.",
-        });
-      } catch (error) {
-        toast({
-          title: "Error sending code",
-          description: error instanceof Error ? error.message : "An error occurred",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
-    }
-
-    if (!password.trim() && !isForgotPassword) {
-      toast({
-        title: "Password is required",
-        description: "Please enter your password.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      if (isLogin) {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password);
-        toast({
-          title: "Account created",
-          description: "Please check your email to confirm your account.",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Authentication error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    if (otp.length !== 6) {
-      toast({
-        title: "Invalid code",
-        description: "Please enter the 6-digit code sent to your email.",
-        variant: "destructive",
-      });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'recovery'
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/email-login`
       });
-
-      if (error) throw error;
-
-      setShowOTP(false);
-      setIsForgotPassword(true);
       
+      if (error) throw error;
+      
+      setShowOTP(true);
       toast({
-        title: "Code verified",
-        description: "Please enter your new password.",
+        title: "Code sent",
+        description: "Check your email for the verification code.",
       });
     } catch (error) {
       toast({
-        title: "Verification error",
+        title: "Error sending code",
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newPassword.trim()) {
-      toast({
-        title: "New Password is required",
-        description: "Please enter a new password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      
-      if (error) throw error;
-
-      toast({
-        title: "Password Reset Successful",
-        description: "You can now log in with your new password.",
-      });
-
-      setIsForgotPassword(false);
-      setShowOTP(false);
-      setEmail("");
-      setNewPassword("");
-    } catch (error) {
-      toast({
-        title: "Password Reset Error",
-        description: error instanceof Error ? error.message : "Could not reset password",
         variant: "destructive",
       });
     } finally {
@@ -179,6 +61,17 @@ const EmailLogin = () => {
     } else {
       navigate("/login");
     }
+  };
+
+  const handleOTPSuccess = () => {
+    setShowOTP(false);
+    setIsForgotPassword(true);
+  };
+
+  const handleResetSuccess = () => {
+    setIsForgotPassword(false);
+    setShowOTP(false);
+    setEmail("");
   };
 
   return (
@@ -205,135 +98,26 @@ const EmailLogin = () => {
         </div>
 
         {showOTP ? (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <p className="text-center text-sm text-gray-300 mb-4">
-                Enter the 6-digit code sent to {email}
-              </p>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => setOtp(value)}
-                className="gap-2"
-                disabled={isSubmitting}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            <button 
-              onClick={handleVerifyOTP}
-              className="emerge-button-primary w-full"
-              disabled={isSubmitting || otp.length !== 6}
-            >
-              {isSubmitting ? "Verifying..." : "Verify Code"}
-            </button>
-          </div>
+          <OTPVerification
+            email={email}
+            isSubmitting={isSubmitting}
+            onVerificationSuccess={handleOTPSuccess}
+          />
         ) : isForgotPassword ? (
-          <form onSubmit={handlePasswordReset} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="newPassword" className="block text-gray-300 text-sm">
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="emerge-input"
-                placeholder="Enter new password"
-                disabled={isSubmitting}
-              />
-            </div>
-            <button 
-              type="submit" 
-              className="emerge-button-primary w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Updating..." : "Reset Password"}
-            </button>
-          </form>
+          <PasswordResetForm
+            isSubmitting={isSubmitting}
+            onResetSuccess={handleResetSuccess}
+          />
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-gray-300 text-sm">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="emerge-input"
-                placeholder="your@email.com"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {!isForgotPassword && (
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-gray-300 text-sm">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="emerge-input"
-                  placeholder="••••••••"
-                  disabled={isSubmitting}
-                />
-              </div>
-            )}
-
-            {isLogin && !isForgotPassword && (
-              <div className="text-right">
-                <button 
-                  type="button"
-                  onClick={() => setIsForgotPassword(true)}
-                  className="text-emerge-gold text-sm hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            )}
-
-            <button 
-              type="submit" 
-              className="emerge-button-primary w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting 
-                ? "Please wait..." 
-                : isForgotPassword 
-                  ? "Send Code" 
-                  : isLogin 
-                    ? "Sign In" 
-                    : "Create Account"
-              }
-            </button>
-          </form>
-        )}
-
-        {!isForgotPassword && !showOTP && (
-          <div className="mt-8 text-center">
-            <button 
-              onClick={() => setIsLogin(!isLogin)} 
-              className="text-emerge-gold hover:underline"
-              disabled={isSubmitting}
-            >
-              {isLogin 
-                ? "Don't have an account? Sign Up" 
-                : "Already have an account? Sign In"}
-            </button>
-          </div>
+          <LoginSignupForm
+            isLogin={isLogin}
+            isSubmitting={isSubmitting}
+            onForgotPassword={() => {
+              setIsForgotPassword(true);
+              handleForgotPassword();
+            }}
+            onToggleMode={() => setIsLogin(!isLogin)}
+          />
         )}
       </div>
     </div>
