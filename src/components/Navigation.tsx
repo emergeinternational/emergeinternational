@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Home } from "lucide-react";
 import Logo from "./Logo";
+import { useAuth } from "@/hooks/useAuth";
 
 interface NavigationProps {
   variant?: "dark" | "light";
@@ -23,6 +23,8 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   const textClass = variant === "dark" ? "text-white" : "text-emerge-darkBg";
   const logoVariant = variant === "dark" ? "gold" : "gold";
 
+  const { user } = useAuth();
+
   return (
     <nav className={`${bgClass} ${textClass} fixed w-full z-50 top-0`}>
       <div className="emerge-container py-4 flex items-center justify-between">
@@ -37,7 +39,6 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
           <Logo variant={logoVariant} />
         </div>
 
-        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
           {navLinks.map((link) => (
             <Link
@@ -54,13 +55,12 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
           <Link to="/cart" className="p-1">
             <ShoppingBag size={20} />
           </Link>
-          <Link to="/login" className="p-1">
+          <Link to={user ? "/profile" : "/login"} className="p-1">
             <User size={20} />
           </Link>
         </div>
       </div>
 
-      {/* Mobile Navigation Menu */}
       {isMenuOpen && (
         <div className={`${bgClass} absolute w-full pb-4 md:hidden z-30`}>
           <div className="emerge-container flex flex-col space-y-4">
@@ -82,4 +82,3 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
 };
 
 export default Navigation;
-

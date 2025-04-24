@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
@@ -40,9 +40,10 @@ const EmailLogin = () => {
       } else {
         await signUp(email, password);
         toast({
-          title: "Verification email sent",
-          description: "Please check your email to verify your account.",
+          title: "Success",
+          description: "Account created! Please complete your profile.",
         });
+        navigate("/profile");
       }
     } catch (error) {
       toast({
