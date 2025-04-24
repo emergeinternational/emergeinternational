@@ -65,12 +65,12 @@ const Landing = () => {
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">Creative Ecosystem</h3>
-                <p className="text-gray-600">Connecting designers, models, photographers, and industry professionals across Africa</p>
+                <p className="text-gray-600">Connecting designers, models, photographers, and industry professionals across the world</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">Global Visibility</h3>
-                <p className="text-gray-600">Providing a world-class platform that showcases the depth and innovation of African fashion talent</p>
+                <p className="text-gray-600">Providing a world-class platform that showcases the depth and innovation of industry talent</p>
               </div>
             </div>
           </div>
