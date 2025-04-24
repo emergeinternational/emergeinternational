@@ -11,6 +11,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  resetPassword: (password: string) => Promise<void>;
   isLoading: boolean;
 };
 
@@ -44,6 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           toast({
             title: "Signed out",
             description: "You've been signed out successfully."
+          });
+        }
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/profile');
+          toast({
+            title: "Password reset requested",
+            description: "Please enter a new password."
           });
         }
         setIsLoading(false);
@@ -104,6 +112,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (password: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been updated successfully."
+      });
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const signOut = async () => {
     setIsLoading(true);
     try {
@@ -117,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, signIn, signUp, signOut, isLoading }}>
+    <AuthContext.Provider value={{ user, session, signIn, signUp, signOut, resetPassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
