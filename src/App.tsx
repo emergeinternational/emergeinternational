@@ -2,9 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
-import { AuthProvider } from "./hooks/useAuth";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -25,6 +25,16 @@ import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  return !user ? <>{children}</> : <Navigate to="/" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -34,22 +44,23 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Landing />} />
-              <Route path="/email-login" element={<EmailLogin />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/shop/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/education" element={<Education />} />
-              <Route path="/donations" element={<Donations />} />
-              <Route path="/payment" element={<Payment />} />
-              <Route path="/admin" element={<Dashboard />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
+
+              <Route path="/" element={<PrivateRoute><Landing /></PrivateRoute>} />
+              <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
+              <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
+              <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
+              <Route path="/education" element={<PrivateRoute><Education /></PrivateRoute>} />
+              <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
+              <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
+              <Route path="/admin" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
+              <Route path="/terms" element={<PublicRoute><Terms /></PublicRoute>} />
+              <Route path="/privacy" element={<PublicRoute><Privacy /></PublicRoute>} />
+              <Route path="/about" element={<PublicRoute><About /></PublicRoute>} />
+              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </TooltipProvider>
         </CartProvider>
