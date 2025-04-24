@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,7 +48,10 @@ const App = () => (
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
 
-              <Route path="/" element={<PrivateRoute><Landing /></PrivateRoute>} />
+              {/* Allow access to the home/landing route without authentication */}
+              <Route path="/" element={<Landing />} />
+              
+              {/* These routes require authentication */}
               <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
               <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
               <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
@@ -56,10 +60,13 @@ const App = () => (
               <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
               <Route path="/admin" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
-              <Route path="/terms" element={<PublicRoute><Terms /></PublicRoute>} />
-              <Route path="/privacy" element={<PublicRoute><Privacy /></PublicRoute>} />
-              <Route path="/about" element={<PublicRoute><About /></PublicRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              
+              {/* Public information pages */}
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/about" element={<About />} />
+              
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </TooltipProvider>
