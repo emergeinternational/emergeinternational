@@ -30,6 +30,15 @@ export const PasswordResetForm = ({
       return;
     }
 
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       toast({
         title: "Passwords do not match",
@@ -41,9 +50,12 @@ export const PasswordResetForm = ({
 
     try {
       setIsSubmitting(true);
+      console.log("Attempting to reset password");
       await resetPassword(newPassword);
+      console.log("Password reset successful");
       onResetSuccess();
     } catch (error) {
+      console.error("Password reset error:", error);
       toast({
         title: "Password Reset Error",
         description: error instanceof Error ? error.message : "Could not reset password",
@@ -70,6 +82,7 @@ export const PasswordResetForm = ({
           disabled={isSubmitting}
           autoComplete="new-password"
         />
+        <p className="text-xs text-gray-400">Must be at least 6 characters long</p>
       </div>
       <div className="space-y-2">
         <label htmlFor="confirmPassword" className="block text-gray-300 text-sm">

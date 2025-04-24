@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -47,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (event === 'PASSWORD_RECOVERY') {
           console.log('Password recovery detected');
-          navigate('/profile');
+          // Don't navigate, as EmailLogin component will handle this
           toast({
             title: "Password reset requested",
             description: "Please enter a new password."
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("Initial auth session check:", session ? "Session exists" : "No session");
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -112,17 +116,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (password: string) => {
     setIsLoading(true);
     try {
+      console.log("Updating password");
       const { error } = await supabase.auth.updateUser({ password });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Password update error:", error);
+        throw error;
+      }
 
+      console.log("Password updated successfully");
       toast({
         title: "Password updated",
         description: "Your password has been updated successfully."
       });
       
+      // Sign out after successful password reset to force re-authentication
+      await supabase.auth.signOut();
       navigate('/login');
     } catch (error) {
+      console.error("Password reset exception:", error);
       toast({
         title: "Password Reset Error",
         description: error instanceof Error ? error.message : "Could not reset password",

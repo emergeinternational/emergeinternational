@@ -16,15 +16,27 @@ const EmailLogin = () => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
   const [isResetLinkSent, setIsResetLinkSent] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Check if this is a recovery link
+    // Check if this is a recovery link by examining URL parameters
+    const searchParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
-      console.log("Recovery hash detected:", hash);
+    
+    console.log("URL search params:", searchParams.toString());
+    console.log("URL hash:", hash);
+    
+    // Check both hash-based and query parameter methods
+    const isRecovery = 
+      (hash && hash.includes('type=recovery')) || 
+      searchParams.has('type') && searchParams.get('type') === 'recovery';
+    
+    if (isRecovery) {
+      console.log("Password recovery mode detected");
+      setIsRecoveryMode(true);
       setIsForgotPassword(true);
     }
   }, []);
@@ -41,8 +53,13 @@ const EmailLogin = () => {
 
     setIsSubmitting(true);
     try {
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/email-login`;
+      
+      console.log("Password reset redirect URL:", redirectTo);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/email-login#type=recovery`
+        redirectTo: redirectTo
       });
       
       if (error) throw error;
@@ -107,7 +124,7 @@ const EmailLogin = () => {
             {showOTP 
               ? "Enter Verification Code" 
               : isForgotPassword 
-                ? (isResetLinkSent ? "Check Your Email" : location.hash.includes('type=recovery') ? "Set New Password" : "Reset Password") 
+                ? (isResetLinkSent ? "Check Your Email" : isRecoveryMode ? "Set New Password" : "Reset Password") 
                 : isLogin 
                   ? "Welcome Back" 
                   : "Create Account"}
@@ -121,7 +138,7 @@ const EmailLogin = () => {
             onVerificationSuccess={handleOTPSuccess}
           />
         ) : isForgotPassword ? (
-          location.hash.includes('type=recovery') ? (
+          isRecoveryMode ? (
             <PasswordResetForm
               isSubmitting={isSubmitting}
               onResetSuccess={handleResetSuccess}

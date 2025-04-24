@@ -41,8 +41,15 @@ const Profile = () => {
   
   const handleRequestPasswordReset = async () => {
     try {
+      // Get the current origin (protocol + domain)
+      const origin = window.location.origin;
+      // Create the reset redirect URL
+      const redirectTo = `${origin}/email-login`;
+      
+      console.log("Reset password redirect URL:", redirectTo);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
-        redirectTo: `${window.location.origin}/email-login#type=recovery`
+        redirectTo: redirectTo
       });
       
       if (error) throw error;
