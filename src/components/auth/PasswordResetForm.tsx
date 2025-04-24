@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PasswordResetFormProps {
   isSubmitting: boolean;
@@ -9,11 +9,13 @@ interface PasswordResetFormProps {
 }
 
 export const PasswordResetForm = ({
-  isSubmitting,
+  isSubmitting: initialSubmitting,
   onResetSuccess,
 }: PasswordResetFormProps) => {
   const [newPassword, setNewPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(initialSubmitting);
   const { toast } = useToast();
+  const { resetPassword } = useAuth();
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +30,9 @@ export const PasswordResetForm = ({
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      setIsSubmitting(true);
+      await resetPassword(newPassword);
       
-      if (error) throw error;
-
       toast({
         title: "Password Reset Successful",
         description: "You can now log in with your new password.",
@@ -44,6 +45,8 @@ export const PasswordResetForm = ({
         description: error instanceof Error ? error.message : "Could not reset password",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

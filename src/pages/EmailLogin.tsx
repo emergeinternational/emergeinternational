@@ -69,9 +69,14 @@ const EmailLogin = () => {
   };
 
   const handleResetSuccess = () => {
+    toast({
+      title: "Password reset successful",
+      description: "You can now log in with your new password",
+    });
     setIsForgotPassword(false);
     setShowOTP(false);
     setEmail("");
+    navigate("/login");
   };
 
   return (
