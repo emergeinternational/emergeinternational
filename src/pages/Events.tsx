@@ -1,6 +1,6 @@
 
 import MainLayout from "@/layouts/MainLayout";
-import { CalendarPlus, CalendarEvent, CalendarDays } from "lucide-react";
+import { CalendarPlus, Calendar, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -14,7 +14,7 @@ const Events = () => {
       location: "Addis Ababa Convention Center",
       description: "Annual fashion showcase featuring emerging Ethiopian designers",
       registrations: 45,
-      icon: <CalendarEvent size={24} className="text-emerge-gold" />
+      icon: <Calendar size={24} className="text-emerge-gold" />
     },
     {
       id: 2,
@@ -81,4 +81,3 @@ const Events = () => {
 };
 
 export default Events;
-
