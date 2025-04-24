@@ -29,10 +29,9 @@ const Landing = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              Celebrating the rich tapestry of African fashion - a global platform that amplifies the voices of African designers, 
-              models, photographers, and creative visionaries. We're more than a marketplace; we're a movement that 
-              transforms African creativity into a powerful global narrative, showcasing innovation, cultural heritage, 
-              and the extraordinary talent that defines contemporary African fashion.
+              A global platform empowering African creativity through fashion, design, and innovation. 
+              We connect talented African designers, models, and creative professionals with a worldwide audience, 
+              transforming cultural expression into a powerful global narrative.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -40,7 +39,7 @@ const Landing = () => {
                 onClick={() => navigate("/shop")}
                 className="emerge-button-primary flex items-center"
               >
-                Start Shopping
+                Explore Collections
                 <ArrowRight className="ml-2" />
               </Button>
               
