@@ -1,6 +1,7 @@
 
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
+import { Facebook, Instagram, TikTok } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -34,6 +35,24 @@ const Footer = () => {
     }
   ];
 
+  const socialLinks = [
+    {
+      icon: Facebook,
+      href: "https://facebook.com/emergeinternational",
+      label: "Facebook"
+    },
+    {
+      icon: Instagram,
+      href: "https://instagram.com/emergeinternational",
+      label: "Instagram"
+    },
+    {
+      icon: TikTok,
+      href: "https://tiktok.com/@emergeinternational",
+      label: "TikTok"
+    }
+  ];
+
   return (
     <footer className="bg-emerge-darkBg text-white py-12 mt-12">
       <div className="emerge-container">
@@ -44,6 +63,23 @@ const Footer = () => {
               Supporting emerging fashion talent across Africa through education,
               resources, and global market access.
             </p>
+            <p className="text-gray-300 text-sm">
+              Owned and operated by Casa Noir LLC, an American Company.
+            </p>
+            <div className="flex space-x-4 mt-4">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-emerge-gold transition-colors"
+                  aria-label={social.label}
+                >
+                  <social.icon size={24} />
+                </a>
+              ))}
+            </div>
           </div>
 
           {sections.map((section) => (
