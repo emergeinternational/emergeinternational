@@ -1,8 +1,8 @@
+
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Facebook, Instagram } from "lucide-react";
-import dynamicIconImports from "lucide-react/dynamicIconImports";
-import React, { Suspense } from "react";
+import { Icon } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -35,8 +35,6 @@ const Footer = () => {
     }
   ];
 
-  const TikTokIcon = React.lazy(dynamicIconImports['tiktok']);
-
   const socialLinks = [
     {
       icon: Facebook,
@@ -49,7 +47,8 @@ const Footer = () => {
       label: "Instagram"
     },
     {
-      icon: TikTokIcon,
+      // For TikTok we'll use a special approach with the Icon component
+      icon: "tiktok",
       href: "https://tiktok.com/@emergeinternational",
       label: "TikTok"
     }
@@ -78,9 +77,11 @@ const Footer = () => {
                   className="text-gray-300 hover:text-emerge-gold transition-colors"
                   aria-label={social.label}
                 >
-                  <Suspense fallback={<div>Loading...</div>}>
-                    {React.createElement(social.icon, { size: 24 })}
-                  </Suspense>
+                  {typeof social.icon === 'string' ? (
+                    <Icon name={social.icon} size={24} />
+                  ) : (
+                    <social.icon size={24} />
+                  )}
                 </a>
               ))}
             </div>
