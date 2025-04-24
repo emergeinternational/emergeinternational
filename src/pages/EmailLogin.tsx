@@ -1,18 +1,19 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 const EmailLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email.trim()) {
@@ -33,15 +34,23 @@ const EmailLogin = () => {
       return;
     }
 
-    // Simulate authentication
-    toast({
-      title: isLogin ? "Login successful" : "Account created",
-      description: isLogin 
-        ? "Welcome back to Emerge International." 
-        : "Your account has been created successfully.",
-    });
-    
-    navigate("/");
+    try {
+      if (isLogin) {
+        await signIn(email, password);
+      } else {
+        await signUp(email, password);
+        toast({
+          title: "Verification email sent",
+          description: "Please check your email to verify your account.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Authentication error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
