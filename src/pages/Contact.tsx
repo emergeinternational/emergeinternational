@@ -1,4 +1,3 @@
-
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,9 +55,9 @@ const Contact = () => {
                   <div>
                     <h3 className="font-medium mb-2">Visit Us</h3>
                     <p className="text-gray-600">
-                      Emerge Fashion Hub,<br />
-                      Bole Road, Addis Ababa,<br />
-                      Ethiopia
+                      World Headquarters,<br />
+                      1 Penn Plaza,<br />
+                      New York, NYC 10001
                     </p>
                   </div>
                 </div>
