@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -13,15 +14,15 @@ const Login = () => {
   const navigate = useNavigate();
 
   const languages = [
-    "English",
-    "Spanish",
-    "German",
-    "Chinese",
-    "Arabic",
-    "Japanese",
-    "Portuguese",
-    "French",
-    "Amharic",
+    "Amharic", 
+    "Arabic", 
+    "Chinese", 
+    "English", 
+    "French", 
+    "German", 
+    "Japanese", 
+    "Portuguese", 
+    "Spanish", 
     "Swahili"
   ];
 
