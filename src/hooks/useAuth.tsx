@@ -1,4 +1,3 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,19 +39,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user role:', error);
-        setUserRole('user'); // Default to user role on error
+        // Improved error handling
+        setUserRole(data?.role ?? 'user');
         return;
       }
 
-      if (data?.role) {
-        setUserRole(data.role as UserRole);
-      } else {
-        // Default role if not set
-        setUserRole('user');
-      }
+      // Ensure role is set, default to 'user' if not found
+      setUserRole(data?.role ?? 'user');
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
-      setUserRole('user'); // Default to user role on error
+      setUserRole('user');
     }
   };
 
