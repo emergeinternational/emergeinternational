@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ShoppingBag, User } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Home } from "lucide-react";
 import Logo from "./Logo";
 
 interface NavigationProps {
@@ -12,6 +12,7 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
+    { name: "Home", href: "/" },
     { name: "Shop", href: "/shop" },
     { name: "Education", href: "/education" },
     { name: "Donations", href: "/donations" },
@@ -81,3 +82,4 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
 };
 
 export default Navigation;
+
