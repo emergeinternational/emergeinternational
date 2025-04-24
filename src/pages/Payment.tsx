@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Camera } from "lucide-react";
@@ -6,12 +5,11 @@ import { useToast } from "../hooks/use-toast";
 import Logo from "../components/Logo";
 
 const Payment = () => {
-  const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "mesa">("telebirr");
+  const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "mpesa">("telebirr");
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get payment details from location state or use defaults
   const paymentDetails = location.state || {
     amount: 0,
     description: "Payment",
@@ -67,14 +65,14 @@ const Payment = () => {
             TeleBirr
           </button>
           <button 
-            onClick={() => setPaymentMethod("mesa")}
+            onClick={() => setPaymentMethod("mpesa")}
             className={`flex-1 py-3 text-center ${
-              paymentMethod === "mesa" 
+              paymentMethod === "mpesa" 
                 ? "bg-emerge-cream text-black border-b-2 border-emerge-gold" 
                 : "bg-white text-gray-500"
             }`}
           >
-            MESA
+            M-Pesa
           </button>
           <button 
             onClick={() => setPaymentMethod("card")}
@@ -93,12 +91,12 @@ const Payment = () => {
           <p className="text-gray-600">
             {paymentDetails.description}<br />
             {paymentMethod === "telebirr" && "Expected within 8 hours"}
-            {paymentMethod === "mesa" && "Instant payment with MESA"}
+            {paymentMethod === "mpesa" && "Pay with M-Pesa"}
             {paymentMethod === "card" && "Secure card payment"}
           </p>
         </div>
 
-        {(paymentMethod === "telebirr" || paymentMethod === "mesa") ? (
+        {(paymentMethod === "telebirr" || paymentMethod === "mpesa") ? (
           <div className="space-y-6">
             <button 
               onClick={handleUploadScreenshot}
