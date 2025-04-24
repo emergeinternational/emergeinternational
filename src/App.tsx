@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
+import Workshops from "./pages/Workshops";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
               
               {/* Public Routes - Accessible without authentication */}
               <Route path="/education" element={<Education />} />
+              <Route path="/workshops" element={<Workshops />} />
               <Route path="/about" element={<About />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />

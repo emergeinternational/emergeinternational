@@ -12,15 +12,18 @@ interface Workshop {
 
 interface UpcomingWorkshopsProps {
   workshops: Workshop[];
+  showAllWorkshops?: boolean;
 }
 
-const UpcomingWorkshops = ({ workshops }: UpcomingWorkshopsProps) => {
+const UpcomingWorkshops = ({ workshops, showAllWorkshops = false }: UpcomingWorkshopsProps) => {
+  const displayedWorkshops = showAllWorkshops ? workshops : workshops.slice(0, 3);
+
   return (
-    <section className="mb-12">
-      <h2 className="emerge-heading text-2xl mb-6">Upcoming Workshops</h2>
+    <section className={showAllWorkshops ? "" : "mb-12"}>
+      {!showAllWorkshops && <h2 className="emerge-heading text-2xl mb-6">Upcoming Workshops</h2>}
       <div className="bg-emerge-cream p-6">
         <div className="space-y-4">
-          {workshops.map(workshop => (
+          {displayedWorkshops.map(workshop => (
             <div key={workshop.id} className="flex justify-between items-center p-3 bg-white">
               <div>
                 <h3 className="font-medium">{workshop.name}</h3>
@@ -41,11 +44,13 @@ const UpcomingWorkshops = ({ workshops }: UpcomingWorkshopsProps) => {
             </div>
           ))}
         </div>
-        <div className="mt-6 text-center">
-          <Link to="/education/workshops" className="emerge-button-primary">
-            View All Workshops
-          </Link>
-        </div>
+        {!showAllWorkshops && (
+          <div className="mt-6 text-center">
+            <Link to="/workshops" className="emerge-button-primary">
+              View All Workshops
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
