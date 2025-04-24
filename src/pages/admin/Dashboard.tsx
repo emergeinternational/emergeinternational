@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Settings, Users } from "lucide-react";
+import { AlertTriangle, Calendar, Heart, Settings, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
