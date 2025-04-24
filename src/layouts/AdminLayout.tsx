@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Logo from "../components/Logo";
+import RoleGuide from "../components/admin/RoleGuide";
 import { 
   ChevronLeft, 
   Home, 
@@ -24,6 +25,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetDescription, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -44,12 +53,13 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { user, signOut, userRole, hasRole } = useAuth();
   const { toast } = useToast();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [showRoleGuide, setShowRoleGuide] = useState(false);
 
   // Define navigation items with required roles
   const sidebarItems: NavItem[] = [
     { icon: <Home size={20} />, label: "Dashboard", path: "/admin", requiredRoles: ['admin', 'editor', 'viewer'] },
-    { icon: <Calendar size={20} />, label: "Events", path: "/admin/events", requiredRoles: ['admin', 'editor'] },
     { icon: <Users size={20} />, label: "Users", path: "/admin/users", requiredRoles: ['admin'] },
+    { icon: <Calendar size={20} />, label: "Events", path: "/admin/events", requiredRoles: ['admin', 'editor'] },
     { icon: <Heart size={20} />, label: "Donations", path: "/admin/donations", requiredRoles: ['admin', 'editor'] },
     { icon: <ShoppingCart size={20} />, label: "Orders", path: "/admin/orders", requiredRoles: ['admin', 'editor'] },
     { icon: <Settings size={20} />, label: "Settings", path: "/admin/settings", requiredRoles: ['admin'] },
@@ -138,8 +148,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
         {/* Role indicator */}
         {!isSidebarCollapsed && userRole && (
-          <div className="px-4 py-2 border-t border-gray-800 text-xs text-gray-500">
-            {userRole.toUpperCase()} ROLE
+          <div className="px-4 py-2 border-t border-gray-800 text-xs text-gray-500 flex items-center justify-between">
+            <div>{userRole.toUpperCase()} ROLE</div>
+            <button 
+              onClick={() => setShowRoleGuide(true)}
+              className="text-gray-500 hover:text-white transition-colors"
+            >
+              <AlertCircle size={14} />
+            </button>
           </div>
         )}
       </div>
@@ -190,6 +206,19 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </header>
         <main className="flex-1 overflow-y-auto p-4">{children}</main>
       </div>
+
+      {/* Role Guide Sheet */}
+      <Sheet open={showRoleGuide} onOpenChange={setShowRoleGuide}>
+        <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+          <SheetHeader className="mb-5">
+            <SheetTitle>Role Permissions Guide</SheetTitle>
+            <SheetDescription>
+              Understanding the different role permissions in the admin panel
+            </SheetDescription>
+          </SheetHeader>
+          <RoleGuide />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

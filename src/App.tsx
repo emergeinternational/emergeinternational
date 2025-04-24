@@ -19,6 +19,7 @@ import Education from "./pages/Education";
 import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Dashboard from "./pages/admin/Dashboard";
+import UsersPage from "./pages/admin/UsersPage";
 import Events from "./pages/Events";
 import Profile from "./pages/Profile";
 import Terms from "./pages/Terms";
@@ -76,13 +77,13 @@ const App = () => (
                   <Dashboard />
                 </RoleBasedRoute>
               } />
-              <Route path="/admin/events" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <Dashboard />
-                </RoleBasedRoute>
-              } />
               <Route path="/admin/users" element={
                 <RoleBasedRoute allowedRoles={['admin']}>
+                  <UsersPage />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/events" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
                   <Dashboard />
                 </RoleBasedRoute>
               } />

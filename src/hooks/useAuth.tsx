@@ -31,24 +31,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      // Fetch the user's role from the profiles table
+      // Fetch the user's role from the user_roles table (new approach)
+      const { data: userRoleData, error: userRoleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle(); // Use maybeSingle to not throw an error if no role is found
+      
+      if (userRoleError) {
+        console.error('Error fetching user role from user_roles table:', userRoleError);
+        // Fall back to profiles table if user_roles query fails
+        fallbackToProfilesTable(userId);
+        return;
+      }
+      
+      if (userRoleData) {
+        // User has a role in the new user_roles table
+        console.log('Role found in user_roles table:', userRoleData.role);
+        setUserRole(userRoleData.role as UserRole);
+        return;
+      }
+      
+      // If we get here, the user doesn't have a role in the user_roles table yet
+      // Fall back to the profiles table
+      fallbackToProfilesTable(userId);
+      
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      setUserRole('user' as UserRole);
+    }
+  };
+  
+  const fallbackToProfilesTable = async (userId: string) => {
+    try {
+      // Try to fetch from profiles table as fallback
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .single();
-
+        
       if (error) {
-        console.error('Error fetching user role:', error);
-        // Improved error handling - ensure type safety with the as operator
-        setUserRole((data?.role as UserRole) ?? 'user' as UserRole);
+        console.error('Error fetching user role from profiles table:', error);
+        setUserRole('user' as UserRole);
         return;
       }
-
-      // Ensure role is set, default to 'user' if not found
+      
+      // Set role from profiles table
+      console.log('Role found in profiles table:', data.role);
       setUserRole((data?.role as UserRole) ?? 'user' as UserRole);
     } catch (error) {
-      console.error('Error in fetchUserRole:', error);
+      console.error('Error in fallbackToProfilesTable:', error);
       setUserRole('user' as UserRole);
     }
   };
@@ -73,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Use setTimeout(0) to avoid deadlocks with Supabase's auth state
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);

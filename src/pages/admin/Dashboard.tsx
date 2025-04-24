@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Settings } from "lucide-react";
+import { AlertTriangle, Settings, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +28,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 interface Payment {
   id: string;
@@ -44,7 +46,7 @@ interface Event {
 }
 
 const Dashboard = () => {
-  const { user, userRole } = useAuth();
+  const { user, userRole, hasRole } = useAuth();
   const { toast } = useToast();
   
   // Stats data query
@@ -59,6 +61,20 @@ const Dashboard = () => {
         { label: "Monthly Donations", value: "ETB 45,600", change: "+18%" },
         { label: "Products Sold", value: "89", change: "+7%" },
       ];
+    }
+  });
+
+  // Get user count
+  const { data: userCount, isLoading: usersLoading } = useQuery({
+    queryKey: ['admin', 'user-count'],
+    queryFn: async () => {
+      try {
+        // In a real app, you'd fetch this from Supabase
+        return { count: 26 };
+      } catch (error) {
+        console.error('Error fetching user count:', error);
+        return { count: 0 };
+      }
     }
   });
 
@@ -164,6 +180,77 @@ const Dashboard = () => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+        
+        {/* Quick Access Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Users Management Card */}
+          {hasRole('admin') && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <Users className="h-5 w-5 mr-2 text-emerge-gold" />
+                  User Management
+                </CardTitle>
+                <CardDescription>Manage user accounts and permissions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-2xl">{usersLoading ? "..." : userCount?.count}</p>
+                    <p className="text-sm text-muted-foreground">Registered users</p>
+                  </div>
+                  <Link to="/admin/users">
+                    <Button>Manage Users</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Events Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Calendar className="h-5 w-5 mr-2 text-emerge-gold" />
+                Events
+              </CardTitle>
+              <CardDescription>Scheduled workshops and fashion events</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-2xl">{eventsLoading ? "..." : events?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Upcoming events</p>
+                </div>
+                <Link to="/admin/events">
+                  <Button>Manage Events</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Donations Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <Heart className="h-5 w-5 mr-2 text-emerge-gold" />
+                Donations
+              </CardTitle>
+              <CardDescription>Track donation campaigns and contributions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-2xl">ETB 45,600</p>
+                  <p className="text-sm text-muted-foreground">Monthly donations</p>
+                </div>
+                <Link to="/admin/donations">
+                  <Button>View Details</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
         {/* Stats Overview */}
