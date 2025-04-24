@@ -35,8 +35,11 @@ const EmailLogin = () => {
     // If we're in forgot password mode, handle password reset
     if (isForgotPassword) {
       try {
+        const redirectUrl = `${window.location.origin}/profile`;
+        console.log("Sending password reset email with redirect to:", redirectUrl);
+        
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + "/profile",
+          redirectTo: redirectUrl,
         });
         
         if (error) throw error;
@@ -44,7 +47,7 @@ const EmailLogin = () => {
         setResetSent(true);
         toast({
           title: "Password reset email sent",
-          description: "Check your email for a password reset link."
+          description: "Check your email for a password reset link.",
         });
       } catch (error) {
         toast({
@@ -76,10 +79,8 @@ const EmailLogin = () => {
         await signUp(email, password);
         toast({
           title: "Account created",
-          description: "Please complete your profile.",
+          description: "Please check your email to confirm your account.",
         });
-        // For signups, explicitly navigate to profile since the session might not be immediately available
-        navigate("/profile");
       }
     } catch (error) {
       toast({

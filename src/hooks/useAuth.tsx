@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
         if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery detected');
           navigate('/profile');
           toast({
             title: "Password reset requested",
@@ -122,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Password updated",
         description: "Your password has been updated successfully."
       });
+      
+      // After password reset, navigate to profile
+      navigate('/profile');
     } catch (error) {
       throw error;
     } finally {
