@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -79,7 +78,11 @@ const Shop = () => {
             <div className="flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.map(product => (
-                  <Link to={`/shop/product/${product.id}`} key={product.id} className="group">
+                  <Link 
+                    to={`/shop/product/${product.id}`} 
+                    key={product.id} 
+                    className="group"
+                  >
                     <div className="bg-gray-100 aspect-square mb-3 overflow-hidden">
                       <img 
                         src={product.image} 
