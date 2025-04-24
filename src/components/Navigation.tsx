@@ -1,8 +1,10 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ShoppingBag, User, Home } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Home, Settings } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "./ui/button";
 
 interface NavigationProps {
   variant?: "dark" | "light";
@@ -10,6 +12,7 @@ interface NavigationProps {
 
 const Navigation = ({ variant = "light" }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, hasRole } = useAuth();
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -22,8 +25,6 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   const bgClass = variant === "dark" ? "bg-emerge-darkBg" : "bg-white";
   const textClass = variant === "dark" ? "text-white" : "text-emerge-darkBg";
   const logoVariant = variant === "dark" ? "gold" : "gold";
-
-  const { user } = useAuth();
 
   return (
     <nav className={`${bgClass} ${textClass} fixed w-full z-50 top-0`}>
@@ -49,6 +50,17 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
               {link.name}
             </Link>
           ))}
+          
+          {/* Admin link - only visible to admin users */}
+          {user && hasRole('admin') && (
+            <Link
+              to="/admin"
+              className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium flex items-center"
+            >
+              <Settings size={16} className="mr-1" />
+              Admin
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -74,6 +86,18 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
                 {link.name}
               </Link>
             ))}
+            
+            {/* Admin link in mobile menu - only visible to admin users */}
+            {user && hasRole('admin') && (
+              <Link
+                to="/admin"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
+              >
+                <Settings size={16} className="mr-2" />
+                Admin Panel
+              </Link>
+            )}
           </div>
         </div>
       )}
