@@ -16,11 +16,20 @@ const Login = () => {
   const languages = ["English", "Amharic", "French", "Swahili"];
 
   const handleContinueWithoutAccount = () => {
+    if (rememberInfo && country.trim()) {
+      // Store user preferences if remember is checked and country is provided
+      localStorage.setItem('userPreferences', JSON.stringify({
+        country,
+        city,
+        language: selectedLanguage
+      }));
+    }
+    
     toast({
       title: "Continuing as guest",
       description: "You can create an account later to save your details.",
     });
-    navigate("/");
+    navigate("/shop");
   };
 
   const handleEmailContinue = () => {
@@ -33,6 +42,27 @@ const Login = () => {
       return;
     }
     navigate("/email-login");
+  };
+
+  const handlePhoneContinue = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Phone authentication will be available soon.",
+    });
+  };
+
+  const handleGoogleContinue = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Google authentication will be available soon.",
+    });
+  };
+
+  const handleAppleContinue = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Apple authentication will be available soon.",
+    });
   };
 
   return (
@@ -100,15 +130,24 @@ const Login = () => {
             Continue with Email
           </button>
           
-          <button className="emerge-button-secondary w-full">
+          <button 
+            onClick={handlePhoneContinue}
+            className="emerge-button-secondary w-full"
+          >
             Continue with Phone
           </button>
           
-          <button className="emerge-button-secondary w-full">
+          <button 
+            onClick={handleGoogleContinue}
+            className="emerge-button-secondary w-full"
+          >
             Continue with Google
           </button>
           
-          <button className="emerge-button-secondary w-full">
+          <button 
+            onClick={handleAppleContinue}
+            className="emerge-button-secondary w-full"
+          >
             Continue with Apple
           </button>
         </div>
