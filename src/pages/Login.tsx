@@ -23,7 +23,7 @@ const Login = () => {
       }));
     }
     
-    navigate("/");
+    navigate("/home");
   };
 
   const handleEmailContinue = () => {

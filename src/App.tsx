@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,23 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
-
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import EmailLogin from "./pages/EmailLogin";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Education from "./pages/Education";
-import Donations from "./pages/Donations";
-import Payment from "./pages/Payment";
-import Dashboard from "./pages/admin/Dashboard";
-import NotFound from "./pages/NotFound";
-import Events from "./pages/Events";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import About from "./pages/About";
-import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -45,13 +27,12 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
 
-              {/* Allow access to the home/landing route without authentication */}
-              <Route path="/" element={<Landing />} />
+              <Route path="/home" element={<Landing />} />
               
-              {/* These routes require authentication */}
               <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
               <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
               <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
@@ -62,7 +43,6 @@ const App = () => (
               <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
               
-              {/* Public information pages */}
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/about" element={<About />} />
