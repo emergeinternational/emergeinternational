@@ -1,13 +1,13 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import ProfileForm from "@/components/ProfileForm";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Profile = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,7 +40,17 @@ const Profile = () => {
       <Navigation variant="dark" />
       <div className="emerge-container pt-24 pb-16">
         <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-serif text-white mb-6 text-center">Your Profile</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-serif text-white">Your Profile</h1>
+            <Button
+              variant="ghost"
+              className="text-white hover:text-emerge-gold hover:bg-white/10"
+              onClick={signOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
           <div className="mb-6 text-center text-white">
             <p>Signed in as: <span className="font-bold">{user.email}</span></p>
           </div>
