@@ -267,7 +267,6 @@ const EmailLogin = () => {
         )}
       </div>
     </div>
-  </div>
   );
 };
 
