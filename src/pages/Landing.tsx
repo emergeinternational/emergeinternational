@@ -1,4 +1,3 @@
-
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -24,16 +23,15 @@ const Landing = () => {
           <div className="max-w-3xl mx-auto text-center space-y-8">
             <h1 className="emerge-heading text-4xl md:text-6xl mb-6 relative">
               <span className="relative z-10">
-                Welcome{userPreferences.country ? ` from ${userPreferences.country}` : ''} to
+                Welcome{userPreferences.country ? ` to ${userPreferences.country}` : ''} 
                 <span className="block mt-2 text-emerge-gold text-4xl md:text-6xl whitespace-normal">Emerge International</span>
               </span>
             </h1>
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              Discover a curated platform that unites African fashion talent - from innovative designers 
-              and professional models to creative photographers and industry experts. Experience our 
-              groundbreaking fashion shows, collaborative workshops, and inspiring events that showcase 
-              the diverse talents shaping the future of fashion.
+              A curated platform uniting African fashion talent - from designers 
+              and models to photographers and industry experts. Experience innovative 
+              fashion shows, collaborative workshops, and inspiring events.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
