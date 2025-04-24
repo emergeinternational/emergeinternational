@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -45,27 +44,28 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-
               <Route path="/home" element={<Landing />} />
               
+              {/* Public Routes - Accessible without authentication */}
+              <Route path="/education" element={<Education />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              
+              {/* Protected Routes - Require authentication */}
               <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
               <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
               <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
-              <Route path="/education" element={<PrivateRoute><Education /></PrivateRoute>} />
               <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
               <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
               <Route path="/admin" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
               
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/about" element={<About />} />
-              
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </TooltipProvider>
         </CartProvider>
