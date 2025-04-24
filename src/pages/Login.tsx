@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -16,8 +15,7 @@ const Login = () => {
   const languages = ["English", "Amharic", "French", "Swahili"];
 
   const handleContinueWithoutAccount = () => {
-    // Always allow continuing without an account, but optionally save preferences
-    if (rememberInfo && (country.trim() || city.trim())) {
+    if (rememberInfo) {
       localStorage.setItem('userPreferences', JSON.stringify({
         country: country.trim() || null,
         city: city.trim() || null,
@@ -25,10 +23,6 @@ const Login = () => {
       }));
     }
     
-    toast({
-      title: "Continuing as guest",
-      description: "You can create an account later to save your details.",
-    });
     navigate("/");
   };
 
