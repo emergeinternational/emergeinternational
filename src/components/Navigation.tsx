@@ -29,7 +29,7 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   return (
     <nav className={`${bgClass} ${textClass} fixed w-full z-50 top-0`}>
       <div className="emerge-container py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-4">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-1 md:hidden"
@@ -40,7 +40,7 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
           <Logo variant={logoVariant} />
         </div>
 
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-6">
           {navLinks.map((link) => (
             <Link
               key={link.name}
