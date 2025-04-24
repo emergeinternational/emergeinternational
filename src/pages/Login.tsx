@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -29,7 +28,7 @@ const Login = () => {
       title: "Continuing as guest",
       description: "You can create an account later to save your details.",
     });
-    navigate("/shop");
+    navigate("/");
   };
 
   const handleEmailContinue = () => {
