@@ -21,7 +21,7 @@ const Logo = ({ variant = "gold", className = "" }: LogoProps) => {
 
   return (
     <Link to="/" className={`block ${className}`}>
-      <div className={`font-serif tracking-wider ${getColorClass()}`}>
+      <div className={`font-serif tracking-wider text-center ${getColorClass()}`}>
         <h1 className="text-2xl md:text-3xl font-medium">EMERGE</h1>
         <p className="text-xs tracking-widest">INTERNATIONAL</p>
       </div>
