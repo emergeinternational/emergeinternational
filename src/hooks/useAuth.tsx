@@ -1,4 +1,3 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +24,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // First set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -49,7 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (event === 'PASSWORD_RECOVERY') {
           console.log('Password recovery detected');
-          // When password recovery link is clicked, we should redirect to a dedicated password reset page
           navigate('/profile');
           toast({
             title: "Password reset requested",
@@ -60,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Then check for existing session
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -85,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Navigation happens in onAuthStateChange
     } catch (error) {
       throw error;
     } finally {
@@ -125,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "Your password has been updated successfully."
       });
       
-      // After password reset, navigate to profile
       navigate('/profile');
     } catch (error) {
       throw error;

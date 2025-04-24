@@ -6,6 +6,11 @@ import { useToast } from "../hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const EmailLogin = () => {
   const [email, setEmail] = useState("");
@@ -13,7 +18,8 @@ const EmailLogin = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otp, setOtp] = useState("");
   const { toast } = useToast();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -35,23 +41,20 @@ const EmailLogin = () => {
     // If we're in forgot password mode, handle password reset
     if (isForgotPassword) {
       try {
-        const redirectUrl = `${window.location.origin}/profile`;
-        console.log("Sending password reset email with redirect to:", redirectUrl);
-        
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: redirectUrl,
+          redirectTo: `${window.location.origin}/profile`,
         });
         
         if (error) throw error;
         
-        setResetSent(true);
+        setShowOTP(true);
         toast({
-          title: "Password reset email sent",
-          description: "Check your email for a password reset link.",
+          title: "Code sent",
+          description: "Check your email for the verification code.",
         });
       } catch (error) {
         toast({
-          title: "Error sending reset email",
+          title: "Error sending code",
           description: error instanceof Error ? error.message : "An error occurred",
           variant: "destructive",
         });
@@ -74,7 +77,6 @@ const EmailLogin = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-        // Navigation is handled by onAuthStateChange in useAuth.tsx
       } else {
         await signUp(email, password);
         toast({
@@ -93,10 +95,47 @@ const EmailLogin = () => {
     }
   };
 
+  const handleVerifyOTP = async () => {
+    if (otp.length !== 6) {
+      toast({
+        title: "Invalid code",
+        description: "Please enter the 6-digit code sent to your email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'recovery'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Code verified",
+        description: "You can now set a new password.",
+      });
+      navigate('/profile');
+    } catch (error) {
+      toast({
+        title: "Verification error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleBackClick = () => {
-    if (isForgotPassword) {
+    if (showOTP) {
+      setShowOTP(false);
+    } else if (isForgotPassword) {
       setIsForgotPassword(false);
-      setResetSent(false);
     } else {
       navigate("/login");
     }
@@ -108,25 +147,46 @@ const EmailLogin = () => {
         <div className="mb-8">
           <button onClick={handleBackClick} className="flex items-center text-emerge-gold hover:text-emerge-darkGold">
             <ArrowLeft size={18} className="mr-2" />
-            <span>{isForgotPassword ? "Back to Login" : "Back"}</span>
+            <span>{showOTP ? "Back to Email" : isForgotPassword ? "Back to Login" : "Back"}</span>
           </button>
         </div>
 
         <div className="mb-12 text-center">
           <Logo className="mx-auto mb-2" />
           <h2 className="text-2xl font-serif mt-6">
-            {isForgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
+            {showOTP ? "Enter Verification Code" : isForgotPassword ? "Reset Password" : isLogin ? "Welcome Back" : "Create Account"}
           </h2>
         </div>
 
-        {resetSent ? (
-          <div className="text-center space-y-4">
-            <p>Check your email for a password reset link.</p>
-            <button
-              onClick={() => setIsForgotPassword(false)}
+        {showOTP ? (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-center text-sm text-gray-300 mb-4">
+                Enter the 6-digit code sent to {email}
+              </p>
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => setOtp(value)}
+                className="gap-2"
+                disabled={isSubmitting}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <button 
+              onClick={handleVerifyOTP}
               className="emerge-button-primary w-full"
+              disabled={isSubmitting || otp.length !== 6}
             >
-              Back to Login
+              {isSubmitting ? "Verifying..." : "Verify Code"}
             </button>
           </div>
         ) : (
@@ -183,7 +243,7 @@ const EmailLogin = () => {
               {isSubmitting 
                 ? "Please wait..." 
                 : isForgotPassword 
-                  ? "Send Reset Link" 
+                  ? "Send Code" 
                   : isLogin 
                     ? "Sign In" 
                     : "Create Account"
@@ -192,7 +252,7 @@ const EmailLogin = () => {
           </form>
         )}
 
-        {!isForgotPassword && (
+        {!isForgotPassword && !showOTP && (
           <div className="mt-8 text-center">
             <button 
               onClick={() => setIsLogin(!isLogin)} 
@@ -207,6 +267,7 @@ const EmailLogin = () => {
         )}
       </div>
     </div>
+  </div>
   );
 };
 
