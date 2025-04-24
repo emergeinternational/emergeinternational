@@ -23,6 +23,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 import Workshops from "./pages/Workshops";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
               
               {/* Protected Routes - Require authentication */}
               <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
