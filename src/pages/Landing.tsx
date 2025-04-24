@@ -1,4 +1,3 @@
-
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -78,4 +77,3 @@ const Landing = () => {
 };
 
 export default Landing;
-
