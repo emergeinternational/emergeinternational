@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Globe } from "lucide-react";
+import { ShippingBanner } from "@/components/ShippingBanner";
 
 const Shop = () => {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -14,8 +15,22 @@ const Shop = () => {
   ];
   
   const products = [
-    { id: 1, name: "Emerge T-Shirt", price: "ETB 4,800", category: "clothing", image: "/placeholder.svg" },
-    { id: 2, name: "Designer Earrings", price: "ETB 12,500", category: "accessories", image: "/placeholder.svg" },
+    { 
+      id: 1, 
+      name: "Emerge T-Shirt", 
+      price: "ETB 4,800", 
+      category: "clothing", 
+      image: "/placeholder.svg",
+      shipsTo: ["Ethiopia", "International"]
+    },
+    { 
+      id: 2, 
+      name: "Designer Earrings", 
+      price: "ETB 12,500", 
+      category: "accessories", 
+      image: "/placeholder.svg",
+      shipsTo: ["Ethiopia", "International"]
+    },
     { id: 3, name: "Leather Bag", price: "ETB 4,800", category: "accessories", image: "/placeholder.svg" },
     { id: 4, name: "Tailored Coat", price: "ETB 12,500", category: "clothing", image: "/placeholder.svg" },
     { id: 5, name: "Woven Sandals", price: "ETB 3,200", category: "footwear", image: "/placeholder.svg" },
@@ -30,13 +45,12 @@ const Shop = () => {
 
   return (
     <MainLayout>
+      <ShippingBanner />
       <div className="emerge-container py-8">
         <h1 className="emerge-heading text-4xl mb-8">Shop</h1>
         
-        {/* Categories */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row">
-            {/* Mobile Category Selector */}
             <select 
               className="block sm:hidden mb-4 p-2 border border-gray-300 rounded"
               value={activeCategory}
@@ -48,7 +62,6 @@ const Shop = () => {
               ))}
             </select>
             
-            {/* Desktop Categories */}
             <div className="hidden sm:flex flex-col space-y-2 w-64 mr-8">
               <button 
                 onClick={() => setActiveCategory("all")}
@@ -74,7 +87,6 @@ const Shop = () => {
               ))}
             </div>
             
-            {/* Products Grid */}
             <div className="flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.map(product => (
@@ -92,6 +104,10 @@ const Shop = () => {
                     </div>
                     <h3 className="font-medium">{product.name}</h3>
                     <p className="text-gray-700">{product.price}</p>
+                    <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
+                      <Globe size={12} />
+                      <span>International Shipping Available</span>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -105,7 +121,6 @@ const Shop = () => {
           </div>
         </div>
         
-        {/* Additional Info */}
         <div className="mt-12 border-t pt-8">
           <h2 className="emerge-heading text-2xl mb-4">About Our Products</h2>
           <p className="text-gray-700 max-w-3xl">
