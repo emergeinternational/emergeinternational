@@ -53,11 +53,26 @@ const Contact = () => {
                 <div className="flex items-start gap-4">
                   <MapPin className="text-emerge-gold mt-1" />
                   <div>
-                    <h3 className="font-medium mb-2">Visit Us</h3>
+                    <h3 className="font-medium mb-2">World Headquarters</h3>
                     <p className="text-gray-600">
                       World Headquarters,<br />
                       1 Penn Plaza,<br />
                       New York, NYC 10001
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <MapPin className="text-emerge-gold mt-1" />
+                  <div>
+                    <h3 className="font-medium mb-2">South America Office</h3>
+                    <p className="text-gray-600">
+                      25-148 Calle San Juan,<br />
+                      South America
                     </p>
                   </div>
                 </div>
