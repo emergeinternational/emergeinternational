@@ -6,18 +6,18 @@ const About = () => {
   const missionSections = [
     {
       icon: Heart,
-      title: "Empowering African Creatives",
-      description: "We are committed to discovering, nurturing, and promoting talented fashion professionals across the African continent. From designers and models to photographers and videographers, our mission is to provide a global platform that showcases the incredible creativity and craftsmanship of emerging African talent."
+      title: "Empowering Global Creative Talent",
+      description: "We are committed to discovering, nurturing, and promoting talented fashion professionals worldwide, with a special focus on the vibrant and influential African fashion scene. From designers and models to photographers and videographers, our mission is to provide a platform that celebrates creativity and craftsmanship from diverse cultural perspectives."
     },
     {
       icon: Globe,
       title: "Global Market Access",
-      description: "We break down barriers by connecting African creatives with international markets. Through our platform, fashion professionals gain exposure, build their portfolios, and access opportunities that were previously out of reach."
+      description: "We connect creative professionals with international markets, with particular emphasis on showcasing Africa's rich fashion heritage and contemporary innovations. Through our platform, fashion professionals gain exposure, build their portfolios, and access opportunities in the global fashion ecosystem."
     },
     {
       icon: Rocket,
       title: "Education and Resources",
-      description: "Education is at the core of our mission. We offer workshops, courses, and resources that equip fashion professionals with the skills, knowledge, and tools they need to succeed in the competitive global fashion industry."
+      description: "Education is at the core of our mission. We offer workshops, courses, and resources that equip fashion professionals with the skills, knowledge, and tools they need to succeed in the competitive global fashion industry, while celebrating and promoting Africa's significant influence on worldwide fashion trends."
     }
   ];
 
@@ -25,17 +25,17 @@ const About = () => {
     {
       icon: Users,
       title: "Models",
-      description: "We support emerging models by providing training, professional development, and opportunities to work with established brands and designers. Our platform connects models with casting directors and agencies worldwide."
+      description: "We support emerging models globally, with special initiatives focused on Africa's dynamic modeling industry. Our platform provides comprehensive training, professional development, and connections with international casting directors and agencies."
     },
     {
       icon: Camera,
       title: "Photographers",
-      description: "Fashion photographers receive mentorship, technical training, and opportunities to build their portfolios. We facilitate collaborations with designers and models while showcasing their work to international publications."
+      description: "Fashion photographers receive expert mentorship and technical training while gaining opportunities to showcase diverse cultural perspectives through their work. We facilitate collaborations between international talents and help build impressive portfolios that resonate with global publications."
     },
     {
       icon: Video,
       title: "Videographers",
-      description: "Our support for videographers includes specialized training in fashion film production, access to industry-standard equipment, and opportunities to create content for fashion shows, brand campaigns, and digital platforms."
+      description: "Our support for videographers spans worldwide, offering specialized training in fashion film production, access to industry-standard equipment, and opportunities to create content that celebrates both local traditions and contemporary global trends."
     }
   ];
 
@@ -61,7 +61,7 @@ const About = () => {
         <section className="mt-12 text-center max-w-2xl mx-auto">
           <h2 className="text-3xl font-serif mb-6">Our Vision</h2>
           <p className="text-gray-700 leading-relaxed">
-            We envision a future where African fashion professionals are recognized globally for their innovation, creativity, and unique cultural narratives. By providing education, resources, and market access, we aim to transform the fashion industry and create opportunities for all emerging talents in the ecosystem.
+            We envision a truly inclusive global fashion industry that celebrates diversity and cultural exchange. While we maintain a strong focus on amplifying Africa's extraordinary influence and talent in the worldwide fashion scene, our platform embraces and connects creative professionals from all corners of the globe, fostering cross-cultural collaboration and innovation.
           </p>
         </section>
 
@@ -85,11 +85,11 @@ const About = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-xl mb-4">Sustainability</h3>
-              <p>We prioritize sustainable and ethical fashion practices, supporting creatives who embrace environmentally conscious and socially responsible approaches to their work.</p>
+              <p>We champion sustainable and ethical fashion practices worldwide, supporting creatives who embrace environmentally conscious and socially responsible approaches in their work, while drawing inspiration from Africa's rich heritage of sustainable craftsmanship.</p>
             </div>
             <div>
-              <h3 className="text-xl mb-4">Cultural Preservation</h3>
-              <p>We celebrate and preserve African creative traditions while encouraging innovation and contemporary interpretations of cultural heritage across all aspects of fashion.</p>
+              <h3 className="text-xl mb-4">Cultural Exchange</h3>
+              <p>We facilitate meaningful cultural exchange in the fashion industry, with particular emphasis on showcasing Africa's profound influence on global fashion. We celebrate diverse creative traditions while encouraging innovation and contemporary interpretations that enrich the international fashion landscape.</p>
             </div>
           </div>
         </section>
