@@ -30,9 +30,10 @@ const Landing = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              A curated platform uniting African fashion talent - from designers 
-              and models to photographers and industry experts. Experience innovative 
-              fashion shows, collaborative workshops, and inspiring events.
+              Celebrating the rich tapestry of African fashion - a global platform that amplifies the voices of African designers, 
+              models, photographers, and creative visionaries. We're more than a marketplace; we're a movement that 
+              transforms African creativity into a powerful global narrative, showcasing innovation, cultural heritage, 
+              and the extraordinary talent that defines contemporary African fashion.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -55,18 +56,18 @@ const Landing = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">Fashion Ecosystem</h3>
-                <p className="text-gray-600">Uniting designers, models, photographers, and industry professionals in collaborative showcases</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">Cultural Expression</h3>
+                <p className="text-gray-600">Elevating African fashion as a powerful medium of cultural storytelling and global dialogue</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">African Talent</h3>
-                <p className="text-gray-600">Celebrating Africa's diverse fashion professionals through our innovative platform</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">Creative Ecosystem</h3>
+                <p className="text-gray-600">Connecting designers, models, photographers, and industry professionals across Africa</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
-                <h3 className="text-xl font-serif text-emerge-gold mb-2">Industry Growth</h3>
-                <p className="text-gray-600">Nurturing the next generation of fashion professionals through mentorship and opportunities</p>
+                <h3 className="text-xl font-serif text-emerge-gold mb-2">Global Visibility</h3>
+                <p className="text-gray-600">Providing a world-class platform that showcases the depth and innovation of African fashion talent</p>
               </div>
             </div>
           </div>
@@ -77,3 +78,4 @@ const Landing = () => {
 };
 
 export default Landing;
+
