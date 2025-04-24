@@ -1,13 +1,156 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { Link } from "react-router-dom";
+import MainLayout from "../layouts/MainLayout";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <MainLayout>
+      {/* Hero Section */}
+      <section className="bg-emerge-darkBg text-white relative">
+        <div className="emerge-container py-20 md:py-32 flex flex-col items-center">
+          <h1 className="emerge-heading text-4xl md:text-6xl mb-6 text-center">
+            EMERGE INTERNATIONAL
+          </h1>
+          <p className="text-lg md:text-xl mb-8 max-w-2xl text-center">
+            Supporting emerging fashion talent across Africa through education, resources, and global market access.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link to="/shop" className="emerge-button-primary">
+              Shop Collection
+            </Link>
+            <Link to="/education" className="emerge-button-secondary">
+              Explore Education
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="py-16">
+        <div className="emerge-container">
+          <h2 className="emerge-heading text-3xl mb-8">Featured Products</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { id: 1, name: "Emerge T-Shirt", price: "ETB 4,800", image: "/placeholder.svg" },
+              { id: 2, name: "Designer Earrings", price: "ETB 12,500", image: "/placeholder.svg" },
+              { id: 3, name: "Leather Bag", price: "ETB 4,800", image: "/placeholder.svg" },
+              { id: 4, name: "Tailored Coat", price: "ETB 12,500", image: "/placeholder.svg" }
+            ].map(product => (
+              <Link to={`/shop/product/${product.id}`} key={product.id} className="group">
+                <div className="bg-gray-100 aspect-square mb-4 overflow-hidden">
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <h3 className="font-medium">{product.name}</h3>
+                <p className="text-gray-700">{product.price}</p>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link to="/shop" className="emerge-button-primary">
+              View All Products
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Education Section */}
+      <section className="py-16 bg-emerge-cream">
+        <div className="emerge-container">
+          <h2 className="emerge-heading text-3xl mb-8">Education & Workshops</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { id: 1, name: "Fashion Design 101", level: "Beginner", image: "/placeholder.svg" },
+              { id: 2, name: "Fashion Marketing Basics", level: "Intermediate", image: "/placeholder.svg" },
+              { id: 3, name: "Sustainable Fashion Practices", level: "Advanced", image: "/placeholder.svg" }
+            ].map(course => (
+              <Link to={`/education/course/${course.id}`} key={course.id} className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="aspect-video overflow-hidden">
+                  <img 
+                    src={course.image} 
+                    alt={course.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="p-4">
+                  <span className="text-xs text-gray-500">{course.level}</span>
+                  <h3 className="font-medium text-lg">{course.name}</h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link to="/education" className="emerge-button-primary">
+              Explore All Courses
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Donation Feature */}
+      <section className="py-16 bg-emerge-darkBg text-white">
+        <div className="emerge-container">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="emerge-heading text-3xl mb-4">Support Emerging Designers</h2>
+            <p className="mb-8">
+              Your donations directly fund scholarships, resources, and opportunities for talented 
+              fashion designers across Africa.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <Link 
+                to="/donations" 
+                className="px-8 py-3 bg-emerge-gold hover:bg-emerge-darkGold text-black font-medium rounded-sm transition-all duration-200"
+              >
+                ETB 500
+              </Link>
+              <Link 
+                to="/donations" 
+                className="px-8 py-3 bg-emerge-gold hover:bg-emerge-darkGold text-black font-medium rounded-sm transition-all duration-200"
+              >
+                ETB 1,000
+              </Link>
+              <Link 
+                to="/donations" 
+                className="px-8 py-3 bg-emerge-gold hover:bg-emerge-darkGold text-black font-medium rounded-sm transition-all duration-200"
+              >
+                ETB 2,500
+              </Link>
+            </div>
+            <Link to="/donations" className="emerge-button-secondary">
+              Donate Now
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="py-16">
+        <div className="emerge-container">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="emerge-heading text-3xl mb-4">Join Our Community</h2>
+            <p className="mb-6">
+              Stay updated on new collections, workshops, and designer features.
+            </p>
+            <form className="flex flex-col sm:flex-row gap-2 w-full max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Your email address"
+                className="flex-1 py-2 px-4 border border-gray-300 focus:outline-none focus:border-emerge-gold"
+              />
+              <button 
+                type="submit" 
+                className="bg-emerge-gold hover:bg-emerge-darkGold text-black font-medium py-2 px-6 transition-all duration-200"
+              >
+                Subscribe
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </MainLayout>
   );
 };
 
