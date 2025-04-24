@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Facebook, Instagram } from "lucide-react";
-import { Icon } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -45,7 +44,6 @@ const Footer = () => {
       href: "https://instagram.com/emergeinternational",
       label: "Instagram"
     }
-    // Removed TikTok from the array since we'll handle it separately
   ];
 
   return (
@@ -55,8 +53,7 @@ const Footer = () => {
           <div>
             <Logo className="mb-6" />
             <p className="text-gray-300 mb-4 max-w-xs">
-              Supporting emerging fashion talent across Africa through education,
-              resources, and global market access.
+              Supporting emerging fashion talent across the world through education, resources, and global market access.
             </p>
             <p className="text-gray-300 text-sm">
               Owned and operated by Casa Noir LLC, an American Company.
@@ -74,7 +71,6 @@ const Footer = () => {
                   <social.icon size={24} />
                 </a>
               ))}
-              {/* Add TikTok icon separately */}
               <a
                 href="https://tiktok.com/@emergeinternational"
                 target="_blank"
@@ -82,7 +78,6 @@ const Footer = () => {
                 className="text-gray-300 hover:text-emerge-gold transition-colors"
                 aria-label="TikTok"
               >
-                {/* Manually rendering the TikTok SVG icon */}
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
                   width="24" 
