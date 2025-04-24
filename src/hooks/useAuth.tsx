@@ -53,6 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
+        if (session?.user) {
+          // If there's already a session, don't redirect right away
+          // This prevents issues with the initial loading
+          console.log("User is already authenticated", session.user);
+        }
       } catch (error) {
         console.error('Error checking authentication:', error);
       } finally {
@@ -79,11 +84,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Using current window location for redirect
+      const currentOrigin = window.location.origin;
       const { error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: window.location.origin + '/profile'
+          emailRedirectTo: `${currentOrigin}/profile`
         } 
       });
       if (error) throw error;

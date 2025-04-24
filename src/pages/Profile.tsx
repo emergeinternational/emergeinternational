@@ -12,7 +12,10 @@ const Profile = () => {
 
   useEffect(() => {
     if (!isLoading && !user) {
+      console.log("No authenticated user found in Profile page, redirecting to login");
       navigate("/login");
+    } else if (user) {
+      console.log("User authenticated in Profile page:", user.email);
     }
   }, [user, isLoading, navigate]);
 
@@ -30,7 +33,14 @@ const Profile = () => {
       <div className="emerge-container pt-24 pb-16">
         <div className="max-w-2xl mx-auto bg-white/10 p-6 rounded-lg shadow-lg">
           <h1 className="text-2xl font-serif text-white mb-6 text-center">Your Profile</h1>
-          {user && <ProfileForm />}
+          {user && (
+            <>
+              <div className="mb-6 text-center text-white">
+                <p>Signed in as: <span className="font-bold">{user.email}</span></p>
+              </div>
+              <ProfileForm />
+            </>
+          )}
         </div>
       </div>
     </div>

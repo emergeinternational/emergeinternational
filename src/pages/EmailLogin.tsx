@@ -42,13 +42,15 @@ const EmailLogin = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-        navigate("/profile");
+        // Navigate is handled by onAuthStateChange in useAuth.tsx
       } else {
         await signUp(email, password);
         toast({
           title: "Account created",
-          description: "Please check your email to verify your account.",
+          description: "Please complete your profile.",
         });
+        // Explicitly navigate to profile page after signup
+        navigate("/profile");
       }
     } catch (error) {
       toast({
