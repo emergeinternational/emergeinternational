@@ -1,7 +1,6 @@
-
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { Facebook, Instagram, TikTok } from "lucide-react";
+import { Facebook, Instagram } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -19,7 +18,6 @@ const Footer = () => {
     {
       title: "Education",
       links: [
-        // Removed "Workshops" link
         { label: "Courses", href: "/education/courses" },
         { label: "Events", href: "/events" }
       ]
@@ -27,7 +25,7 @@ const Footer = () => {
     {
       title: "About",
       links: [
-        { label: "Our Mission", href: "/about" }, // Updated href
+        { label: "Our Mission", href: "/about" },
         { label: "Designers", href: "/designers" },
         { label: "Donations", href: "/donations" },
         { label: "Contact Us", href: "/contact" }
@@ -47,7 +45,7 @@ const Footer = () => {
       label: "Instagram"
     },
     {
-      icon: TikTok,
+      icon: Instagram,
       href: "https://tiktok.com/@emergeinternational",
       label: "TikTok"
     }
