@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,8 +31,8 @@ const eventFormSchema = z.object({
   description: z.string(),
   date: z.string(),
   location: z.string(),
-  capacity: z.string().transform((val) => parseInt(val, 10) || 0),
-  price: z.string().transform((val) => parseFloat(val) || 0),
+  capacity: z.coerce.number().int().positive().optional(),
+  price: z.coerce.number().positive().optional(),
 });
 
 const EventsPage = () => {
@@ -61,8 +60,8 @@ const EventsPage = () => {
       description: "",
       date: "",
       location: "",
-      capacity: "",
-      price: "",
+      capacity: undefined,
+      price: undefined,
     },
   });
 
@@ -75,8 +74,8 @@ const EventsPage = () => {
           description: values.description,
           date: new Date(values.date).toISOString(),
           location: values.location,
-          capacity: Number(values.capacity), // Explicitly convert to number
-          price: Number(values.price), // Explicitly convert to number
+          capacity: values.capacity,
+          price: values.price,
         }]);
 
       if (error) throw error;
