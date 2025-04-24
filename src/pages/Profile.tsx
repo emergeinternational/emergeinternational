@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -22,12 +21,6 @@ const Profile = () => {
       navigate("/login");
     } else if (user) {
       console.log("User authenticated in Profile page:", user.email);
-      
-      // Check if this is a password recovery session
-      const hash = window.location.hash;
-      if (hash && hash.includes('type=recovery')) {
-        setShowPasswordReset(true);
-      }
     }
   }, [user, isLoading, navigate]);
 
@@ -49,7 +42,7 @@ const Profile = () => {
   const handleRequestPasswordReset = async () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
-        redirectTo: `${window.location.origin}/profile`
+        redirectTo: `${window.location.origin}/email-login#type=recovery`
       });
       
       if (error) throw error;

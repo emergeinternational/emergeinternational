@@ -13,6 +13,7 @@ export const PasswordResetForm = ({
   onResetSuccess,
 }: PasswordResetFormProps) => {
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(initialSubmitting);
   const { toast } = useToast();
   const { resetPassword } = useAuth();
@@ -24,6 +25,15 @@ export const PasswordResetForm = ({
       toast({
         title: "New Password is required",
         description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please make sure your passwords match.",
         variant: "destructive",
       });
       return;
@@ -58,6 +68,22 @@ export const PasswordResetForm = ({
           className="emerge-input"
           placeholder="Enter new password"
           disabled={isSubmitting}
+          autoComplete="new-password"
+        />
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="confirmPassword" className="block text-gray-300 text-sm">
+          Confirm Password
+        </label>
+        <input
+          id="confirmPassword"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="emerge-input"
+          placeholder="Confirm new password"
+          disabled={isSubmitting}
+          autoComplete="new-password"
         />
       </div>
       <button 

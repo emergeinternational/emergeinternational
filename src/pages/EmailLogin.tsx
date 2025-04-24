@@ -24,6 +24,7 @@ const EmailLogin = () => {
     // Check if this is a recovery link
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
+      console.log("Recovery hash detected:", hash);
       setIsForgotPassword(true);
     }
   }, []);
@@ -41,7 +42,7 @@ const EmailLogin = () => {
     setIsSubmitting(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/email-login`
+        redirectTo: `${window.location.origin}/email-login#type=recovery`
       });
       
       if (error) throw error;
