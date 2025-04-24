@@ -12,7 +12,18 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const languages = ["English", "Amharic", "French", "Swahili"];
+  const languages = [
+    "English",
+    "Spanish",
+    "German",
+    "Chinese",
+    "Arabic",
+    "Japanese",
+    "Portuguese",
+    "French",
+    "Amharic",
+    "Swahili"
+  ];
 
   const handleContinueWithoutAccount = () => {
     if (rememberInfo) {
@@ -86,7 +97,7 @@ const Login = () => {
               <span>▼</span>
             </div>
             {showLanguageDropdown && (
-              <div className="absolute top-full left-0 right-0 bg-emerge-darkBg border border-emerge-gold/50 z-10">
+              <div className="absolute top-full left-0 right-0 bg-emerge-darkBg border border-emerge-gold/50 rounded-md z-10 max-h-60 overflow-y-auto">
                 {languages.map((lang) => (
                   <div
                     key={lang}
