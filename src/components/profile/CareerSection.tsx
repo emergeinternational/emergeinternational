@@ -14,7 +14,7 @@ interface CareerProps {
 const CareerSection = ({ formData, onChange }: CareerProps) => {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white mb-4">Career Information</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Career Information</h2>
       
       <div>
         <label htmlFor="profession" className="block text-sm font-medium text-white mb-1">

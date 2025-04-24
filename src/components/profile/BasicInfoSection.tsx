@@ -16,7 +16,7 @@ interface BasicInfoProps {
 const BasicInfoSection = ({ formData, onChange }: BasicInfoProps) => {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white mb-4">Basic Information</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Basic Information</h2>
       
       <div>
         <label htmlFor="full_name" className="block text-sm font-medium text-white mb-1">

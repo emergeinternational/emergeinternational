@@ -26,7 +26,7 @@ const FashionSection = ({ formData, onChange }: FashionProps) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white mb-4">Fashion Preferences</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Fashion Preferences</h2>
       
       <div>
         <label htmlFor="fashion_style" className="block text-sm font-medium text-white mb-1">
