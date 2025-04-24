@@ -1,3 +1,4 @@
+
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -29,9 +30,14 @@ const Landing = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-gray-600 mb-8">
-              A global platform empowering African creativity through fashion, design, and innovation. 
-              We connect talented African designers, models, and creative professionals with a worldwide audience, 
-              transforming cultural expression into a powerful global narrative.
+              A global stage for fashion, music, and art—powered by Africa. We curate experiences that connect 
+              continents and cultures, spotlighting African designers and creatives as catalysts in the global 
+              creative movement. From Lagos to London, New York City to Addis our platform celebrates innovation, 
+              identity, and storytelling that transcends borders.
+
+              <span className="block mt-4 font-semibold text-emerge-gold">
+                Rooted in Africa. Reverberating worldwide.
+              </span>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
