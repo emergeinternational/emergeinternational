@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 
 interface OTPVerificationProps {
   email: string;
@@ -11,18 +11,19 @@ interface OTPVerificationProps {
 }
 
 export const OTPVerification = ({
-  email,
+  email: initialEmail,
   isSubmitting,
   onVerificationSuccess,
 }: OTPVerificationProps) => {
+  const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState("");
-  const [canResend, setCanResend] = useState(false);
+  const [canResend, setCanResend] = useState(true);
   const [resendCountdown, setResendCountdown] = useState(60);
   const { toast } = useToast();
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (resendCountdown > 0) {
+    if (resendCountdown > 0 && !canResend) {
       timer = setTimeout(() => {
         setResendCountdown(prev => prev - 1);
       }, 1000);
@@ -30,13 +31,22 @@ export const OTPVerification = ({
       setCanResend(true);
     }
     return () => clearTimeout(timer);
-  }, [resendCountdown]);
+  }, [resendCountdown, canResend]);
 
   const handleResendOTP = async () => {
     if (!email.trim()) {
       toast({
         title: "Email Required",
         description: "Please enter your email address first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
         variant: "destructive",
       });
       return;
@@ -50,16 +60,16 @@ export const OTPVerification = ({
       if (error) throw error;
       
       toast({
-        title: "OTP Resent",
-        description: "A new OTP has been sent to your email.",
+        title: "OTP Sent",
+        description: "A verification code has been sent to your email.",
       });
       
       setCanResend(false);
       setResendCountdown(60);
     } catch (error) {
       toast({
-        title: "Resend Failed",
-        description: error instanceof Error ? error.message : "Could not resend OTP",
+        title: "Send Failed",
+        description: error instanceof Error ? error.message : "Could not send verification code",
         variant: "destructive",
       });
     }
@@ -101,9 +111,22 @@ export const OTPVerification = ({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-center text-sm text-gray-300 mb-4">
-          Enter the 6-digit code sent to {email}
-        </p>
+        <label htmlFor="email" className="block text-sm text-gray-300">
+          Email Address
+        </label>
+        <Input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          className="emerge-input"
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm text-gray-300">Verification Code</label>
         <InputOTP
           maxLength={6}
           value={otp}
@@ -126,7 +149,7 @@ export const OTPVerification = ({
           disabled={!canResend || isSubmitting}
           className={`text-emerge-gold ${canResend ? 'hover:underline' : 'opacity-50'}`}
         >
-          {canResend ? "Resend Code" : `Resend in ${resendCountdown}s`}
+          {canResend ? "Send Code" : `Resend in ${resendCountdown}s`}
         </button>
       </div>
 
