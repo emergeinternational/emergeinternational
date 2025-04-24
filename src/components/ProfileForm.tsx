@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -8,6 +7,7 @@ import BasicInfoSection from "./profile/BasicInfoSection";
 import CareerSection from "./profile/CareerSection";
 import FashionSection from "./profile/FashionSection";
 import ContactSection from "./profile/ContactSection";
+import AvatarUpload from "./profile/AvatarUpload";
 
 const ProfileForm = () => {
   const { user } = useAuth();
@@ -28,7 +28,8 @@ const ProfileForm = () => {
     favorite_brands: [] as string[],
     linkedin_url: "",
     preferred_shopping_locations: [] as string[],
-    size_preferences: {} as Record<string, any>
+    size_preferences: {} as Record<string, any>,
+    avatar_url: ""
   });
 
   useEffect(() => {
@@ -62,10 +63,10 @@ const ProfileForm = () => {
           favorite_brands: data.favorite_brands || [],
           linkedin_url: data.linkedin_url || "",
           preferred_shopping_locations: data.preferred_shopping_locations || [],
-          // Fix the type issue by ensuring size_preferences is always an object
           size_preferences: typeof data.size_preferences === 'object' && data.size_preferences !== null 
             ? data.size_preferences 
-            : {}
+            : {},
+          avatar_url: data.avatar_url || ""
         });
       }
     };
@@ -98,8 +99,21 @@ const ProfileForm = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleAvatarUpload = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      avatar_url: url
+    }));
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      <AvatarUpload 
+        url={formData.avatar_url} 
+        onUpload={handleAvatarUpload}
+        userId={user?.id || ''}
+      />
+      
       <BasicInfoSection formData={formData} onChange={handleChange} />
       <CareerSection formData={formData} onChange={handleChange} />
       <FashionSection formData={formData} onChange={handleChange} />
