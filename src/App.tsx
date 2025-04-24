@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,6 +26,9 @@ import Privacy from "./pages/Privacy";
 import About from "./pages/About";
 import Workshops from "./pages/Workshops";
 import Contact from "./pages/Contact";
+import EventsPage from "./pages/admin/EventsPage";
+import DonationsPage from "./pages/admin/DonationsPage";
+import OrdersPage from "./pages/admin/OrdersPage";
 
 const queryClient = new QueryClient();
 
@@ -84,12 +86,17 @@ const App = () => (
               } />
               <Route path="/admin/events" element={
                 <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <Dashboard />
+                  <EventsPage />
                 </RoleBasedRoute>
               } />
               <Route path="/admin/donations" element={
                 <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <Dashboard />
+                  <DonationsPage />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/orders" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                  <OrdersPage />
                 </RoleBasedRoute>
               } />
               
