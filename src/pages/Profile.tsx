@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -8,7 +7,7 @@ import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Profile = () => {
-  const { user, isLoading, signOut, resetPassword } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -53,6 +52,7 @@ const Profile = () => {
     
     setIsResetting(true);
     try {
+      const { resetPassword } = useAuth();
       await resetPassword(newPassword);
       setShowPasswordReset(false);
       setNewPassword("");

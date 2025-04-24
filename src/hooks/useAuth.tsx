@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
+      
       if (error) throw error;
 
       toast({
@@ -120,8 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: "Your password has been updated successfully."
       });
       
-      navigate('/profile');
+      navigate('/login');
     } catch (error) {
+      toast({
+        title: "Password Reset Error",
+        description: error instanceof Error ? error.message : "Could not reset password",
+        variant: "destructive"
+      });
       throw error;
     } finally {
       setIsLoading(false);
