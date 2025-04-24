@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ShoppingBag, User } from "lucide-react";
@@ -15,7 +14,6 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
     { name: "Shop", href: "/shop" },
     { name: "Education", href: "/education" },
     { name: "Donations", href: "/donations" },
-    { name: "Events", href: "/events" },
   ];
 
   const bgClass = variant === "dark" ? "bg-emerge-darkBg" : "bg-white";
