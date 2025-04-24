@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Events = () => {
   const [selectedTickets, setSelectedTickets] = useState<{ [key: number]: string }>({});
+  const [isProcessing, setIsProcessing] = useState<{ [key: number]: boolean }>({});
   const { toast } = useToast();
 
   const events = [
@@ -66,7 +67,7 @@ const Events = () => {
     }));
   };
 
-  const handleRegister = (eventId: number) => {
+  const handleRegister = async (eventId: number) => {
     if (!selectedTickets[eventId]) {
       toast({
         title: "Please select a ticket type",
@@ -76,11 +77,30 @@ const Events = () => {
       return;
     }
 
-    toast({
-      title: "Proceeding to payment",
-      description: `Selected ${selectedTickets[eventId]} ticket`
-    });
-    // Will integrate with payment system later
+    // Set processing state for this specific event
+    setIsProcessing(prev => ({ ...prev, [eventId]: true }));
+
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Here you would normally redirect to a payment gateway or process the payment
+      toast({
+        title: "Payment successful!",
+        description: `Your ${selectedTickets[eventId]} ticket has been confirmed.`,
+      });
+
+      // In a real implementation, you would redirect to a payment page:
+      // window.location.href = "/payment?eventId=" + eventId + "&ticketType=" + selectedTickets[eventId];
+    } catch (error) {
+      toast({
+        title: "Payment failed",
+        description: "There was an error processing your payment. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(prev => ({ ...prev, [eventId]: false }));
+    }
   };
 
   return (
@@ -140,10 +160,11 @@ const Events = () => {
                     </span>
                     <Button 
                       onClick={() => handleRegister(event.id)}
+                      disabled={isProcessing[event.id] || !selectedTickets[event.id]}
                       size="sm" 
                       className="bg-emerge-gold hover:bg-emerge-gold/90"
                     >
-                      Register Now
+                      {isProcessing[event.id] ? "Processing..." : "Register Now"}
                     </Button>
                   </div>
                 </div>
