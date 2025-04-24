@@ -1,4 +1,3 @@
-
 import MainLayout from "../layouts/MainLayout";
 import { Heart, Globe, Rocket, Camera, Users, Video } from "lucide-react";
 
@@ -74,7 +73,12 @@ const About = () => {
                   <section.icon size={36} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl font-serif mb-3">{section.title}</h3>
-                <p className="text-gray-700 text-sm">{section.description}</p>
+                <p className="text-gray-700 text-sm">
+                  {section.title === "Models" 
+                    ? "We support both emerging and established models globally, with special initiatives focused on Africa's dynamic modeling industry. Our platform provides comprehensive training, professional development, and connections with international casting directors and agencies."
+                    : section.description
+                  }
+                </p>
               </div>
             ))}
           </div>

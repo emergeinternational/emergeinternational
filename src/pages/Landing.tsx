@@ -1,4 +1,3 @@
-
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +31,8 @@ const Landing = () => {
             <p className="text-lg md:text-xl text-gray-600 mb-8">
               Discover a curated collection of fashion that bridges cultures and celebrates creativity. 
               With a special focus on Africa's vibrant influence, we bring you worldwide design excellence 
-              through our innovative fashion shows, designer workshops, and inspiring events.
+              through our innovative fashion shows featuring emerging and established models, designer workshops, 
+              and inspiring events.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -56,17 +56,17 @@ const Landing = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">Global Fashion</h3>
-                <p className="text-gray-600">Curated collections from talented designers worldwide</p>
+                <p className="text-gray-600">Curated collections and runway shows featuring diverse talent from around the world</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">African Heritage</h3>
-                <p className="text-gray-600">Celebrating Africa's rich fashion influence and creativity</p>
+                <p className="text-gray-600">Celebrating Africa's rich fashion influence through our designers and models</p>
               </div>
               
               <div className="p-6 bg-emerge-cream rounded-lg shadow-sm">
                 <h3 className="text-xl font-serif text-emerge-gold mb-2">Sustainable Future</h3>
-                <p className="text-gray-600">Committed to ethical fashion and responsible practices</p>
+                <p className="text-gray-600">Committed to ethical fashion and nurturing emerging talent</p>
               </div>
             </div>
           </div>
