@@ -1,8 +1,9 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfileForm = () => {
   const { user } = useAuth();
@@ -14,6 +15,34 @@ const ProfileForm = () => {
     city: "",
     language: ""
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      if (data) {
+        setFormData({
+          full_name: data.full_name || "",
+          country: data.country || "",
+          city: data.city || "",
+          language: data.language || ""
+        });
+      }
+    };
+
+    fetchProfile();
+  }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +68,7 @@ const ProfileForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="full_name" className="block text-sm font-medium mb-1">
+        <label htmlFor="full_name" className="block text-sm font-medium text-white mb-1">
           Full Name
         </label>
         <input
@@ -48,12 +77,13 @@ const ProfileForm = () => {
           value={formData.full_name}
           onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
           className="emerge-input w-full"
+          placeholder="Enter your full name"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="country" className="block text-sm font-medium mb-1">
+        <label htmlFor="country" className="block text-sm font-medium text-white mb-1">
           Country
         </label>
         <input
@@ -62,12 +92,13 @@ const ProfileForm = () => {
           value={formData.country}
           onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
           className="emerge-input w-full"
+          placeholder="Enter your country"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="city" className="block text-sm font-medium mb-1">
+        <label htmlFor="city" className="block text-sm font-medium text-white mb-1">
           City
         </label>
         <input
@@ -76,12 +107,13 @@ const ProfileForm = () => {
           value={formData.city}
           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
           className="emerge-input w-full"
+          placeholder="Enter your city"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="language" className="block text-sm font-medium mb-1">
+        <label htmlFor="language" className="block text-sm font-medium text-white mb-1">
           Preferred Language
         </label>
         <input
@@ -90,6 +122,7 @@ const ProfileForm = () => {
           value={formData.language}
           onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value }))}
           className="emerge-input w-full"
+          placeholder="Enter your preferred language"
           required
         />
       </div>
