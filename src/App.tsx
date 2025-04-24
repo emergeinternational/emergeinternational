@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,6 +6,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
+
+// Import all page components
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import EmailLogin from "./pages/EmailLogin";
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Education from "./pages/Education";
+import Donations from "./pages/Donations";
+import Payment from "./pages/Payment";
+import Dashboard from "./pages/admin/Dashboard";
+import Events from "./pages/Events";
+import Profile from "./pages/Profile";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
