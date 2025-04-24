@@ -32,8 +32,8 @@ const eventFormSchema = z.object({
   description: z.string(),
   date: z.string(),
   location: z.string(),
-  capacity: z.string().transform(Number),
-  price: z.string().transform(Number),
+  capacity: z.string().transform((val) => parseInt(val, 10) || 0),
+  price: z.string().transform((val) => parseFloat(val) || 0),
 });
 
 const EventsPage = () => {
@@ -75,8 +75,8 @@ const EventsPage = () => {
           description: values.description,
           date: new Date(values.date).toISOString(),
           location: values.location,
-          capacity: values.capacity,
-          price: values.price,
+          capacity: values.capacity, // Now this is a number thanks to the zod transform
+          price: values.price, // Now this is a number thanks to the zod transform
         }]);
 
       if (error) throw error;
