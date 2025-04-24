@@ -15,8 +15,8 @@ const Landing = () => {
         <div className="absolute top-0 right-0 opacity-5 transform rotate-12 translate-x-1/4 -translate-y-1/4">
           <ShoppingBag 
             size={500} 
-            className="text-emerge-darkBg/10 stroke-[0.5]" 
-            strokeWidth={1} 
+            className="text-emerge-gold/20" 
+            strokeWidth={0.5} 
           />
         </div>
 
@@ -75,4 +75,3 @@ const Landing = () => {
 };
 
 export default Landing;
-
