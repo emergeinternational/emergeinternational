@@ -75,8 +75,8 @@ const EventsPage = () => {
           description: values.description,
           date: new Date(values.date).toISOString(),
           location: values.location,
-          capacity: values.capacity, // Now this is a number thanks to the zod transform
-          price: values.price, // Now this is a number thanks to the zod transform
+          capacity: Number(values.capacity), // Explicitly convert to number
+          price: Number(values.price), // Explicitly convert to number
         }]);
 
       if (error) throw error;
