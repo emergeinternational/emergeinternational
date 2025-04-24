@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
@@ -5,13 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 
 interface OTPVerificationProps {
-  email: string;
+  email?: string;
   isSubmitting: boolean;
   onVerificationSuccess: () => void;
 }
 
 export const OTPVerification = ({
-  email: initialEmail,
+  email: initialEmail = '',
   isSubmitting,
   onVerificationSuccess,
 }: OTPVerificationProps) => {
