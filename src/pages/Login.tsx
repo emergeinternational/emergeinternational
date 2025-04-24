@@ -14,10 +14,10 @@ const Login = () => {
   const navigate = useNavigate();
 
   const languages = [
+    "English", // English is now explicitly first
     "Amharic", 
     "Arabic", 
     "Chinese", 
-    "English", 
     "French", 
     "German", 
     "Japanese", 
