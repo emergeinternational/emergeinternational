@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
@@ -26,7 +25,7 @@ const Footer = () => {
     {
       title: "About",
       links: [
-        { label: "Our Mission", href: "/about" },
+        { label: "Our Mission", href: "/about" }, // Updated href
         { label: "Designers", href: "/designers" },
         { label: "Donations", href: "/donations" },
         { label: "Contact Us", href: "/contact" }
