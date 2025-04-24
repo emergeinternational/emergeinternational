@@ -1,8 +1,6 @@
-
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { Facebook, Instagram } from "lucide-react";
-import { Tiktok } from "lucide-react/icons/tiktok"; // Correct import for TikTok icon
+import { Facebook, Instagram, Tiktok } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -47,7 +45,7 @@ const Footer = () => {
       label: "Instagram"
     },
     {
-      icon: Tiktok, // Replace Instagram with Tiktok
+      icon: Tiktok,
       href: "https://tiktok.com/@emergeinternational",
       label: "TikTok"
     }
