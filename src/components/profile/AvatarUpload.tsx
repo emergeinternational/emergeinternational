@@ -44,7 +44,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
         console.error("User is not authenticated");
         throw new Error("You must be logged in to upload an avatar");
       }
-      console.log("User is authenticated with ID:", session.user.id);
+      console.log("User authentication details:", JSON.stringify(session.user, null, 2));
 
       // Compress image if needed
       console.log(`Compressing image: ${file.name}, size: ${file.size} bytes`);
@@ -57,44 +57,46 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       
       console.log(`Uploading to ${bucketName}/${fileName}`);
       
+      // Detailed bucket and storage logging
+      console.log("Checking Supabase storage configuration...");
+      console.log("Supabase URL:", supabase.supabaseUrl);
+      console.log("Storage client:", JSON.stringify(supabase.storage, null, 2));
+      
       // Check if bucket exists
-      console.log("Checking available buckets...");
+      console.log("Listing available buckets...");
       const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
       if (bucketsError) {
         console.error("Error listing buckets:", bucketsError);
-        console.error("Error message:", bucketsError.message);
-      } else {
-        console.log("Available buckets:", buckets?.map(b => b.name));
-        const avatarBucketExists = buckets?.some(bucket => bucket.name === bucketName);
-        console.log(`Bucket '${bucketName}' exists:`, avatarBucketExists);
+        throw bucketsError;
       }
       
-      // Log storage client details (safely)
-      console.log("Storage client ready, attempting upload...");
-      
-      // Upload compressed image
+      console.log("Available buckets:", buckets?.map(b => b.name));
+      const avatarBucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      console.log(`Bucket '${bucketName}' exists:`, avatarBucketExists);
+
+      // Detailed upload logging
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true
       };
       console.log("Upload options:", uploadOptions);
       
+      console.log("Attempting file upload...");
       const { data, error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(fileName, compressedFile, uploadOptions);
       
       if (uploadError) {
-        console.error("Upload error details:", uploadError);
-        console.error("Error message:", uploadError.message);
-        throw new Error(`Failed to upload image: ${uploadError.message}`);
+        console.error("Full upload error details:", JSON.stringify(uploadError, null, 2));
+        throw uploadError;
       }
       
       if (!data || !data.path) {
         console.error("Upload succeeded but no path returned");
         throw new Error("Failed to get uploaded file path");
       }
-      
-      console.log("Upload successful, data:", data);
+
+      console.log("Upload successful, data:", JSON.stringify(data, null, 2));
       
       // Get public URL
       console.log(`Getting public URL for ${bucketName}/${data.path}`);
@@ -110,7 +112,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
         description: "Avatar updated successfully",
       });
     } catch (error: any) {
-      console.error("Error uploading:", error);
+      console.error("Complete error object:", JSON.stringify(error, null, 2));
       toast({
         title: "Upload Failed",
         description: error?.message || "Error uploading avatar",
@@ -153,3 +155,4 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
 };
 
 export default AvatarUpload;
+
