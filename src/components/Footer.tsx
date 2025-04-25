@@ -36,12 +36,12 @@ const Footer = () => {
   const socialLinks = [
     {
       icon: Facebook,
-      href: "https://facebook.com/emergeinternational",
+      href: "https://web.facebook.com/share/g/1EfHFVv1Se/",
       label: "Facebook"
     },
     {
       icon: Instagram,
-      href: "https://instagram.com/emergeinternational",
+      href: "https://www.instagram.com/theblacktravelerintl/profilecard/?igsh=aWR3a3Y0NXBhdTZ4",
       label: "Instagram"
     }
   ];
@@ -72,7 +72,7 @@ const Footer = () => {
                 </a>
               ))}
               <a
-                href="https://tiktok.com/@emergeinternational"
+                href="https://www.tiktok.com/@theblacktraveler?_t=ZT-8vpc5YD2gW6&_r=1"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-300 hover:text-emerge-gold transition-colors"
