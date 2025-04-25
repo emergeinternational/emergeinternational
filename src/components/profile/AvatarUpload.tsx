@@ -60,6 +60,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
       if (bucketsError) {
         console.error("Error listing buckets:", bucketsError);
+        console.error("Error message:", bucketsError.message);
       } else {
         console.log("Available buckets:", buckets?.map(b => b.name));
         const avatarBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
@@ -76,9 +77,8 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       
       if (uploadError) {
         console.error("Upload error details:", uploadError);
-        console.error("Error code:", uploadError.code);
         console.error("Error message:", uploadError.message);
-        console.error("Error name:", uploadError.name);
+        // Remove reference to uploadError.code
         throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
       

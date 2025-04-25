@@ -22,9 +22,8 @@ export const useStorage = () => {
       
       if (listError) {
         console.error("Error checking buckets:", listError);
-        console.error("Error code:", listError.code);
         console.error("Error message:", listError.message);
-        console.error("Error status:", listError.status);
+        // Remove references to error.code and error.status
         throw new Error(`Failed to check storage buckets: ${listError.message}`);
       }
       
@@ -44,9 +43,8 @@ export const useStorage = () => {
         
         if (createError) {
           console.error("Error creating bucket:", createError);
-          console.error("Error code:", createError.code);
           console.error("Error message:", createError.message);
-          console.error("Error status:", createError.status);
+          // Remove references to error.code and error.status
           throw new Error(`Failed to create storage bucket: ${createError.message}`);
         }
         
@@ -102,9 +100,8 @@ export const useStorage = () => {
       
       if (error) {
         console.error("Storage upload error:", error);
-        console.error("Error code:", error.code);
         console.error("Error message:", error.message);
-        console.error("Error status:", error.status);
+        // Remove references to error.code and error.status
         throw error;
       }
       
