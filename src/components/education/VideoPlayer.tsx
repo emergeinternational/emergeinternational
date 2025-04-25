@@ -8,7 +8,10 @@ interface VideoPlayerProps {
   title?: string;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ source = "https://www.youtube.com/embed/4p-4fmb8dDQ", title = "Video content" }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  source = "https://www.youtube.com/embed/4p-4fmb8dDQ", 
+  title = "Video content" 
+}) => {
   return (
     <div className="mb-6">
       <AspectRatio ratio={16 / 9}>
