@@ -133,32 +133,12 @@ const fallbackContent: EducationContent[] = [
 ];
 
 /**
- * Gets education categories from Supabase with a fallback to static data
+ * Gets education categories with fallback to static data
  */
 export const getEducationCategories = async (): Promise<EducationCategory[]> => {
   try {
-    // Try to get categories from database
-    try {
-      const { data, error } = await supabase
-        .from('education_categories')
-        .select('*')
-        .order('name');
-      
-      if (error) {
-        console.error("Error fetching education categories:", error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        return data as unknown as EducationCategory[];
-      } else {
-        console.log("No education categories found in database, using fallback data");
-        return fallbackCategories;
-      }
-    } catch (error) {
-      console.warn("Database error in getEducationCategories, using fallback data:", error);
-      return fallbackCategories;
-    }
+    console.log("Using static fallback data for education categories");
+    return fallbackCategories;
   } catch (error) {
     console.error("Unexpected error in getEducationCategories:", error);
     return fallbackCategories;
@@ -166,7 +146,7 @@ export const getEducationCategories = async (): Promise<EducationCategory[]> => 
 };
 
 /**
- * Gets education content from Supabase with a fallback to static data
+ * Gets education content with fallback to static data
  */
 export const getEducationContent = async (
   categoryId?: string,
@@ -174,53 +154,19 @@ export const getEducationContent = async (
   featuredOnly: boolean = false
 ): Promise<EducationContent[]> => {
   try {
-    // Try to get content from database
-    try {
-      // Build query
-      let query = supabase.from('education_content').select('*');
-      
-      // If query succeeds, proceed with filters
-      if (categoryId) {
-        query = query.eq('category_id', categoryId);
-      }
-      
-      if (featuredOnly) {
-        query = query.eq('is_featured', true);
-      }
-      
-      const { data, error } = await query.order('published_at', { ascending: false }).limit(limit);
-      
-      if (error) {
-        console.error("Error fetching education content:", error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        return data as unknown as EducationContent[];
-      } else {
-        console.log("No education content found in database, using fallback data");
-        // Filter fallback content based on parameters
-        let filtered = [...fallbackContent];
-        if (categoryId) {
-          filtered = filtered.filter(item => item.category_id === categoryId);
-        }
-        if (featuredOnly) {
-          filtered = filtered.filter(item => item.is_featured);
-        }
-        return filtered.slice(0, limit);
-      }
-    } catch (error) {
-      console.warn("Database error in getEducationContent, using fallback data:", error);
-      // Filter fallback content based on parameters
-      let filtered = [...fallbackContent];
-      if (categoryId) {
-        filtered = filtered.filter(item => item.category_id === categoryId);
-      }
-      if (featuredOnly) {
-        filtered = filtered.filter(item => item.is_featured);
-      }
-      return filtered.slice(0, limit);
+    console.log("Using static fallback data for education content");
+    // Filter fallback content based on parameters
+    let filtered = [...fallbackContent];
+    
+    if (categoryId) {
+      filtered = filtered.filter(item => item.category_id === categoryId);
     }
+    
+    if (featuredOnly) {
+      filtered = filtered.filter(item => item.is_featured);
+    }
+    
+    return filtered.slice(0, limit);
   } catch (error) {
     console.error("Unexpected error in getEducationContent:", error);
     return fallbackContent.slice(0, limit);

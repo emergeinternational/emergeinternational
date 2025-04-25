@@ -77,35 +77,13 @@ const fallbackArchivedWorkshops: Workshop[] = [
 ];
 
 /**
- * Gets workshops from Supabase with a fallback to static data
+ * Gets workshops with fallback to static data
  * @param showArchived Whether to show archived workshops
  */
 export const getWorkshops = async (showArchived: boolean = false): Promise<Workshop[]> => {
   try {
-    console.log(`Fetching workshops with archived=${showArchived}`);
-    
-    try {
-      const { data, error } = await supabase
-        .from('workshops')
-        .select('*')
-        .eq('is_archived', showArchived)
-        .order('date', { ascending: true });
-      
-      if (error) {
-        console.error("Error fetching workshops:", error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        return data as unknown as Workshop[];
-      } else {
-        console.log("No workshops found in database, using fallback data");
-        return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
-      }
-    } catch (error) {
-      console.warn("Database error in getWorkshops, using fallback data:", error);
-      return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
-    }
+    console.log(`Using fallback data for workshops with archived=${showArchived}`);
+    return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
   } catch (error) {
     console.error("Unexpected error in getWorkshops:", error);
     return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;

@@ -2,8 +2,8 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-interface Workshop {
-  id: number;
+interface WorkshopDisplay {
+  id: number | string;
   name: string;
   date: string;
   location: string;
@@ -11,7 +11,7 @@ interface Workshop {
 }
 
 interface UpcomingWorkshopsProps {
-  workshops: Workshop[];
+  workshops: WorkshopDisplay[];
   showAllWorkshops?: boolean;
 }
 
@@ -44,11 +44,17 @@ const UpcomingWorkshops = ({ workshops, showAllWorkshops = false }: UpcomingWork
             </div>
           ))}
         </div>
-        {!showAllWorkshops && (
+        {!showAllWorkshops && workshops.length > 0 && (
           <div className="mt-6 text-center">
             <Link to="/workshops" className="emerge-button-primary">
               View All Workshops
             </Link>
+          </div>
+        )}
+        {workshops.length === 0 && (
+          <div className="text-center py-8">
+            <p>No upcoming workshops available at this time.</p>
+            <p className="text-sm text-gray-500 mt-2">Check back soon for new workshops!</p>
           </div>
         )}
       </div>
