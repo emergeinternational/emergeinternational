@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -48,11 +47,6 @@ const Education = () => {
         const workshopsData = await getWorkshops();
         setUpcomingWorkshops(workshopsData.slice(0, 3));
         
-        // Fallback to static content if no dynamic content yet
-        if (contentData.length === 0) {
-          setEducationContent(getStaticCourses());
-        }
-        
       } catch (error) {
         console.error("Error fetching education data:", error);
         toast({
@@ -60,10 +54,6 @@ const Education = () => {
           description: "Failed to load education content. Please try again later.",
           variant: "destructive",
         });
-        
-        // Fallback to static content
-        setEducationContent(getStaticCourses());
-        
       } finally {
         setIsLoading(false);
       }
@@ -72,83 +62,9 @@ const Education = () => {
     fetchData();
   }, [activeLevel, toast]);
 
-  // Fallback function for static courses while content database is being populated
-  const getStaticCourses = () => {
-    return [
-      { 
-        id: "1", 
-        category_id: "beginner",
-        title: "Fashion Design 101", 
-        summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
-        content_type: "course",
-        image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
-        is_featured: true,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: "2", 
-        category_id: "beginner",
-        title: "Digital Fashion Marketing", 
-        summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
-        content_type: "course",
-        image_url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop",
-        is_featured: false,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: "3", 
-        category_id: "advanced",
-        title: "Advanced Pattern Making", 
-        summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
-        content_type: "course",
-        image_url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&auto=format&fit=crop",
-        is_featured: false,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: "4", 
-        category_id: "intermediate",
-        title: "Sustainable Fashion", 
-        summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
-        content_type: "course",
-        image_url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&auto=format&fit=crop",
-        is_featured: true,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: "5", 
-        category_id: "intermediate",
-        title: "Fashion Portfolio", 
-        summary: "Create a professional portfolio showcasing your designs. Learn photography, styling, and digital presentation techniques.",
-        content_type: "course",
-        image_url: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=800&auto=format&fit=crop",
-        is_featured: false,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: "6", 
-        category_id: "workshop",
-        title: "Innovation Workshop", 
-        summary: "Explore cutting-edge textile techniques and innovative materials in this intensive hands-on workshop.",
-        content_type: "workshop",
-        image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
-        is_featured: true,
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-    ];
-  };
+  const filteredCourses = activeLevel === "all" 
+    ? educationContent 
+    : educationContent.filter(content => content.category_id === activeLevel);
 
   // Format workshop data for the component
   const formattedWorkshops = upcomingWorkshops.map(workshop => ({
@@ -162,10 +78,6 @@ const Education = () => {
     location: workshop.location,
     spots: workshop.spots
   }));
-
-  const filteredCourses = activeLevel === "all" 
-    ? educationContent 
-    : educationContent.filter(content => content.category_id === activeLevel);
 
   return (
     <MainLayout>
@@ -209,17 +121,23 @@ const Education = () => {
             ALL
           </button>
           {levels.map(level => (
-            <button
+            <Link
               key={level.id}
-              onClick={() => setActiveLevel(level.id)}
+              to={`/education/category/${level.id}`}
               className={`px-4 py-2 mr-2 whitespace-nowrap ${
                 activeLevel === level.id
                   ? "text-emerge-gold border-b-2 border-emerge-gold"
                   : "text-gray-600"
               }`}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent default link behavior
+                setActiveLevel(level.id); // Update local state
+                // Only navigate if we're not filtering locally
+                // window.location.href = `/education/category/${level.id}`;
+              }}
             >
               {level.name}
-            </button>
+            </Link>
           ))}
         </div>
         
