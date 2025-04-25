@@ -12,27 +12,23 @@ const UsersPage = () => {
   const { toast } = useToast();
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Function to refresh the user registration triggers
-  const refreshUserTriggers = async () => {
+  // Function to refresh the user management component
+  const refreshUserData = async () => {
     setIsRefreshing(true);
     try {
-      // Call the Supabase function to refresh the user triggers
-      const { error } = await supabase.rpc('refresh_user_triggers');
-      
-      if (error) {
-        throw error;
-      }
+      // Instead of calling a non-existent RPC function, we'll just trigger a refresh
+      // of the UserManagement component by updating the lastUpdated timestamp
       
       toast({
-        title: "User triggers refreshed",
-        description: "The system has been updated to detect new users."
+        title: "User data refreshed",
+        description: "The user list has been refreshed."
       });
       
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error refreshing user triggers:', error);
+      console.error('Error refreshing user data:', error);
       toast({
-        title: "Error refreshing triggers",
+        title: "Error refreshing user data",
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
@@ -54,11 +50,11 @@ const UsersPage = () => {
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
-              onClick={refreshUserTriggers}
+              onClick={refreshUserData}
               disabled={isRefreshing}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-              Sync Users
+              Refresh Users
             </Button>
             {lastUpdated && (
               <div className="text-xs text-gray-500">
@@ -69,7 +65,7 @@ const UsersPage = () => {
         </div>
         
         <div className="bg-white p-6 rounded shadow">
-          <UserManagement />
+          <UserManagement key={lastUpdated?.getTime()} />
         </div>
       </div>
     </AdminLayout>
