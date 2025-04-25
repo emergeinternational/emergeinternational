@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -51,13 +51,40 @@ interface TalentApplication {
   age: number | null;
   category_type: string | null;
   photo_url: string | null;
-  gender: string | null; // Made nullable to match actual data shape
+  gender: string | null; // Made explicit
 }
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
+  const [debugRecords, setDebugRecords] = useState<any[]>([]);
+
+  // Debug function to check database schema
+  const checkTableSchema = async () => {
+    try {
+      const { data: columns, error } = await supabase.rpc(
+        'select_columns_info',
+        { table_name: 'talent_applications' }
+      ).select('*');
+      
+      if (error) {
+        console.error("Failed to check schema:", error);
+      } else {
+        console.log("Talent applications table schema:", columns);
+      }
+      
+    } catch (err) {
+      console.error("Error checking schema:", err);
+    }
+  };
+  
+  // Debug on mount
+  useEffect(() => {
+    console.log("TalentManagement component mounted");
+    // Check table schema when component mounts
+    checkTableSchema();
+  }, []);
 
   const { data: applications, isLoading, refetch } = useQuery({
     queryKey: ['talent-applications'],
@@ -74,6 +101,10 @@ const TalentManagement = () => {
       }
       
       console.log("Fetched applications:", data);
+      
+      // Store raw data for debugging
+      setDebugRecords(data || []);
+      
       // Use type assertion to avoid TypeScript errors
       return (data as unknown) as TalentApplication[];
     }
@@ -139,6 +170,7 @@ const TalentManagement = () => {
 
   // Debug log to check data
   console.log("Current applications data:", applications);
+  console.log("Raw database records:", debugRecords);
   
   return (
     <div className="space-y-4">
@@ -412,6 +444,16 @@ const TalentManagement = () => {
           )}
         </TableBody>
       </Table>
+      
+      {/* Add debug info section */}
+      {debugRecords && debugRecords.length > 0 && (
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Debug: Latest Record</h3>
+          <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto">
+            {JSON.stringify(debugRecords[0], null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };

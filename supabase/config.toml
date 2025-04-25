@@ -1,1 +1,5 @@
+
 project_id = "dqfnetchkvnzrtacgvfw"
+
+[functions.select_columns_info]
+verify_jwt = true

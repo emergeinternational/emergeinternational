@@ -25,13 +25,18 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ModelMeasurementsSection } from "@/components/talent/FormSections/ModelMeasurementsSection";
 
+// Define a strict schema for form validation
 const mediaFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
-  gender: z.enum(["Male", "Female"]),
-  category: z.enum(["Model", "Dancer", "Singer", "Actor", "Designer", "Other"]),
+  gender: z.enum(["Male", "Female"], {
+    required_error: "Gender selection is required",
+  }),
+  category: z.enum(["Model", "Dancer", "Singer", "Actor", "Designer", "Other"], {
+    required_error: "Category selection is required",
+  }),
   instagramHandle: z.string().optional(),
   tiktokHandle: z.string().optional(),
   telegramHandle: z.string().optional(),
@@ -72,20 +77,49 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   const selectedCategory = form.watch("category");
   const selectedGender = form.watch("gender");
 
+  // Debug function to check table columns
+  const checkTableColumns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('talent_applications')
+        .select('*')
+        .limit(1);
+      
+      console.log("Table structure check:", data);
+      
+      // Check if the 'gender' column exists
+      const { data: columns, error: columnsError } = await supabase.rpc(
+        'select_columns_info', 
+        { table_name: 'talent_applications' }
+      ).select('*');
+      
+      if (columnsError) {
+        console.error("Failed to check columns:", columnsError);
+      } else {
+        console.log("Available columns:", columns);
+      }
+      
+    } catch (err) {
+      console.error("Error checking table structure:", err);
+    }
+  };
+
   const onSubmit = async (data: MediaFormData) => {
     try {
       setIsSubmitting(true);
       console.log("Form submission data:", data);
+      console.log("Gender value from form:", data.gender); // Explicitly log gender
 
-      // Debug: Check what the database schema expects
-      console.log("Preparing talent application data with gender:", data.gender);
+      // First check table structure (debug only)
+      await checkTableColumns();
 
+      // Prepare submission data with explicit gender field
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
         age: parseInt(data.age, 10),
-        gender: data.gender, // Ensure gender field is explicitly included
+        gender: data.gender, // Explicitly include gender
         category_type: data.category,
         notes: data.description,
         social_media: {
