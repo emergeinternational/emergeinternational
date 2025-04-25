@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -58,6 +60,9 @@ interface TalentRegistrationFormProps {
 const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps) => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [photoFilesCount, setPhotoFilesCount] = useState(0);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [portfolioFile, setPortfolioFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
   const form = useForm<TalentFormData>({
     resolver: zodResolver(talentFormSchema),
@@ -120,13 +125,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
     return true;
   };
 
-  const ensureBucketExists = async () => {
+  const createBucketIfNotExists = async () => {
     try {
+      // First check if bucket exists
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
         console.error("Error checking buckets:", listError);
-        return false;
+        throw new Error(`Failed to check storage buckets: ${listError.message}`);
       }
       
       const bucketExists = buckets?.some(bucket => bucket.name === 'talent_media');
@@ -136,43 +142,42 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         const { data, error: createError } = await supabase.storage
           .createBucket('talent_media', { 
             public: true,
-            fileSizeLimit: MAX_FILE_SIZE
+            fileSizeLimit: MAX_FILE_SIZE 
           });
         
         if (createError) {
           console.error("Error creating bucket:", createError);
-          return false;
+          throw new Error(`Failed to create storage bucket: ${createError.message}`);
         }
         
-        const { error: policyError } = await supabase.storage
-          .from('talent_media')
-          .createSignedUrl('dummy.txt', 1);
-          
-        if (policyError && !policyError.message.includes('does not exist')) {
-          console.error("Error setting bucket policy:", policyError);
-        }
+        console.log("Bucket created successfully:", data);
+      } else {
+        console.log("Bucket already exists");
       }
       
       return true;
     } catch (error) {
       console.error("Error ensuring bucket exists:", error);
-      return false;
+      throw error;
     }
   };
 
   const uploadFile = async (file: File, path: string) => {
     try {
-      const bucketReady = await ensureBucketExists();
-      
-      if (!bucketReady) {
-        throw new Error("Storage bucket could not be created or accessed");
+      if (!file) {
+        console.log("No file to upload");
+        return null;
       }
+      
+      console.log(`Starting upload for file ${file.name} (${file.size} bytes) to ${path}`);
+      console.log(`File type: ${file.type}`);
       
       if (file.size > MAX_FILE_SIZE) {
-        throw new Error(`File ${file.name} exceeds maximum size limit`);
+        throw new Error(`File ${file.name} exceeds maximum size limit of ${MAX_FILE_SIZE} bytes`);
       }
       
-      console.log(`Uploading file ${file.name} to ${path}`);
+      // Ensure bucket exists before uploading
+      await createBucketIfNotExists();
       
       const { data, error } = await supabase.storage
         .from("talent_media")
@@ -206,15 +211,31 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       return [];
     }
 
-    const uploadPromises = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const path = `${type}s/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-      uploadPromises.push(uploadFile(file, path));
-    }
-
     try {
-      return await Promise.all(uploadPromises);
+      const totalFiles = files.length;
+      const uploadPromises = [];
+      const uploadResults = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const timestamp = Date.now();
+        const safeFilename = file.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "");
+        const path = `${type}/${timestamp}-${safeFilename}`;
+        
+        try {
+          const result = await uploadFile(file, path);
+          if (result) {
+            uploadResults.push(result);
+            // Update progress
+            setUploadProgress(Math.round(((i + 1) / totalFiles) * 100));
+          }
+        } catch (error) {
+          console.error(`Error uploading file ${file.name}:`, error);
+          throw new Error(`Failed to upload ${file.name}: ${error.message || "Unknown error"}`);
+        }
+      }
+      
+      return uploadResults;
     } catch (error) {
       console.error(`Error uploading ${type} files:`, error);
       throw new Error(`Failed to upload ${type} files: ${error.message || "Unknown error"}`);
@@ -226,12 +247,31 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       setPhotoFilesCount(e.target.files.length);
     }
   };
+  
+  const handleVideoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setVideoFile(e.target.files[0]);
+    } else {
+      setVideoFile(null);
+    }
+  };
+  
+  const handlePortfolioInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setPortfolioFile(e.target.files[0]);
+    } else {
+      setPortfolioFile(null);
+    }
+  };
 
   const onSubmit = async (data: TalentFormData) => {
     try {
       setUploadingFiles(true);
+      setUploadProgress(0);
 
       const photoInput = document.querySelector<HTMLInputElement>('#photos');
+      const videoInput = document.querySelector<HTMLInputElement>('#video');
+      const portfolioInput = document.querySelector<HTMLInputElement>('#portfolio');
       
       if (!photoInput?.files || photoInput.files.length === 0) {
         toast({
@@ -243,8 +283,10 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         return;
       }
       
+      // Upload photos
       let photoUrls: string[] = [];
       try {
+        console.log("Starting photo upload...");
         photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
         
         if (photoUrls.length === 0) {
@@ -268,6 +310,50 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         setUploadingFiles(false);
         return;
       }
+      
+      // Upload video (optional)
+      let videoUrl: string | null = null;
+      if (videoInput?.files && videoInput.files.length > 0) {
+        try {
+          setUploadProgress(0);
+          console.log("Starting video upload...");
+          const videoUrls = await handleFileUpload(videoInput.files, "video");
+          if (videoUrls.length > 0) {
+            videoUrl = videoUrls[0];
+            console.log("Successfully uploaded video:", videoUrl);
+          }
+        } catch (uploadError) {
+          console.error("Error uploading video:", uploadError);
+          toast({
+            title: "Warning",
+            description: "Could not upload video, but continuing with submission. " + 
+              (uploadError.message || "Please try again later."),
+          });
+          // Continue with submission even if video upload fails
+        }
+      }
+      
+      // Upload portfolio (optional)
+      let portfolioUrl: string | null = data.portfolioUrl || null;
+      if (portfolioInput?.files && portfolioInput.files.length > 0) {
+        try {
+          setUploadProgress(0);
+          console.log("Starting portfolio upload...");
+          const portfolioUrls = await handleFileUpload(portfolioInput.files, "portfolio");
+          if (portfolioUrls.length > 0) {
+            portfolioUrl = portfolioUrls[0];
+            console.log("Successfully uploaded portfolio:", portfolioUrl);
+          }
+        } catch (uploadError) {
+          console.error("Error uploading portfolio:", uploadError);
+          toast({
+            title: "Warning",
+            description: "Could not upload portfolio file, but continuing with submission. " + 
+              (uploadError.message || "Please try again later."),
+          });
+          // Continue with submission even if portfolio upload fails, using URL if provided
+        }
+      }
 
       const socialMedia = {
         instagram: data.socialMediaHandle || null,
@@ -280,11 +366,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         phone: data.phoneNumber,
         age: data.age,
         country: data.country,
+        city: data.city,
         photo_url: photoUrls[0],
-        portfolio_url: data.portfolioUrl || null,
+        portfolio_url: portfolioUrl,
         category_type: data.category,
         social_media: socialMedia,
         status: 'pending' as TalentStatus,
+        skills: [data.category],
+        notes: data.talentDescription
       };
 
       console.log("Submitting talent application:", submissionData);
@@ -320,7 +409,12 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       
       form.reset();
       if (photoInput) photoInput.value = '';
+      if (videoInput) videoInput.value = '';
+      if (portfolioInput) portfolioInput.value = '';
       setPhotoFilesCount(0);
+      setVideoFile(null);
+      setPortfolioFile(null);
+      setUploadProgress(0);
       
       onSubmitSuccess();
     } catch (error) {
@@ -603,10 +697,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                 type="file"
                 accept={ACCEPTED_VIDEO_TYPES.join(",")}
                 className="mt-1"
+                onChange={handleVideoInputChange}
               />
               <p className="text-sm text-gray-500 mt-1">
                 Upload a video up to 100MB (MP4, MOV, AVI)
               </p>
+              {videoFile && (
+                <p className="text-sm text-green-600">Selected: {videoFile.name}</p>
+              )}
             </div>
 
             <div>
@@ -616,11 +714,22 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                 type="file"
                 accept={ACCEPTED_PORTFOLIO_TYPES.join(",")}
                 className="mt-1"
+                onChange={handlePortfolioInputChange}
               />
               <p className="text-sm text-gray-500 mt-1">
                 Upload portfolio (PDF) or design samples (JPG, PNG, WebP)
               </p>
+              {portfolioFile && (
+                <p className="text-sm text-green-600">Selected: {portfolioFile.name}</p>
+              )}
             </div>
+            
+            {uploadingFiles && uploadProgress > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-1">Uploading files: {uploadProgress}%</p>
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            )}
           </div>
 
           <FormField
