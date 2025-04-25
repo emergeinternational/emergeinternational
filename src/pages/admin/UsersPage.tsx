@@ -37,6 +37,11 @@ const UsersPage = () => {
     }
   };
 
+  // Check user data on initial load
+  useEffect(() => {
+    refreshUserData();
+  }, []);
+
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">

@@ -7,7 +7,8 @@ import {
   UserX, 
   Shield,
   RefreshCw,
-  Filter
+  Filter,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,12 +54,26 @@ interface UserWithRole {
   loading?: boolean;
   created_at?: string;
   last_sign_in_at?: string;
+  is_new?: boolean;
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllUsers, setShowAllUsers] = useState(true);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{
+    authUsersCount: number | null;
+    profilesCount: number | null;
+    userRolesCount: number | null;
+    lastRefreshed: string | null;
+    fetchMethod: 'auth-api' | 'profiles-table' | 'unknown';
+  }>({
+    authUsersCount: null,
+    profilesCount: null,
+    userRolesCount: null,
+    lastRefreshed: null,
+    fetchMethod: 'unknown',
+  });
   const { toast } = useToast();
   
   useEffect(() => {
@@ -81,6 +96,14 @@ const UserManagement = () => {
       if (authUsers) {
         console.log(`Fetched ${authUsers.users.length} users from auth API`);
         
+        // Update diagnostic info
+        setDiagnosticInfo(prev => ({
+          ...prev,
+          authUsersCount: authUsers.users.length,
+          lastRefreshed: new Date().toISOString(),
+          fetchMethod: 'auth-api'
+        }));
+        
         // Get user roles
         const { data: userRoles, error: rolesError } = await supabase
           .from('user_roles')
@@ -88,6 +111,11 @@ const UserManagement = () => {
         
         if (rolesError) {
           console.error('Error fetching user roles:', rolesError);
+        } else {
+          setDiagnosticInfo(prev => ({
+            ...prev,
+            userRolesCount: userRoles?.length || 0
+          }));
         }
         
         // Get profiles for additional user data
@@ -97,7 +125,16 @@ const UserManagement = () => {
           
         if (profilesError) {
           console.error('Error fetching profiles:', profilesError);
+        } else {
+          setDiagnosticInfo(prev => ({
+            ...prev,
+            profilesCount: profiles?.length || 0
+          }));
         }
+        
+        // Current time to identify new users (less than 1 hour old)
+        const oneHourAgo = new Date();
+        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
         
         // Map users with roles and profile data
         const enhancedUsers: UserWithRole[] = authUsers.users.map(user => {
@@ -107,14 +144,26 @@ const UserManagement = () => {
           // Find profile data
           const profile = profiles?.find(p => p.id === user.id);
           
+          // Check if user was created in the last hour
+          const isNewUser = user.created_at ? 
+            new Date(user.created_at) > oneHourAgo : false;
+          
           return {
             id: user.id,
             email: user.email || 'No Email',
             full_name: profile?.full_name || user.user_metadata?.full_name || 'Unnamed User',
             role: (userRole?.role as UserRole) || profile?.role as UserRole || 'user',
             created_at: user.created_at,
-            last_sign_in_at: user.last_sign_in_at
+            last_sign_in_at: user.last_sign_in_at,
+            is_new: isNewUser
           };
+        });
+        
+        // Sort with newest users first
+        enhancedUsers.sort((a, b) => {
+          if (!a.created_at) return 1;
+          if (!b.created_at) return -1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
         
         setUsers(enhancedUsers);
@@ -138,6 +187,14 @@ const UserManagement = () => {
       
       if (profilesError) throw profilesError;
       
+      // Update diagnostic info
+      setDiagnosticInfo(prev => ({
+        ...prev,
+        profilesCount: profiles?.length || 0,
+        lastRefreshed: new Date().toISOString(),
+        fetchMethod: 'profiles-table'
+      }));
+      
       // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -145,17 +202,38 @@ const UserManagement = () => {
       
       if (rolesError) throw rolesError;
       
+      setDiagnosticInfo(prev => ({
+        ...prev,
+        userRolesCount: userRoles?.length || 0
+      }));
+      
+      // Current time to identify new users (less than 1 hour old)
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+      
       // Map roles to profiles
       const enhancedUsers: UserWithRole[] = profiles.map(profile => {
         const userRole = userRoles?.find(ur => ur.user_id === profile.id);
+        
+        // Check if user was created in the last hour
+        const isNewUser = profile.created_at ? 
+          new Date(profile.created_at) > oneHourAgo : false;
         
         return {
           id: profile.id,
           email: profile.email || 'No Email',
           full_name: profile.full_name,
           role: (userRole?.role as UserRole) || 'user',
-          created_at: profile.created_at
+          created_at: profile.created_at,
+          is_new: isNewUser
         };
+      });
+      
+      // Sort with newest users first
+      enhancedUsers.sort((a, b) => {
+        if (!a.created_at) return 1;
+        if (!b.created_at) return -1;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
       
       setUsers(enhancedUsers);
@@ -337,6 +415,35 @@ const UserManagement = () => {
         </div>
       </div>
       
+      {/* Diagnostic Info Panel */}
+      <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-xs">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-medium">System Diagnostic</h3>
+          <Badge variant={diagnosticInfo.fetchMethod === 'unknown' ? 'destructive' : 'success'}>
+            {diagnosticInfo.fetchMethod === 'auth-api' ? 'Using Auth API' : 
+             diagnosticInfo.fetchMethod === 'profiles-table' ? 'Using Profiles Table' : 
+             'Data Source Unknown'}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-slate-500">Auth Users</p>
+            <p className="font-medium">{diagnosticInfo.authUsersCount ?? 'Not available'}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Profiles</p>
+            <p className="font-medium">{diagnosticInfo.profilesCount ?? 'Not available'}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">User Roles</p>
+            <p className="font-medium">{diagnosticInfo.userRolesCount ?? 'Not available'}</p>
+          </div>
+        </div>
+        <div className="mt-2 text-slate-500">
+          Last refreshed: {diagnosticInfo.lastRefreshed ? formatDate(diagnosticInfo.lastRefreshed) : 'Never'}
+        </div>
+      </div>
+      
       <Table>
         <TableHeader>
           <TableRow>
@@ -362,13 +469,20 @@ const UserManagement = () => {
             </TableRow>
           ) : (
             users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} className={user.is_new ? "bg-emerald-50" : undefined}>
                 <TableCell>
-                  <div className="font-medium">
-                    {user.full_name || 'Unnamed User'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {user.id.slice(0, 8)}...
+                  <div className="flex items-center">
+                    <div>
+                      <div className="font-medium flex items-center">
+                        {user.full_name || 'Unnamed User'}
+                        {user.is_new && (
+                          <Badge variant="success" className="ml-2">New</Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {user.id.slice(0, 8)}...
+                      </div>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
@@ -456,6 +570,11 @@ const UserManagement = () => {
       {!loading && users.length > 0 && (
         <div className="text-xs text-gray-500 mt-2">
           Showing {users.length} users
+          {users.filter(u => u.is_new).length > 0 && (
+            <span className="ml-1">
+              including <span className="font-semibold text-emerald-600">{users.filter(u => u.is_new).length} new</span> in the last hour
+            </span>
+          )}
         </div>
       )}
     </div>
