@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EducationContent } from "./types";
+import { EducationContent, TalentType, WeeklyContent } from "./types";
 import { getFallbackContent } from "./fallbackData";
 import { getEducationCategories } from "./categoriesService";
 import { TALENT_TYPES } from "./types";
@@ -114,7 +114,7 @@ export const getEducationContentByTalentType = async (
   }
 };
 
-export const getCourseWeeklyContent = async (courseId: string) => {
+export const getCourseWeeklyContent = async (courseId: string): Promise<WeeklyContent[]> => {
   try {
     return [
       {

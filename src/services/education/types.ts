@@ -49,7 +49,7 @@ export interface WeeklyContent {
   content: string;
 }
 
-// Define talent types as simple string array
+// Define talent types as a simple string array - no complex typing
 export const TALENT_TYPES = [
   'models',
   'designers',
@@ -57,7 +57,7 @@ export const TALENT_TYPES = [
   'videographers',
   'influencers',
   'entertainment'
-];
+] as const;
 
-// Using string type instead of complex generics to avoid deep instantiation
-export type TalentType = string;
+// Use string literal type instead of complex generics
+export type TalentType = typeof TALENT_TYPES[number];
