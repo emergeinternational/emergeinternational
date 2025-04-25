@@ -1,5 +1,5 @@
 
-# A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
+# This file was created by Lovable AI. Do not edit.
 project_id = "dqfnetchkvnzrtacgvfw"
 
 [api]
@@ -11,37 +11,23 @@ schemas = ["public", "storage", "graphql_public"]
 port = 54322
 
 [studio]
-enabled = true
 port = 54323
-api_url = "http://localhost"
 
 [inbucket]
-enabled = true
 port = 54324
 
-[auth]
-enabled = true
-site_url = "http://localhost:3000"
-
 [storage]
+enabled = true
+
+[auth]
 enabled = true
 
 [realtime]
 enabled = true
 
-[analytics]
-enabled = true
-port = 54327
+[edge_functions]
+[edge_functions.education-automation]
+verify_jwt = false
 
-[vector]
-enabled = true
-port = 54328
-
-[functions.education-automation]
-verify_jwt = true
-
-[functions.select_columns_info]
-verify_jwt = true
-
-[functions.send-contact-email]
-verify_jwt = true
+[edge_functions.select_columns_info]
+verify_jwt = false

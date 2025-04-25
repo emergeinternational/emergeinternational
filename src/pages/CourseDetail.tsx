@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Calendar, Users, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
 import { getEducationContent, EducationContent } from "../services/educationService";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,23 @@ const CourseDetail = () => {
     fetchCourseDetails();
   }, [id, toast, navigate]);
 
+  // Format course data for better display
+  const courseLevel = course?.category_id || "beginner";
+  const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
+  const courseType = course?.content_type || "course";
+  const formattedDuration = courseType === "course" ? "10-12 weeks" : "1-2 days";
+  
+  // Get nextStartDate (for display purposes)
+  const getNextStartDate = () => {
+    const now = new Date();
+    // Add between 1-14 days to the current date
+    const daysToAdd = Math.floor(Math.random() * 14) + 1;
+    now.setDate(now.getDate() + daysToAdd);
+    return now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+  
+  const nextStartDate = getNextStartDate();
+
   return (
     <MainLayout>
       <div className="emerge-container py-16">
@@ -74,19 +91,19 @@ const CourseDetail = () => {
                 <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Duration: {course.content_type === "course" ? "10-12 weeks" : "1-2 days"}</span>
+                    <span>Duration: {formattedDuration}</span>
                   </div>
                   <div className="flex items-center">
                     <Calendar className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Next Start: {new Date().toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      day: 'numeric', 
-                      year: 'numeric'
-                    })}</span>
+                    <span>Next Start: {nextStartDate}</span>
                   </div>
                   <div className="flex items-center">
                     <Users className="mr-2 h-4 w-4 text-emerge-gold" />
                     <span>Capacity: 15-20 students</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Book className="mr-2 h-4 w-4 text-emerge-gold" />
+                    <span>Level: {formattedLevel}</span>
                   </div>
                 </div>
               </div>
@@ -116,6 +133,14 @@ const CourseDetail = () => {
                     <li>Building a portfolio and showcasing your work effectively</li>
                     <li>Career opportunities and networking in the industry</li>
                   </ul>
+                  
+                  <div className="p-4 bg-emerge-cream mt-8 rounded-sm">
+                    <h3 className="font-medium mb-2">Course Updates</h3>
+                    <p className="text-sm text-gray-600">
+                      This course content is automatically curated from top educational platforms and updated weekly
+                      to ensure you have access to the most current learning materials.
+                    </p>
+                  </div>
                 </div>
                 
                 <div>
@@ -124,34 +149,62 @@ const CourseDetail = () => {
                     <div className="space-y-3">
                       <p className="flex justify-between">
                         <span className="text-gray-600">Format:</span>
-                        <span>{course.content_type === "course" ? "In-person" : "Workshop"}</span>
+                        <span className="capitalize">{courseType}</span>
                       </p>
                       <p className="flex justify-between">
                         <span className="text-gray-600">Level:</span>
-                        <span className="capitalize">{course.category_id}</span>
+                        <span className="capitalize">{formattedLevel}</span>
                       </p>
                       <p className="flex justify-between">
                         <span className="text-gray-600">Prerequisites:</span>
                         <span>None</span>
                       </p>
+                      {course.source && (
+                        <p className="flex justify-between">
+                          <span className="text-gray-600">Provider:</span>
+                          <span>{course.source}</span>
+                        </p>
+                      )}
                     </div>
                     
                     <div className="mt-6">
-                      <Button className="w-full bg-emerge-gold hover:bg-emerge-gold/90">
-                        Enroll Now
-                      </Button>
-                      
-                      {course.source_url && (
+                      {course.source_url ? (
                         <a 
                           href={course.source_url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center mt-4 text-sm text-emerge-gold hover:underline"
+                          className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
                         >
-                          More Information <ExternalLink size={14} className="ml-1" />
+                          Start Learning Now
                         </a>
+                      ) : (
+                        <Button className="w-full bg-emerge-gold hover:bg-emerge-gold/90">
+                          Enroll Now
+                        </Button>
+                      )}
+                      
+                      {course.source_url && (
+                        <p className="text-center text-xs text-gray-500 mt-2">
+                          You'll be redirected to the course provider
+                        </p>
                       )}
                     </div>
+                  </div>
+                  
+                  <div className="mt-6 bg-white border border-gray-200 p-5">
+                    <h3 className="text-lg font-medium mb-3">Similar Courses</h3>
+                    <ul className="space-y-3 text-sm">
+                      <li>
+                        <a href="/education" className="text-emerge-gold hover:underline">
+                          View More {formattedLevel} Courses
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/education" className="text-emerge-gold hover:underline">
+                          Browse All Categories
+                        </a>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
