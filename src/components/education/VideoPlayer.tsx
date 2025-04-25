@@ -1,32 +1,19 @@
 
-import React from 'react';
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import React from "react";
 
-interface VideoPlayerProps {
-  videoId?: string;
-  source?: string;
-  title?: string;
-}
-
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
-  source = "https://www.youtube.com/embed/4p-4fmb8dDQ", 
-  title = "Video content" 
-}) => {
+const VideoPlayer = () => {
   return (
-    <div className="mb-6">
-      <AspectRatio ratio={16 / 9}>
-        <iframe
-          width="100%"
-          height="100%"
-          src={source}
-          title={title}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          loading="lazy"
-          className="w-full h-full rounded"
-        />
-      </AspectRatio>
+    <div style={{ width: "100%", maxWidth: "720px", margin: "0 auto" }}>
+      <iframe
+        width="100%"
+        height="400"
+        src="https://www.youtube.com/embed/4p-4fmb8dDQ"
+        title="Guaranteed Working Test Video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        loading="lazy"
+      />
     </div>
   );
 };
