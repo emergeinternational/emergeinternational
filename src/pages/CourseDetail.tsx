@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
@@ -78,9 +77,8 @@ const CourseDetail = () => {
   const renderContentSection = () => {
     if (!course) return null;
 
-    if (course.content_type === 'video' && course.source_url) {
-      console.log("Rendering video content with source:", course.source_url);
-      return <VideoPlayer source={course.source_url} title={course.title} />;
+    if (course.content_type === 'video') {
+      return <VideoPlayer />;
     }
 
     if (course.content_type === 'weekly') {
