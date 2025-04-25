@@ -8,6 +8,7 @@ export interface EducationCategory {
   updated_at: string;
 }
 
+// Simplified, flat interface for education content
 export interface EducationContent {
   id: string;
   category_id: string;
@@ -49,7 +50,5 @@ export interface WeeklyContent {
   content: string;
 }
 
-// Define talent types as a simple string array to avoid complex type inference
+// Define talent types as a simple string array without derived types
 export const TALENT_TYPES = ['models', 'designers', 'photographers', 'videographers', 'influencers', 'entertainment'];
-
-// No derived types that could cause recursive definitions
