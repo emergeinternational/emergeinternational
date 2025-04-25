@@ -49,7 +49,8 @@ export interface WeeklyContent {
   content: string;
 }
 
-// Define talent types as simple string literals to avoid complex type inferencing
+// Define talent types as a readonly array of literal strings
+// This prevents TypeScript from creating complex nested types
 export const TALENT_TYPES = [
   'models',
   'designers',
@@ -59,5 +60,5 @@ export const TALENT_TYPES = [
   'entertainment'
 ] as const;
 
-// Create a type from the array for better type safety
-export type TalentType = typeof TALENT_TYPES[number];
+// Use a simpler type definition to avoid deep type instantiation
+export type TalentType = (typeof TALENT_TYPES)[number];

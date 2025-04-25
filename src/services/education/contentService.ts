@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EducationContent, TALENT_TYPES, TalentType } from "./types";
+import { EducationContent, TALENT_TYPES } from "./types";
 import { getFallbackContent } from "./fallbackData";
 import { getEducationCategories } from "./categoriesService";
 
@@ -85,6 +85,8 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
 /**
  * Groups education content by talent type using basic iteration
  * to avoid complex type inference that could cause infinite recursion
+ * 
+ * WARNING: Avoid importing deep types or recursive models here. Use only flat types.
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
@@ -94,13 +96,12 @@ export const getEducationContentByTalentType = async (
     // Create a simple object with string keys to store results
     const result: Record<string, EducationContent[]> = {};
     
-    // Use a basic for loop with indices to avoid type recursion issues
-    for (let i = 0; i < TALENT_TYPES.length; i++) {
-      // Get the talent type as a string
-      const talentType = TALENT_TYPES[i];
-      // Fetch content for this talent type
+    // Use explicit string iteration rather than array iteration to avoid type recursion
+    // This prevents TypeScript from creating deep nested type inferences
+    const talentTypes = TALENT_TYPES as readonly string[];
+    for (let i = 0; i < talentTypes.length; i++) {
+      const talentType = talentTypes[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
-      // Store in the result object
       result[talentType] = content;
     }
     
@@ -111,9 +112,10 @@ export const getEducationContentByTalentType = async (
     // Create a fallback with a simple structure
     const result: Record<string, EducationContent[]> = {};
     
-    // Use simple for loop to avoid any potential typing issues
-    for (let i = 0; i < TALENT_TYPES.length; i++) {
-      const talentType = TALENT_TYPES[i];
+    // Use explicit string iteration for consistent approach
+    const talentTypes = TALENT_TYPES as readonly string[];
+    for (let i = 0; i < talentTypes.length; i++) {
+      const talentType = talentTypes[i];
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
