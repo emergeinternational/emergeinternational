@@ -31,6 +31,7 @@ import EventsPage from "./pages/admin/EventsPage";
 import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
+import TalentsPage from "./pages/admin/TalentsPage";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,11 @@ const App = () => (
               <Route path="/admin/users" element={
                 <RoleBasedRoute allowedRoles={['admin']}>
                   <UsersPage />
+                </RoleBasedRoute>
+              } />
+              <Route path="/admin/talents" element={
+                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                  <TalentsPage />
                 </RoleBasedRoute>
               } />
               <Route path="/admin/events" element={

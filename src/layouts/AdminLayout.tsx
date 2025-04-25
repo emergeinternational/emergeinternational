@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +12,8 @@ import {
   LogOut,
   Settings,
   AlertCircle,
-  ShoppingCart
+  ShoppingCart,
+  UserCheck
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -55,17 +55,16 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showRoleGuide, setShowRoleGuide] = useState(false);
 
-  // Define navigation items with required roles
   const sidebarItems: NavItem[] = [
     { icon: <Home size={20} />, label: "Dashboard", path: "/admin", requiredRoles: ['admin', 'editor', 'viewer'] },
     { icon: <Users size={20} />, label: "Users", path: "/admin/users", requiredRoles: ['admin'] },
+    { icon: <UserCheck size={20} />, label: "Talents", path: "/admin/talents", requiredRoles: ['admin', 'editor'] },
     { icon: <Calendar size={20} />, label: "Events", path: "/admin/events", requiredRoles: ['admin', 'editor'] },
     { icon: <Heart size={20} />, label: "Donations", path: "/admin/donations", requiredRoles: ['admin', 'editor'] },
     { icon: <ShoppingCart size={20} />, label: "Orders", path: "/admin/orders", requiredRoles: ['admin', 'editor'] },
     { icon: <Settings size={20} />, label: "Settings", path: "/admin/settings", requiredRoles: ['admin'] },
   ];
 
-  // Effect to check if user has permission to be on admin pages
   useEffect(() => {
     if (user && userRole && !hasRole(['admin', 'editor', 'viewer'])) {
       toast({
@@ -101,7 +100,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-emerge-cream">
-      {/* Sidebar */}
       <div 
         className={`bg-emerge-darkBg text-white flex flex-col transition-all duration-300 ${
           isSidebarCollapsed ? "w-20" : "w-64"
@@ -124,7 +122,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
         <div className="flex-1 py-6">
           {sidebarItems.map((item) => {
-            // Only show menu items the user has access to
             if (!hasRole(item.requiredRoles)) return null;
 
             return (
@@ -146,7 +143,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           })}
         </div>
 
-        {/* Role indicator */}
         {!isSidebarCollapsed && userRole && (
           <div className="px-4 py-2 border-t border-gray-800 text-xs text-gray-500 flex items-center justify-between">
             <div>{userRole.toUpperCase()} ROLE</div>
@@ -160,7 +156,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         )}
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b p-4">
           <div className="flex justify-between items-center">
@@ -207,7 +202,6 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <main className="flex-1 overflow-y-auto p-4">{children}</main>
       </div>
 
-      {/* Role Guide Sheet */}
       <Sheet open={showRoleGuide} onOpenChange={setShowRoleGuide}>
         <SheetContent side="right" className="w-[400px] sm:w-[540px]">
           <SheetHeader className="mb-5">

@@ -262,6 +262,54 @@ export type Database = {
         }
         Relationships: []
       }
+      talent_applications: {
+        Row: {
+          created_at: string | null
+          email: string
+          experience_years: number | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          portfolio_url: string | null
+          skills: string[] | null
+          social_media: Json | null
+          status: Database["public"]["Enums"]["talent_status"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          experience_years?: number | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          portfolio_url?: string | null
+          skills?: string[] | null
+          social_media?: Json | null
+          status?: Database["public"]["Enums"]["talent_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          experience_years?: number | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          portfolio_url?: string | null
+          skills?: string[] | null
+          social_media?: Json | null
+          status?: Database["public"]["Enums"]["talent_status"] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -320,6 +368,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer" | "user"
+      talent_status: "pending" | "approved" | "rejected" | "on_hold"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -436,6 +485,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer", "user"],
+      talent_status: ["pending", "approved", "rejected", "on_hold"],
     },
   },
 } as const
