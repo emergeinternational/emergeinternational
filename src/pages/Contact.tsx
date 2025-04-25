@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Phone, MapPin, Send } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,43 @@ import { useToast } from "@/hooks/use-toast";
 const Contact = () => {
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // For now, just show a success message
-    toast({
-      title: "Message sent!",
-      description: "Thanks! We'll get back to you soon.",
-    });
+    const formData = new FormData(e.currentTarget);
     
-    // Reset the form
-    (e.target as HTMLFormElement).reset();
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-contact-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          subject: formData.get('subject'),
+          message: formData.get('message'),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      toast({
+        title: "Message sent!",
+        description: "Thanks! We'll get back to you soon.",
+      });
+      
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      toast({
+        title: "Error sending message",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      console.error('Error sending message:', error);
+    }
   };
 
   return (
@@ -76,32 +103,29 @@ const Contact = () => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <Mail className="text-emerge-gold mt-1" />
-                  <div>
-                    <h3 className="font-medium mb-2">Email Us</h3>
-                    <p className="text-gray-600">
-                      For general inquiries and support
-                    </p>
-                    <a href="mailto:contact@emerge.com" className="text-emerge-gold hover:underline">
-                      contact@emerge.com
-                    </a>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
                   <Phone className="text-emerge-gold mt-1" />
                   <div>
                     <h3 className="font-medium mb-2">Call Us</h3>
-                    <p className="text-gray-600">
-                      Monday to Friday, 9am - 5pm EAT
-                    </p>
-                    <a href="tel:+251111234567" className="text-emerge-gold hover:underline">
-                      +251 11 123 4567
-                    </a>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-gray-600 font-medium">United States</p>
+                        <a href="tel:+16465435666" className="text-emerge-gold hover:underline block">
+                          +1 (646) 543-5666
+                        </a>
+                        <p className="text-gray-600 text-sm">
+                          9:00 AM – 5:00 PM EST, Monday to Friday
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">Ethiopia</p>
+                        <a href="tel:+251937343332" className="text-emerge-gold hover:underline block">
+                          +251 937 343 332
+                        </a>
+                        <p className="text-gray-600 text-sm">
+                          10:00 AM – 6:00 PM GMT, Tuesday to Saturday
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -114,7 +138,6 @@ const Contact = () => {
                   <div>
                     <h3 className="font-medium mb-2">World Headquarters</h3>
                     <p className="text-gray-600">
-                      World Headquarters,<br />
                       1 Penn Plaza,<br />
                       New York, NYC 10001
                     </p>
@@ -131,7 +154,7 @@ const Contact = () => {
                     <h3 className="font-medium mb-2">South America Office</h3>
                     <p className="text-gray-600">
                       25-148 Calle San Juan,<br />
-                      South America
+                      Cartagena, Colombia
                     </p>
                   </div>
                 </div>
