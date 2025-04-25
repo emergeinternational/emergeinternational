@@ -58,5 +58,8 @@ export const TALENT_TYPES = [
   'videographers',
   'influencers',
   'entertainment'
-];
+] as const;
+
+// Create a type from the array for better type safety
+export type TalentType = typeof TALENT_TYPES[number];
 

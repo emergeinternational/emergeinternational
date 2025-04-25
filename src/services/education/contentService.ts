@@ -1,7 +1,6 @@
 
-
 import { supabase } from "@/integrations/supabase/client";
-import { EducationContent, TALENT_TYPES } from "./types";
+import { EducationContent, TALENT_TYPES, TalentType } from "./types";
 import { getFallbackContent } from "./fallbackData";
 import { getEducationCategories } from "./categoriesService";
 
@@ -84,8 +83,7 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
 };
 
 /**
- * Groups education content by talent type using a completely flat approach
- * with explicit typing and no type recursion
+ * Groups education content by talent type using a simple iteration approach
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
@@ -95,7 +93,7 @@ export const getEducationContentByTalentType = async (
     // Create a simple record to store results
     const result: Record<string, EducationContent[]> = {};
     
-    // Iterate through the talent types array by index to avoid type recursion
+    // Use a simple for loop to avoid any complex type inference
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       // Fetch content for this talent type
@@ -138,4 +136,3 @@ export const getCourseWeeklyContent = async (courseId: string) => {
     return [];
   }
 };
-
