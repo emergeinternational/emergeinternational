@@ -4,6 +4,7 @@ import { Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { compressImage } from "@/utils/imageCompression"; // Import compression utility
 
 interface AvatarUploadProps {
   url: string | null;
@@ -15,7 +16,6 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   
-  // Simplified approach - no bucket check on component mount
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       if (!event.target.files || event.target.files.length === 0) {
@@ -23,41 +23,40 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       }
       
       setUploading(true);
-      const file = event.target.files[0];
+      const originalFile = event.target.files[0];
       
-      // Simple file size validation (1MB limit)
-      if (file.size > 1024 * 1024) {
+      // Compress the image before upload
+      const compressedFile = await compressImage(originalFile, 2); // Allow up to 2MB
+      
+      // Validate compressed file size
+      if (compressedFile.size > 2 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select an image smaller than 1MB",
+          description: "Please select an image smaller than 2MB",
           variant: "destructive",
         });
         return;
       }
 
-      // Create a simple filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}.${fileExt}`;
+      const fileExt = originalFile.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = fileName;
       
-      console.log(`Trying to upload file: ${filePath}`);
-
-      // First check if bucket exists
+      // Check and create bucket if needed
       const { data: buckets } = await supabase.storage.listBuckets();
       const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
       
       if (!bucketExists) {
-        console.log("Creating avatars bucket");
         await supabase.storage.createBucket('avatars', { 
           public: true,
-          fileSizeLimit: 1024 * 1024 // 1MB limit
+          fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
         });
       }
       
-      // Try upload
+      // Upload compressed image
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });
@@ -102,7 +101,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       <div className="relative">
         <input
           type="file"
-          accept="image/jpeg, image/png, image/jpg"
+          accept="image/jpeg, image/png, image/jpg, image/webp"
           onChange={uploadAvatar}
           disabled={uploading}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
