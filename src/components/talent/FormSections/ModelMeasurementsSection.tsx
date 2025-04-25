@@ -13,17 +13,24 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-medium text-white">Model Measurements</h3>
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-medium text-black">Model Measurements</h3>
+        <p className="text-gray-600 text-sm mb-4">
+          Please provide your measurements accurately. All measurements should be in centimeters (cm) unless specified otherwise.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <FormField
           control={form.control}
           name="height"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Height (cm)</FormLabel>
+              <FormLabel className="font-bold text-black">Height</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="175" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="175 cm" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">Enter height in centimeters</p>
               <FormMessage />
             </FormItem>
           )}
@@ -34,10 +41,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="weight"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Weight (kg)</FormLabel>
+              <FormLabel className="font-bold text-black">Weight</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="65" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="65 kg" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">Enter weight in kilograms</p>
               <FormMessage />
             </FormItem>
           )}
@@ -48,10 +56,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="measurements.bust"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Bust/Chest (cm)</FormLabel>
+              <FormLabel className="font-bold text-black">Bust/Chest</FormLabel>
               <FormControl>
-                <Input placeholder="90" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="90 cm" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">Measure around the fullest part</p>
               <FormMessage />
             </FormItem>
           )}
@@ -62,10 +71,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="measurements.waist"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Waist (cm)</FormLabel>
+              <FormLabel className="font-bold text-black">Waist</FormLabel>
               <FormControl>
-                <Input placeholder="60" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="60 cm" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">Measure at natural waistline</p>
               <FormMessage />
             </FormItem>
           )}
@@ -76,10 +86,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="measurements.hips"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Hips (cm)</FormLabel>
+              <FormLabel className="font-bold text-black">Hips</FormLabel>
               <FormControl>
-                <Input placeholder="90" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="90 cm" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">Measure at fullest part of hips</p>
               <FormMessage />
             </FormItem>
           )}
@@ -90,10 +101,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="dressSize"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Dress Size</FormLabel>
+              <FormLabel className="font-bold text-black">Dress Size</FormLabel>
               <FormControl>
-                <Input placeholder="8 US / 38 EU" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="US 4 / EU 34" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">US/EU size preferred</p>
               <FormMessage />
             </FormItem>
           )}
@@ -104,10 +116,11 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           name="shoeSize"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-white">Shoe Size</FormLabel>
+              <FormLabel className="font-bold text-black">Shoe Size</FormLabel>
               <FormControl>
-                <Input placeholder="7 US / 37.5 EU" className="bg-gray-800 border-gray-700 text-white" {...field} />
+                <Input placeholder="US 7 / EU 37.5" {...field} />
               </FormControl>
+              <p className="text-xs text-gray-500">US/EU size preferred</p>
               <FormMessage />
             </FormItem>
           )}
