@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Workshop {
@@ -76,23 +75,26 @@ const fallbackArchivedWorkshops: Workshop[] = [
   }
 ];
 
-/**
- * Gets workshops with fallback to static data
- * @param showArchived Whether to show archived workshops
- */
 export const getWorkshops = async (showArchived: boolean = false): Promise<Workshop[]> => {
   try {
-    console.log(`Using fallback data for workshops with archived=${showArchived}`);
-    return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
+    const { data, error } = await supabase
+      .from('workshops')
+      .select('*')
+      .eq('is_archived', showArchived)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching workshops:", error);
+      return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
+    }
+
+    return data || (showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops);
   } catch (error) {
     console.error("Unexpected error in getWorkshops:", error);
     return showArchived ? fallbackArchivedWorkshops : fallbackUpcomingWorkshops;
   }
 };
 
-/**
- * Gets archived workshops with fallback to static data
- */
 export const getArchivedWorkshops = async (): Promise<Workshop[]> => {
   return getWorkshops(true);
 };

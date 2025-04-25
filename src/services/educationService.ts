@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -137,8 +136,17 @@ const fallbackContent: EducationContent[] = [
  */
 export const getEducationCategories = async (): Promise<EducationCategory[]> => {
   try {
-    console.log("Using static fallback data for education categories");
-    return fallbackCategories;
+    const { data, error } = await supabase
+      .from('education_categories')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error("Error fetching education categories:", error);
+      return fallbackCategories;
+    }
+
+    return data || fallbackCategories;
   } catch (error) {
     console.error("Unexpected error in getEducationCategories:", error);
     return fallbackCategories;
@@ -154,23 +162,46 @@ export const getEducationContent = async (
   featuredOnly: boolean = false
 ): Promise<EducationContent[]> => {
   try {
-    console.log("Using static fallback data for education content");
-    // Filter fallback content based on parameters
-    let filtered = [...fallbackContent];
-    
+    let query = supabase
+      .from('education_content')
+      .select('*')
+      .limit(limit);
+
     if (categoryId) {
-      filtered = filtered.filter(item => item.category_id === categoryId);
+      query = query.eq('category_id', categoryId);
     }
-    
+
     if (featuredOnly) {
-      filtered = filtered.filter(item => item.is_featured);
+      query = query.eq('is_featured', true);
     }
-    
-    return filtered.slice(0, limit);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching education content:", error);
+      return getFallbackContent(categoryId, limit, featuredOnly);
+    }
+
+    return data || getFallbackContent(categoryId, limit, featuredOnly);
   } catch (error) {
-    console.error("Unexpected error in getEducationContent:", error);
-    return fallbackContent.slice(0, limit);
+    console.error("Error in getEducationContent:", error);
+    return getFallbackContent(categoryId, limit, featuredOnly);
   }
+};
+
+// Helper function to filter fallback content
+const getFallbackContent = (categoryId?: string, limit: number = 10, featuredOnly: boolean = false): EducationContent[] => {
+  let filtered = [...fallbackContent];
+  
+  if (categoryId) {
+    filtered = filtered.filter(item => item.category_id === categoryId);
+  }
+  
+  if (featuredOnly) {
+    filtered = filtered.filter(item => item.is_featured);
+  }
+  
+  return filtered.slice(0, limit);
 };
 
 /**

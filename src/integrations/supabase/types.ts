@@ -39,6 +39,80 @@ export type Database = {
         }
         Relationships: []
       }
+      education_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      education_content: {
+        Row: {
+          category_id: string | null
+          content_type: string
+          created_at: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean
+          published_at: string | null
+          source_url: string | null
+          summary: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          content_type: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean
+          published_at?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean
+          published_at?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_content_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "education_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emerge_submissions: {
         Row: {
           age: number | null
@@ -421,6 +495,45 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      workshops: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          id: string
+          is_archived: boolean
+          location: string
+          name: string
+          registration_link: string | null
+          spots: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          location: string
+          name: string
+          registration_link?: string | null
+          spots?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          location?: string
+          name?: string
+          registration_link?: string | null
+          spots?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
