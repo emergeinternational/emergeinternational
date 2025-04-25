@@ -18,7 +18,7 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
     { name: "Home", href: "/" },
     { name: "Shop", href: "/shop" },
     { name: "Education", href: "/education" },
-    { name: "Donations", href: "/donations" },
+    { name: "Talent", href: "/talent-registration" },
     { name: "Events", href: "/events" },
   ];
 
