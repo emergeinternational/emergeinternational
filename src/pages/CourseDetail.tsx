@@ -80,8 +80,8 @@ const CourseDetail = () => {
     if (!course) return null;
 
     if (course.content_type === 'video') {
-      console.log("Attempting to render video player");
-      return <VideoPlayer />;
+      console.log("Attempting to render video player with URL:", course.source_url);
+      return <VideoPlayer videoUrl={course.source_url} />;
     }
 
     if (course.content_type === 'weekly') {
