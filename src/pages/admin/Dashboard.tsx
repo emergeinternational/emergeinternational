@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from "react";
-import { AlertTriangle, Calendar, Heart, Settings, Users } from "lucide-react";
+import { AlertTriangle, Calendar, Heart, Settings, Users, UserCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -162,6 +163,30 @@ const Dashboard = () => {
                   </div>
                   <Link to="/admin/users">
                     <Button>Manage Users</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* New Talent Management Card */}
+          {hasRole(['admin', 'editor']) && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <UserCheck className="h-5 w-5 mr-2 text-emerge-gold" />
+                  Talent Applications
+                </CardTitle>
+                <CardDescription>Manage talent registration applications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-2xl">New</p>
+                    <p className="text-sm text-muted-foreground">Talent applications</p>
+                  </div>
+                  <Link to="/admin/talents">
+                    <Button>Review Applications</Button>
                   </Link>
                 </div>
               </CardContent>
