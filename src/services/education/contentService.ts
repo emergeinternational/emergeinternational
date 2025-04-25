@@ -87,19 +87,19 @@ export const getEducationContentByCategory = async (): Promise<Record<string, an
 /**
  * Groups education content by talent type
  * 
- * WARNING: Using simplified typing to avoid TypeScript recursion issues
- * Runtime validation is used instead of complex type inference
+ * Implementation note: This function returns a simple object with talent types as keys and arrays as values
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<any> => {  // Using any to completely avoid type recursion
+): Promise<{ [key: string]: EducationContent[] }> => {
   try {
-    // Use a plain object to avoid TypeScript recursion
-    const result: {[key: string]: any} = {};
+    // Use a simple object literal to avoid TypeScript recursion
+    const result: { [key: string]: EducationContent[] } = {};
     
-    // Iterate through talent types manually
-    for (const talentType of TALENT_TYPES) {
+    // Process each talent type separately
+    for (let i = 0; i < TALENT_TYPES.length; i++) {
+      const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
     }
@@ -108,10 +108,11 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Use the same simple approach for fallback
-    const result: {[key: string]: any} = {};
+    // Use the same approach for fallback
+    const result: { [key: string]: EducationContent[] } = {};
     
-    for (const talentType of TALENT_TYPES) {
+    for (let i = 0; i < TALENT_TYPES.length; i++) {
+      const talentType = TALENT_TYPES[i];
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
