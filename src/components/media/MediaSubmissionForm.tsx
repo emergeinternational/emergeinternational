@@ -29,6 +29,7 @@ const mediaFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
+  gender: z.enum(["Male", "Female"]),
   category: z.enum(["Model", "Dancer", "Singer", "Actor", "Designer", "Other"]),
   instagramHandle: z.string().optional(),
   tiktokHandle: z.string().optional(),
@@ -39,7 +40,9 @@ const mediaFormSchema = z.object({
   measurements: z.object({
     bust: z.string().optional(),
     waist: z.string().optional(),
-    hips: z.string().optional()
+    hips: z.string().optional(),
+    chest: z.string().optional(),
+    shoulders: z.string().optional()
   }).optional(),
   dressSize: z.string().optional(),
   shoeSize: z.string().optional()
@@ -64,6 +67,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   });
 
   const selectedCategory = form.watch("category");
+  const selectedGender = form.watch("gender");
 
   const onSubmit = async (data: MediaFormData) => {
     try {
@@ -152,6 +156,30 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
 
               <FormField
                 control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Gender</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
@@ -163,9 +191,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="phoneNumber"
@@ -179,7 +205,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                   </FormItem>
                 )}
               />
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="age"
@@ -265,7 +293,11 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               />
             </div>
 
-            <ModelMeasurementsSection form={form} show={selectedCategory === "Model"} />
+            <ModelMeasurementsSection 
+              form={form} 
+              show={selectedCategory === "Model"} 
+              gender={selectedGender || ""}
+            />
 
             <FormField
               control={form.control}

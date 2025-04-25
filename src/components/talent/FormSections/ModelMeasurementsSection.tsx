@@ -6,9 +6,10 @@ import { UseFormReturn } from "react-hook-form";
 interface ModelMeasurementsSectionProps {
   form: UseFormReturn<any>;
   show: boolean;
+  gender: string;
 }
 
-export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectionProps) => {
+export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasurementsSectionProps) => {
   if (!show) return null;
 
   return (
@@ -51,57 +52,110 @@ export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectio
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="measurements.bust"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="font-bold text-black">Bust/Chest</FormLabel>
-              <FormControl>
-                <Input placeholder="90 cm" {...field} />
-              </FormControl>
-              <p className="text-xs text-gray-500">Measure around the fullest part</p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {gender === "Male" ? (
+          <>
+            <FormField
+              control={form.control}
+              name="measurements.chest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Chest</FormLabel>
+                  <FormControl>
+                    <Input placeholder="100 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure around the fullest part of chest</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="measurements.waist"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="font-bold text-black">Waist</FormLabel>
-              <FormControl>
-                <Input placeholder="60 cm" {...field} />
-              </FormControl>
-              <p className="text-xs text-gray-500">Measure at natural waistline</p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="measurements.waist"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Waist</FormLabel>
+                  <FormControl>
+                    <Input placeholder="80 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure at natural waistline</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="measurements.hips"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="font-bold text-black">Hips</FormLabel>
-              <FormControl>
-                <Input placeholder="90 cm" {...field} />
-              </FormControl>
-              <p className="text-xs text-gray-500">Measure at fullest part of hips</p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="measurements.shoulders"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Shoulders</FormLabel>
+                  <FormControl>
+                    <Input placeholder="45 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure shoulder width</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        ) : (
+          <>
+            <FormField
+              control={form.control}
+              name="measurements.bust"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Bust</FormLabel>
+                  <FormControl>
+                    <Input placeholder="90 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure around fullest part of bust</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="measurements.waist"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Waist</FormLabel>
+                  <FormControl>
+                    <Input placeholder="60 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure at smallest part of waist</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="measurements.hips"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Hips</FormLabel>
+                  <FormControl>
+                    <Input placeholder="90 cm" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Measure at fullest part of hips</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
 
         <FormField
           control={form.control}
           name="dressSize"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">Dress Size</FormLabel>
+              <FormLabel className="font-bold text-black">
+                {gender === "Male" ? "Suit Size" : "Dress Size"}
+              </FormLabel>
               <FormControl>
                 <Input placeholder="US 4 / EU 34" {...field} />
               </FormControl>
