@@ -1,9 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EducationContent, TalentType, WeeklyContent } from "./types";
+import { EducationContent, TALENT_TYPES } from "./types";
 import { getFallbackContent } from "./fallbackData";
 import { getEducationCategories } from "./categoriesService";
-import { TALENT_TYPES } from "./types";
 
 /**
  * Gets education content with talent type filtering
@@ -59,7 +58,7 @@ export const getEducationContent = async (
 /**
  * Groups education content by category
  */
-export const getEducationContentByCategory = async (): Promise<Record<string, EducationContent[]>> => {
+export const getEducationContentByCategory = async () => {
   try {
     const categories = await getEducationCategories();
     const result: Record<string, EducationContent[]> = {};
@@ -84,42 +83,41 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
 };
 
 /**
- * Groups education content by talent type without using complex types
- * Uses simple string-based iteration to avoid type recursion issues
+ * Groups education content by talent type using a safe approach
+ * that avoids any complex type recursion
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<Record<string, EducationContent[]>> => {
+) => {
   try {
-    // Use a simple string record to avoid recursive type instantiation
-    const result: Record<string, EducationContent[]> = {};
+    // Use a simple Record type with string keys
+    const result: Record<string, any[]> = {};
     
-    // Iterate through talent types as simple strings
+    // Loop through the talent types array by index
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
     }
     
-    return result;
+    return result as Record<string, EducationContent[]>;
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Create a fallback response with static content
-    const result: Record<string, EducationContent[]> = {};
+    // Create a fallback with a simple structure
+    const result: Record<string, any[]> = {};
     
-    // Use index-based iteration to avoid type issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
-    return result;
+    return result as Record<string, EducationContent[]>;
   }
 };
 
-export const getCourseWeeklyContent = async (courseId: string): Promise<WeeklyContent[]> => {
+export const getCourseWeeklyContent = async (courseId: string) => {
   try {
     return [
       {

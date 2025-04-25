@@ -49,10 +49,7 @@ export interface WeeklyContent {
   content: string;
 }
 
-// Simple string literals for talent types - this avoids recursive type instantiation
-export type TalentType = 'models' | 'designers' | 'photographers' | 'videographers' | 'influencers' | 'entertainment';
-
-// Define talent types as constant strings for consistent usage
+// List of valid talent types as simple strings
 export const TALENT_TYPES = [
   'models',
   'designers',
@@ -60,4 +57,4 @@ export const TALENT_TYPES = [
   'videographers',
   'influencers',
   'entertainment'
-] as const;
+];
