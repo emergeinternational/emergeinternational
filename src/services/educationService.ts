@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -46,7 +45,7 @@ export interface CourseEngagement {
   last_click_date: string;
 }
 
-// Define talent types
+// Define talent types as string literals in an array with const assertion
 export const TALENT_TYPES = [
   'models',
   'designers',
@@ -56,8 +55,8 @@ export const TALENT_TYPES = [
   'entertainment'
 ] as const;
 
-// Define talent type as a union of string literals
-export type TalentType = typeof TALENT_TYPES[number];
+// Define talent type as a union of string literals from the array
+export type TalentType = (typeof TALENT_TYPES)[number];
 
 // Static fallback data for categories
 const fallbackCategories: EducationCategory[] = [
@@ -403,6 +402,9 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
   }
 };
 
+/**
+ * Groups education content by talent type
+ */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
@@ -410,6 +412,7 @@ export const getEducationContentByTalentType = async (
   try {
     const result: Record<string, EducationContent[]> = {};
     
+    // Use explicit string type for talentType instead of TalentType to avoid deep instantiation
     for (const talentType of TALENT_TYPES) {
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
