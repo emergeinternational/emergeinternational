@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,13 +32,19 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
           description: "Please select an image smaller than 5MB",
           variant: "destructive",
         });
+        setUploading(false);
         return;
       }
 
       // Compress image if needed
+      console.log(`Compressing image: ${file.name}, size: ${file.size} bytes`);
       const compressedFile = await compressImage(file);
+      console.log(`Compressed to: ${compressedFile.size} bytes`);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      
+      console.log(`Uploading to avatars/${fileName}`);
       
       // Upload compressed image
       const { data, error: uploadError } = await supabase.storage
@@ -48,15 +55,16 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
         });
       
       if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw uploadError;
+        console.error("Upload error details:", uploadError);
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
       
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
-        .getPublicUrl(fileName);
+        .getPublicUrl(data.path);
       
+      console.log("Upload successful, URL:", publicUrlData.publicUrl);
       onUpload(publicUrlData.publicUrl);
       
       toast({

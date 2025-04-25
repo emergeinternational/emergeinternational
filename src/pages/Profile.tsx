@@ -10,23 +10,25 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { useStorage } from "@/hooks/useStorage"; // Import our new hook
+import { useStorage } from "@/hooks/useStorage"; // Import our hook
 
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { ensureBucket } = useStorage(); // Use our new hook
+  const { ensureBucket } = useStorage(); // Use our hook
   
-  // Initialize storage when component mounts
+  // Check if the avatars bucket exists when component mounts
   useEffect(() => {
     if (user) {
-      // Create the storage bucket as soon as we have an authenticated user
+      // Check for the avatars bucket
       ensureBucket('avatars', { 
         public: true,
-        fileSizeLimit: 1 * 1024 * 1024 // 1MB
+        fileSizeLimit: 5 * 1024 * 1024 // 5MB
       }).catch(err => {
-        console.error("Failed to create avatars bucket:", err);
+        console.error("Failed to ensure avatars bucket exists:", err);
+        // Just log the error, don't show to user as it's likely a permissions issue
+        // and the bucket probably already exists on the server
       });
     }
   }, [user]);

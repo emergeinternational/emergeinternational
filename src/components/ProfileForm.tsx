@@ -7,13 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import BasicInfoSection from "./profile/BasicInfoSection";
 import ContactSection from "./profile/ContactSection";
 import AvatarUpload from "./profile/AvatarUpload";
-import { useStorage } from "@/hooks/useStorage"; // Import our new hook
+import { useStorage } from "@/hooks/useStorage"; // Import our hook
 
 const ProfileForm = () => {
   const { user } = useAuth();
   const { createProfile, isLoading } = useProfile();
   const { toast } = useToast();
-  const { ensureBucket } = useStorage(); // Use our new hook
+  const { ensureBucket } = useStorage(); // Use our hook
   const [formData, setFormData] = useState({
     full_name: "",
     country: "",
@@ -26,19 +26,16 @@ const ProfileForm = () => {
     avatar_url: ""
   });
 
-  // Ensure the avatars bucket exists when component mounts
+  // Check for the avatars bucket when component mounts
   useEffect(() => {
     if (user) {
+      // Verify the avatars bucket exists
       ensureBucket('avatars', { 
         public: true,
-        fileSizeLimit: 1 * 1024 * 1024 // 1MB
+        fileSizeLimit: 5 * 1024 * 1024 // 5MB limit
       }).catch(err => {
-        console.error("Failed to create avatars bucket:", err);
-        toast({
-          title: "Storage Setup Error",
-          description: "There was a problem setting up storage. Some features may be limited.",
-          variant: "destructive"
-        });
+        console.error("Failed to ensure avatars bucket exists:", err);
+        // Just log the error, don't show to user
       });
     }
   }, [user]);

@@ -17,26 +17,38 @@ export const useStorage = () => {
     setError(null);
     
     try {
-      const { data: buckets } = await supabase.storage.listBuckets();
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error("Error checking buckets:", listError);
+        throw new Error(`Failed to check storage buckets: ${listError.message}`);
+      }
+      
       const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
       
       if (!bucketExists) {
         console.log(`Creating bucket: ${bucketName}`);
         
-        const { error } = await supabase.storage
+        // Only an authenticated admin or service role should try to create buckets
+        // This will likely fail for regular users due to RLS policies
+        const { error: createError } = await supabase.storage
           .createBucket(bucketName, {
             public: options?.public ?? true,
-            fileSizeLimit: options?.fileSizeLimit ?? 1024 * 1024 // Default 1MB
+            fileSizeLimit: options?.fileSizeLimit ?? 1024 * 1024 * 5 // Default 5MB
           });
         
-        if (error) throw error;
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          throw new Error(`Failed to create storage bucket: ${createError.message}`);
+        }
+        
         return true;
       } else {
         console.log(`Bucket ${bucketName} already exists`);
         return true;
       }
     } catch (err) {
-      console.error(`Error ensuring bucket ${bucketName}:`, err);
+      console.error(`Error ensuring bucket exists ${bucketName}:`, err);
       setError(err instanceof Error ? err : new Error('Unknown error'));
       return false;
     } finally {
@@ -57,12 +69,10 @@ export const useStorage = () => {
     setError(null);
     
     try {
-      // Ensure bucket exists
-      const bucketReady = await ensureBucket(bucketName);
-      if (!bucketReady) throw new Error(`Failed to ensure bucket ${bucketName}`);
-      
       // Generate file path if not provided
       const filePath = path || `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+      
+      console.log(`Uploading file to ${bucketName}/${filePath}`);
       
       // Upload file
       const { data, error } = await supabase.storage
@@ -72,13 +82,17 @@ export const useStorage = () => {
           upsert: options?.upsert !== undefined ? options.upsert : true
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Storage upload error:", error);
+        throw error;
+      }
       
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(data.path);
       
+      console.log("Upload successful, URL:", publicUrlData.publicUrl);
       return publicUrlData.publicUrl;
     } catch (err) {
       console.error(`Error uploading to ${bucketName}:`, err);
