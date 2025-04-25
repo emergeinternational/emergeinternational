@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { 
   Check, 
@@ -80,11 +79,9 @@ const UserManagement = () => {
   });
   const { toast } = useToast();
   
-  // Filter users based on current filter state
   const filteredUsers = useMemo(() => {
     let result = [...users];
     
-    // Apply search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       result = result.filter(user => 
@@ -93,12 +90,10 @@ const UserManagement = () => {
       );
     }
     
-    // Apply role filter
     if (filters.role !== 'all') {
       result = result.filter(user => user.role === filters.role);
     }
     
-    // Apply date range filter
     if (filters.dateRange !== 'all-time' && result.length > 0) {
       const now = new Date();
       let startDate: Date;
@@ -108,7 +103,6 @@ const UserManagement = () => {
           startDate = new Date(now.setHours(0, 0, 0, 0));
           break;
         case 'this-week': {
-          // Set to beginning of current week (Sunday)
           const day = now.getDay();
           startDate = new Date(now);
           startDate.setDate(now.getDate() - day);
@@ -120,7 +114,7 @@ const UserManagement = () => {
           startDate.setDate(startDate.getDate() - 30);
           break;
         default:
-          startDate = new Date(0); // Beginning of time
+          startDate = new Date(0);
       }
       
       result = result.filter(user => {
@@ -130,7 +124,6 @@ const UserManagement = () => {
       });
     }
     
-    // Apply verification filter
     if (filters.verified !== null) {
       result = result.filter(user => user.is_verified === filters.verified);
     }
@@ -163,12 +156,31 @@ const UserManagement = () => {
   
   useEffect(() => {
     fetchUsers();
+
+    const channel = supabase
+      .channel('user_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          fetchUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
-  
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Get profiles for additional user data
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, created_at');
@@ -180,14 +192,9 @@ const UserManagement = () => {
           profilesCount: 0,
           fetchMethod: 'profiles-table'
         }));
-      } else {
-        setDiagnosticInfo(prev => ({
-          ...prev,
-          profilesCount: profiles?.length || 0
-        }));
+        throw profilesError;
       }
       
-      // Get user roles from the new user_roles table
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -198,26 +205,15 @@ const UserManagement = () => {
           ...prev,
           userRolesCount: 0
         }));
-      } else {
-        setDiagnosticInfo(prev => ({
-          ...prev,
-          userRolesCount: userRoles?.length || 0
-        }));
+        throw rolesError;
       }
       
-      // Current time to identify new users (less than 1 hour old)
       const oneHourAgo = new Date();
       oneHourAgo.setHours(oneHourAgo.getHours() - 1);
       
       if (profiles) {
-        // Map profiles with roles
         const enhancedUsers: UserWithRole[] = profiles.map(profile => {
-          // Find role in user_roles table (primary source)
           const userRole = userRoles?.find(ur => ur.user_id === profile.id);
-          
-          // Determine if this is a verified user (placeholder logic)
-          // In a real scenario, this would check email verification status
-          const isVerified = Boolean(profile.email && profile.full_name);
           
           return {
             id: profile.id,
@@ -226,25 +222,19 @@ const UserManagement = () => {
             role: (userRole?.role as UserRole) || profile.role as UserRole || 'user',
             created_at: profile.created_at,
             is_new: profile.created_at ? new Date(profile.created_at) > oneHourAgo : false,
-            is_verified: isVerified
+            is_verified: Boolean(profile.email && profile.full_name)
           };
         });
         
-        // Sort with newest users first
-        enhancedUsers.sort((a, b) => {
-          if (!a.created_at) return 1;
-          if (!b.created_at) return -1;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-        
         setUsers(enhancedUsers);
+        setDiagnosticInfo(prev => ({
+          ...prev,
+          profilesCount: profiles.length,
+          userRolesCount: userRoles?.length || 0,
+          lastRefreshed: new Date().toISOString(),
+          fetchMethod: 'profiles-table'
+        }));
       }
-      
-      setDiagnosticInfo(prev => ({
-        ...prev,
-        lastRefreshed: new Date().toISOString()
-      }));
-      
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -258,7 +248,6 @@ const UserManagement = () => {
   };
   
   const updateUserRole = async (userId: string, newRole: UserRole) => {
-    // Find the user and mark as loading
     setUsers(prevUsers => 
       prevUsers.map(u => 
         u.id === userId ? { ...u, loading: true } : u
@@ -266,7 +255,6 @@ const UserManagement = () => {
     );
     
     try {
-      // First check if user has a role entry
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('*')
@@ -275,7 +263,6 @@ const UserManagement = () => {
         
       let userRolesSuccess = false;
       
-      // Update or insert into user_roles
       if (existingRole) {
         const { error: updateError } = await supabase
           .from('user_roles')
@@ -299,7 +286,6 @@ const UserManagement = () => {
         }
       }
       
-      // Also update profiles table as fallback
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -309,7 +295,6 @@ const UserManagement = () => {
         console.error("Error updating profile role:", profileError);
       }
       
-      // If either update was successful, update UI
       if (userRolesSuccess || !profileError) {
         setUsers(prevUsers => 
           prevUsers.map(u => 
@@ -329,7 +314,6 @@ const UserManagement = () => {
     } catch (error) {
       console.error('Error updating role:', error);
       
-      // Reset loading state
       setUsers(prevUsers => 
         prevUsers.map(u => 
           u.id === userId ? { ...u, loading: false } : u
@@ -381,7 +365,6 @@ const UserManagement = () => {
         <h2 className="text-xl font-semibold">User Management</h2>
       </div>
       
-      {/* User filters */}
       <UserFilters 
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -391,7 +374,6 @@ const UserManagement = () => {
         activeFilterCount={activeFilterCount}
       />
       
-      {/* Diagnostic Info Panel */}
       <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-xs">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-medium">System Diagnostic</h3>
