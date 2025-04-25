@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo"];
+const ACCEPTED_PORTFOLIO_TYPES = ["application/pdf", ...ACCEPTED_IMAGE_TYPES];
 
 const talentFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -37,8 +38,9 @@ const talentFormSchema = z.object({
   city: z.string().min(2, "City is required"),
   country: z.string().min(2, "Country is required"),
   socialMediaHandle: z.string().optional(),
+  telegramHandle: z.string().optional(),
   portfolioUrl: z.string().url().optional().or(z.literal("")),
-  category: z.enum(["Model", "Dancer", "Singer", "Actor", "Other"]),
+  category: z.enum(["Model", "Dancer", "Singer", "Actor", "Designer", "Other"]),
   talentDescription: z.string()
     .min(10, "Please provide a description")
     .max(300, "Description must not exceed 300 characters"),
@@ -71,7 +73,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
     return data.path;
   };
 
-  const handleFileUpload = async (files: FileList | null, type: "photo" | "video") => {
+  const handleFileUpload = async (files: FileList | null, type: "photo" | "video" | "portfolio") => {
     if (!files || files.length === 0) return [];
 
     const uploadPromises = [];
@@ -89,6 +91,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         toast({
           title: "Invalid file type",
           description: "Please upload only video files (MP4, MOV, AVI)",
+          variant: "destructive",
+        });
+        continue;
+      }
+      if (type === "portfolio" && !ACCEPTED_PORTFOLIO_TYPES.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload image or PDF files",
           variant: "destructive",
         });
         continue;
@@ -113,7 +123,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
     try {
       setUploadingFiles(true);
 
-      // Handle photo uploads
       const photoInput = document.querySelector<HTMLInputElement>('#photos');
       const photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
 
@@ -126,37 +135,24 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         return;
       }
 
-      // Handle video upload
       const videoInput = document.querySelector<HTMLInputElement>('#video');
       const videoUrls = await handleFileUpload(videoInput?.files || null, "video");
 
-      // Use Supabase's server side REST endpoint with the public anon key from the client
-      const SUPABASE_URL = "https://dqfnetchkvnzrtacgvfw.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZm5ldGNoa3ZuenJ0YWNndmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0ODkyNTgsImV4cCI6MjA2MTA2NTI1OH0.h6eC1M8Kxt1r-kATr_dXNfL41jQFd8khGqf7XLSupvg";
+      const portfolioInput = document.querySelector<HTMLInputElement>('#portfolio');
+      const portfolioUrls = await handleFileUpload(portfolioInput?.files || null, "portfolio");
 
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/talent_registrations`, {
+      const response = await fetch("https://dqfnetchkvnzrtacgvfw.supabase.co/rest/v1/talent_registrations", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZm5ldGNoa3ZuenJ0YWNndmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0ODkyNTgsImV4cCI6MjA2MTA2NTI1OH0.h6eC1M8Kxt1r-kATr_dXNfL41jQFd8khGqf7XLSupvg',
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
-          full_name: data.fullName,
-          email: data.email,
-          phone_number: data.phoneNumber,
-          age: data.age,
-          gender: data.gender,
-          city: data.city,
-          country: data.country,
-          social_media_handle: data.socialMediaHandle,
-          portfolio_url: data.portfolioUrl,
-          category: data.category,
-          talent_description: data.talentDescription,
-          availability: data.availability,
+          ...data,
           photo_urls: photoUrls,
           video_url: videoUrls[0],
-          consent_given: data.consent,
+          portfolio_url: portfolioUrls[0] || data.portfolioUrl,
         }),
       });
 
@@ -295,6 +291,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                       <SelectItem value="Dancer">Dancer</SelectItem>
                       <SelectItem value="Singer">Singer</SelectItem>
                       <SelectItem value="Actor">Actor</SelectItem>
+                      <SelectItem value="Designer">Designer</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -343,6 +340,20 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                   <FormLabel>Instagram or TikTok Handle</FormLabel>
                   <FormControl>
                     <Input placeholder="@yourusername" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="telegramHandle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telegram Handle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@yourtelegram" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -424,6 +435,19 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
               />
               <p className="text-sm text-gray-500 mt-1">
                 Upload a video up to 100MB (MP4, MOV, AVI)
+              </p>
+            </div>
+
+            <div>
+              <FormLabel>Portfolio or Design Samples (Optional)</FormLabel>
+              <Input
+                id="portfolio"
+                type="file"
+                accept={ACCEPTED_PORTFOLIO_TYPES.join(",")}
+                className="mt-1"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Upload portfolio (PDF) or design samples (JPG, PNG, WebP)
               </p>
             </div>
           </div>
