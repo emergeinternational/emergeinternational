@@ -16,12 +16,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <div className="mb-6">
       <AspectRatio ratio={16 / 9}>
         <iframe
+          width="100%"
+          height="100%"
           src={source}
-          loading="lazy"
+          title={title}
+          frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
+          loading="lazy"
           className="w-full h-full rounded"
-          title={title}
         />
       </AspectRatio>
     </div>
