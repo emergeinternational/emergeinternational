@@ -90,12 +90,12 @@ export const getEducationContentByCategory = async (): Promise<{[key: string]: E
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<{[key: string]: EducationContent[]}> => {
+): Promise<Record<string, EducationContent[]>> => {
   try {
-    // Use simple object type to avoid recursive type instantiation
-    const result: {[key: string]: EducationContent[]} = {};
+    // Use a plain object type to avoid recursive type instantiation issues
+    const result: Record<string, EducationContent[]> = {};
     
-    // Use for loop instead of map to avoid type inference issues
+    // Use standard for loop instead of functional methods to avoid type inference issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
@@ -106,8 +106,8 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Also use simple object type in the error case
-    const result: {[key: string]: EducationContent[]} = {};
+    // Use the same simple type here as well
+    const result: Record<string, EducationContent[]> = {};
     
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
