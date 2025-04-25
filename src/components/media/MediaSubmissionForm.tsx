@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +24,6 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// File size limits and accepted file types
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_MEDIA_SIZE = 250 * 1024 * 1024; // 250MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -65,7 +63,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
     },
   });
 
-  // File validation functions
   const validateFile = (file: File, type: "photo" | "media") => {
     const maxSize = type === "photo" ? MAX_IMAGE_SIZE : MAX_MEDIA_SIZE;
     const acceptedTypes = type === "photo" ? ACCEPTED_IMAGE_TYPES : ACCEPTED_MEDIA_TYPES;
@@ -92,7 +89,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
     return true;
   };
 
-  // Handle file input changes
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -117,7 +113,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
     }
   };
 
-  // File upload function - no bucket creation, just upload
   const uploadFile = async (file: File, bucketName: string): Promise<string | null> => {
     try {
       if (!file) return null;
@@ -125,12 +120,10 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       console.log(`Uploading file ${file.name} (${file.size} bytes) to ${bucketName} bucket`);
       console.log(`File type: ${file.type}`);
       
-      // Generate safe file path with timestamp and sanitized name
       const timestamp = Date.now();
       const safeFilename = file.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "");
       const filePath = `public/${timestamp}-${safeFilename}`;
       
-      // Attempt the upload
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -149,7 +142,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         throw new Error("Upload succeeded but no path returned");
       }
       
-      // Get and return the public URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(data.path);
@@ -176,7 +168,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       setUploading(true);
       setUploadProgress(0);
       
-      // Upload photo first (required)
       let photoUrl: string | null = null;
       try {
         setUploadProgress(10);
@@ -196,7 +187,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         return;
       }
       
-      // Upload media file (optional)
       let mediaUrl: string | null = null;
       if (mediaFile) {
         try {
@@ -209,18 +199,16 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
             title: "Warning",
             description: `Media file upload failed, but continuing with submission: ${error instanceof Error ? error.message : "Unknown error"}`,
           });
-          // Continue with submission even if media upload fails
         }
       }
       
       setUploadProgress(90);
       
-      // Prepare submission data
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
-        age: data.age,
+        age: parseInt(data.age, 10),
         category_type: data.category,
         notes: data.description,
         photo_url: photoUrl,
@@ -234,7 +222,6 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       
       console.log("Submitting entry:", submissionData);
       
-      // Insert submission into the database
       const { error: insertError } = await supabase
         .from('talent_applications')
         .insert(submissionData);
@@ -252,13 +239,11 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       
       setUploadProgress(100);
       
-      // Success!
       toast({
         title: "Success!",
         description: "Your entry has been submitted for review.",
       });
       
-      // Reset form
       form.reset();
       setPhotoFile(null);
       setMediaFile(null);
