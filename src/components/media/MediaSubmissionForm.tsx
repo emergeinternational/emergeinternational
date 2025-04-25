@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,13 +21,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { BasicInfoSection } from "../talent/FormSections/BasicInfoSection";
-import { ModelMeasurementsSection } from "../talent/FormSections/ModelMeasurementsSection";
-import { PerformerSection } from "../talent/FormSections/PerformerSection";
-import { SocialSection } from "../talent/FormSections/SocialSection";
-
-// Define the type for talent_status to match what's in the database
-type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 const mediaFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -38,23 +30,11 @@ const mediaFormSchema = z.object({
   category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Fashion Designer"]),
   description: z.string().min(10, "Please provide a description").max(500, "Description must not exceed 500 characters"),
   instagramHandle: z.string().optional(),
-  portfolioUrl: z.string().url().optional().or(z.literal("")),
-  height: z.number().optional(),
-  weight: z.number().optional(),
-  measurements: z.object({
-    bust: z.string().optional(),
-    waist: z.string().optional(),
-    hips: z.string().optional(),
-  }).optional(),
-  shoeSize: z.string().optional(),
-  dressSize: z.string().optional(),
-  demoReelUrl: z.string().url().optional().or(z.literal("")),
-  languagesSpoken: z.string().optional(),
-  travelAvailability: z.enum(["Local Only", "Domestic Travel", "International OK"]).optional(),
-  experienceLevel: z.enum(["Beginner", "Intermediate", "Professional"]).optional(),
+  tiktokHandle: z.string().optional(),
 });
 
 type MediaFormData = z.infer<typeof mediaFormSchema>;
+type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 interface MediaSubmissionFormProps {
   onSubmitSuccess: () => void;
@@ -63,16 +43,13 @@ interface MediaSubmissionFormProps {
 const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
+  
   const form = useForm<MediaFormData>({
     resolver: zodResolver(mediaFormSchema),
     defaultValues: {
       category: undefined,
     },
   });
-
-  const category = form.watch("category");
-  const isModel = category === "Top Model";
-  const isPerformer = ["Top Performer", "Top Dancer"].includes(category || "");
 
   const onSubmit = async (data: MediaFormData) => {
     try {
@@ -84,20 +61,13 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         category_type: data.category,
         notes: data.description,
         social_media: {
-          instagram: data.instagramHandle || null
+          instagram: data.instagramHandle || null,
+          tiktok: data.tiktokHandle || null
         },
-        height: data.height,
-        weight: data.weight,
-        measurements: data.measurements,
-        shoe_size: data.shoeSize,
-        dress_size: data.dressSize,
-        demo_reel_url: data.demoReelUrl,
-        languages_spoken: data.languagesSpoken?.split(",").map(lang => lang.trim()),
-        travel_availability: data.travelAvailability,
-        experience_level: data.experienceLevel,
-        portfolio_url: data.portfolioUrl,
-        status: "pending" as TalentStatus // Explicitly type this as TalentStatus
+        status: "pending" as TalentStatus
       };
+      
+      console.log("Submitting entry:", submissionData);
       
       const { error } = await supabase
         .from('talent_applications')
@@ -115,7 +85,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       
       toast({
         title: "Success!",
-        description: "Thank you for registering! Our team will review your information and reach out to selected talent for the next stage.",
+        description: "Your entry has been submitted for review.",
       });
       
       form.reset();
@@ -152,36 +122,90 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         </div>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <BasicInfoSection form={form} />
-            
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="category"
+              name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Select Your Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                      <SelectItem value="Top Model">Top Model</SelectItem>
-                      <SelectItem value="Top Performer">Top Performer</SelectItem>
-                      <SelectItem value="Top Dancer">Top Dancer</SelectItem>
-                      <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel className="text-white">Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your full name" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <ModelMeasurementsSection form={form} show={isModel} />
-            <PerformerSection form={form} show={isPerformer} />
-            <SocialSection form={form} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="your@email.com" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Phone Number</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="+1234567890" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Age</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your age" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Select Your Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                        <SelectItem value="Top Model">Top Model</SelectItem>
+                        <SelectItem value="Top Performer">Top Performer</SelectItem>
+                        <SelectItem value="Top Dancer">Top Dancer</SelectItem>
+                        <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -200,6 +224,36 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="instagramHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">Instagram Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourusername" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tiktokHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-white">TikTok Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourtiktok" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Button 
               type="submit" 
