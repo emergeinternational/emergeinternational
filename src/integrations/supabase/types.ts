@@ -264,6 +264,9 @@ export type Database = {
       }
       talent_applications: {
         Row: {
+          age: number | null
+          category_type: string | null
+          country: string | null
           created_at: string | null
           email: string
           experience_years: number | null
@@ -271,6 +274,7 @@ export type Database = {
           id: string
           notes: string | null
           phone: string | null
+          photo_url: string | null
           portfolio_url: string | null
           skills: string[] | null
           social_media: Json | null
@@ -279,6 +283,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          age?: number | null
+          category_type?: string | null
+          country?: string | null
           created_at?: string | null
           email: string
           experience_years?: number | null
@@ -286,6 +293,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          photo_url?: string | null
           portfolio_url?: string | null
           skills?: string[] | null
           social_media?: Json | null
@@ -294,6 +302,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          age?: number | null
+          category_type?: string | null
+          country?: string | null
           created_at?: string | null
           email?: string
           experience_years?: number | null
@@ -301,6 +312,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string | null
+          photo_url?: string | null
           portfolio_url?: string | null
           skills?: string[] | null
           social_media?: Json | null

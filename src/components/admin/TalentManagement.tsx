@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, ExternalLink } from "lucide-react";
+import { RefreshCw, Shield, ExternalLink, MapPin } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type TalentStatus = 'pending' | 'approved' | 'rejected' | 'on_hold';
 
@@ -42,6 +43,10 @@ interface TalentApplication {
   status: TalentStatus;
   notes: string | null;
   created_at: string;
+  country: string | null;
+  age: number | null;
+  category_type: string | null;
+  photo_url: string | null;
 }
 
 const TalentManagement = () => {
@@ -116,9 +121,10 @@ const TalentManagement = () => {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Photo</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Experience</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -126,13 +132,13 @@ const TalentManagement = () => {
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
+              <TableCell colSpan={6} className="text-center py-8">
                 Loading applications...
               </TableCell>
             </TableRow>
           ) : !applications?.length ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
+              <TableCell colSpan={6} className="text-center py-8">
                 No applications found
               </TableCell>
             </TableRow>
@@ -140,19 +146,45 @@ const TalentManagement = () => {
             applications.map((app) => (
               <TableRow key={app.id}>
                 <TableCell>
+                  <Avatar className="h-10 w-10">
+                    {app.photo_url ? (
+                      <AvatarImage src={app.photo_url} alt={app.full_name} />
+                    ) : (
+                      <AvatarFallback>{app.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    )}
+                  </Avatar>
+                </TableCell>
+                <TableCell>
                   <div className="font-medium">{app.full_name}</div>
                   <div className="text-sm text-gray-500">
                     Applied {new Date(app.created_at).toLocaleDateString()}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div>{app.email}</div>
-                  {app.phone && (
-                    <div className="text-sm text-gray-500">{app.phone}</div>
-                  )}
+                  <div className="space-y-1">
+                    <div className="text-sm">
+                      {app.age && <span className="mr-2">{app.age} years old</span>}
+                      {app.country && (
+                        <span className="flex items-center text-gray-600">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {app.country}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500">{app.email}</div>
+                    {app.phone && (
+                      <div className="text-sm text-gray-500">{app.phone}</div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {app.experience_years ? `${app.experience_years} years` : 'N/A'}
+                  {app.category_type ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerge-cream text-emerge-darkBg">
+                      {app.category_type}
+                    </span>
+                  ) : (
+                    'N/A'
+                  )}
                 </TableCell>
                 <TableCell>
                   <span className={`font-medium ${getStatusColor(app.status)}`}>
@@ -179,33 +211,55 @@ const TalentManagement = () => {
                           </DialogDescription>
                         </DialogHeader>
                         {selectedApplication && (
-                          <div className="space-y-4">
+                          <div className="space-y-6">
+                            <div className="flex items-center space-x-4">
+                              <Avatar className="h-20 w-20">
+                                {selectedApplication.photo_url ? (
+                                  <AvatarImage src={selectedApplication.photo_url} alt={selectedApplication.full_name} />
+                                ) : (
+                                  <AvatarFallback>{selectedApplication.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                )}
+                              </Avatar>
+                              <div>
+                                <h3 className="text-lg font-semibold">{selectedApplication.full_name}</h3>
+                                <p className="text-sm text-gray-500">
+                                  {selectedApplication.category_type || 'Category not specified'}
+                                </p>
+                              </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <h3 className="font-semibold">Personal Information</h3>
-                                <p>Name: {selectedApplication.full_name}</p>
-                                <p>Email: {selectedApplication.email}</p>
-                                {selectedApplication.phone && (
-                                  <p>Phone: {selectedApplication.phone}</p>
-                                )}
+                                <div className="space-y-2 mt-2">
+                                  <p>Age: {selectedApplication.age || 'Not specified'}</p>
+                                  <p>Country: {selectedApplication.country || 'Not specified'}</p>
+                                  <p>Email: {selectedApplication.email}</p>
+                                  {selectedApplication.phone && (
+                                    <p>Phone: {selectedApplication.phone}</p>
+                                  )}
+                                </div>
                               </div>
                               <div>
                                 <h3 className="font-semibold">Professional Details</h3>
-                                <p>Experience: {selectedApplication.experience_years || 'N/A'} years</p>
-                                {selectedApplication.portfolio_url && (
-                                  <p>
-                                    <a 
-                                      href={selectedApplication.portfolio_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-emerge-gold hover:underline inline-flex items-center"
-                                    >
-                                      Portfolio <ExternalLink className="h-4 w-4 ml-1" />
-                                    </a>
-                                  </p>
-                                )}
+                                <div className="space-y-2 mt-2">
+                                  <p>Experience: {selectedApplication.experience_years || 'N/A'} years</p>
+                                  {selectedApplication.portfolio_url && (
+                                    <p>
+                                      <a 
+                                        href={selectedApplication.portfolio_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-emerge-gold hover:underline inline-flex items-center"
+                                      >
+                                        Portfolio <ExternalLink className="h-4 w-4 ml-1" />
+                                      </a>
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
+
                             {selectedApplication.skills && (
                               <div>
                                 <h3 className="font-semibold mb-2">Skills</h3>
