@@ -91,8 +91,8 @@ export const getEducationContentByTalentType = async (
   featuredOnly: boolean = false
 ): Promise<Record<string, EducationContent[]>> => {
   try {
-    // Use a simple object to store results
-    const result: { [key: string]: EducationContent[] } = {};
+    // Create a simple object with string keys to store results
+    const result: Record<string, EducationContent[]> = {};
     
     // Use a basic for loop with indices to avoid type recursion issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
@@ -109,7 +109,7 @@ export const getEducationContentByTalentType = async (
     console.error("Error in getEducationContentByTalentType:", error);
     
     // Create a fallback with a simple structure
-    const result: { [key: string]: EducationContent[] } = {};
+    const result: Record<string, EducationContent[]> = {};
     
     // Use simple for loop to avoid any potential typing issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
