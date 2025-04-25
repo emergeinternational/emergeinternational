@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Check, 
@@ -83,79 +82,61 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // First fetch all auth users directly using the auth API
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-        // If we can't access auth.admin API, fallback to profiles table
-        fallbackToProfilesTable();
-        return;
-      }
-      
-      if (authUsers) {
-        console.log(`Fetched ${authUsers.users.length} users from auth API`);
+      // Get profiles for additional user data
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role, created_at, last_sign_in_at');
         
-        // Update diagnostic info
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
         setDiagnosticInfo(prev => ({
           ...prev,
-          authUsersCount: authUsers.users.length,
-          lastRefreshed: new Date().toISOString(),
-          fetchMethod: 'auth-api'
+          profilesCount: 0,
+          fetchMethod: 'profiles-table'
         }));
-        
-        // Get user roles
-        const { data: userRoles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role');
-        
-        if (rolesError) {
-          console.error('Error fetching user roles:', rolesError);
-        } else {
-          setDiagnosticInfo(prev => ({
-            ...prev,
-            userRolesCount: userRoles?.length || 0
-          }));
-        }
-        
-        // Get profiles for additional user data
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, role');
-          
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-        } else {
-          setDiagnosticInfo(prev => ({
-            ...prev,
-            profilesCount: profiles?.length || 0
-          }));
-        }
-        
-        // Current time to identify new users (less than 1 hour old)
-        const oneHourAgo = new Date();
-        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-        
-        // Map users with roles and profile data
-        const enhancedUsers: UserWithRole[] = authUsers.users.map(user => {
+      } else {
+        setDiagnosticInfo(prev => ({
+          ...prev,
+          profilesCount: profiles?.length || 0
+        }));
+      }
+      
+      // Get user roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
+        setDiagnosticInfo(prev => ({
+          ...prev,
+          userRolesCount: 0
+        }));
+      } else {
+        setDiagnosticInfo(prev => ({
+          ...prev,
+          userRolesCount: userRoles?.length || 0
+        }));
+      }
+      
+      // Current time to identify new users (less than 1 hour old)
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+      
+      if (profiles) {
+        // Map profiles with roles
+        const enhancedUsers: UserWithRole[] = profiles.map(profile => {
           // Find role in user_roles table (primary source)
-          const userRole = userRoles?.find(ur => ur.user_id === user.id);
-          
-          // Find profile data
-          const profile = profiles?.find(p => p.id === user.id);
-          
-          // Check if user was created in the last hour
-          const isNewUser = user.created_at ? 
-            new Date(user.created_at) > oneHourAgo : false;
+          const userRole = userRoles?.find(ur => ur.user_id === profile.id);
           
           return {
-            id: user.id,
-            email: user.email || 'No Email',
-            full_name: profile?.full_name || user.user_metadata?.full_name || 'Unnamed User',
-            role: (userRole?.role as UserRole) || profile?.role as UserRole || 'user',
-            created_at: user.created_at,
-            last_sign_in_at: user.last_sign_in_at,
-            is_new: isNewUser
+            id: profile.id,
+            email: profile.email || 'No Email',
+            full_name: profile.full_name || 'Unnamed User',
+            role: (userRole?.role as UserRole) || profile.role as UserRole || 'user',
+            created_at: profile.created_at,
+            last_sign_in_at: profile.last_sign_in_at,
+            is_new: profile.created_at ? new Date(profile.created_at) > oneHourAgo : false
           };
         });
         
@@ -168,83 +149,19 @@ const UserManagement = () => {
         
         setUsers(enhancedUsers);
       }
-    } catch (error) {
-      console.error('Error in primary user fetch method:', error);
-      // Fallback to profiles table if auth API fails
-      fallbackToProfilesTable();
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const fallbackToProfilesTable = async () => {
-    try {
-      console.log('Falling back to profiles table for user data');
-      // Instead of using the admin API, we'll fetch from profiles and user_roles tables
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, created_at');
-      
-      if (profilesError) throw profilesError;
-      
-      // Update diagnostic info
-      setDiagnosticInfo(prev => ({
-        ...prev,
-        profilesCount: profiles?.length || 0,
-        lastRefreshed: new Date().toISOString(),
-        fetchMethod: 'profiles-table'
-      }));
-      
-      // Get user roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-      
-      if (rolesError) throw rolesError;
       
       setDiagnosticInfo(prev => ({
         ...prev,
-        userRolesCount: userRoles?.length || 0
+        lastRefreshed: new Date().toISOString()
       }));
       
-      // Current time to identify new users (less than 1 hour old)
-      const oneHourAgo = new Date();
-      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-      
-      // Map roles to profiles
-      const enhancedUsers: UserWithRole[] = profiles.map(profile => {
-        const userRole = userRoles?.find(ur => ur.user_id === profile.id);
-        
-        // Check if user was created in the last hour
-        const isNewUser = profile.created_at ? 
-          new Date(profile.created_at) > oneHourAgo : false;
-        
-        return {
-          id: profile.id,
-          email: profile.email || 'No Email',
-          full_name: profile.full_name,
-          role: (userRole?.role as UserRole) || 'user',
-          created_at: profile.created_at,
-          is_new: isNewUser
-        };
-      });
-      
-      // Sort with newest users first
-      enhancedUsers.sort((a, b) => {
-        if (!a.created_at) return 1;
-        if (!b.created_at) return -1;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-      
-      setUsers(enhancedUsers);
     } catch (error) {
-      console.error('Error in fallback user fetch:', error);
+      console.error('Error fetching users:', error);
       toast({
         title: "Error fetching users",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
-      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -259,21 +176,7 @@ const UserManagement = () => {
     );
     
     try {
-      // Use a stored procedure approach via a serverless function or RPC
-      // For now, we'll use a simple approach by updating both tables individually
-      
-      // 1. Update profiles table first (this should have less restrictive RLS)
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-        
-      if (profilesError) {
-        console.error("Error updating profile role:", profilesError);
-        // Don't throw yet, try updating user_roles
-      }
-      
-      // 2. Check if entry exists in user_roles
+      // First check if user has a role entry
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('*')
@@ -282,7 +185,7 @@ const UserManagement = () => {
         
       let userRolesSuccess = false;
       
-      // 3. Either update or insert into user_roles
+      // Update or insert into user_roles
       if (existingRole) {
         const { error: updateError } = await supabase
           .from('user_roles')
@@ -306,9 +209,18 @@ const UserManagement = () => {
         }
       }
       
-      // 4. If either update was successful, update UI
-      if (!profilesError || userRolesSuccess) {
-        // Update local state
+      // Also update profiles table as fallback
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error("Error updating profile role:", profileError);
+      }
+      
+      // If either update was successful, update UI
+      if (userRolesSuccess || !profileError) {
         setUsers(prevUsers => 
           prevUsers.map(u => 
             u.id === userId ? { ...u, role: newRole, loading: false } : u
@@ -317,13 +229,12 @@ const UserManagement = () => {
         
         toast({
           title: "Role updated successfully",
-          description: `User role has been updated to ${newRole}`,
-          duration: 3000
+          description: `User role has been updated to ${newRole}`
         });
       } else {
-        // Both updates failed
         throw new Error("Failed to update role in both tables");
       }
+      
     } catch (error) {
       console.error('Error updating role:', error);
       
@@ -334,12 +245,10 @@ const UserManagement = () => {
         )
       );
       
-      // Show error toast
       toast({
         title: "Error updating role",
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-        duration: 5000
+        variant: "destructive"
       });
     }
   };
