@@ -61,7 +61,7 @@ export const getEducationContent = async (
 export const getEducationContentByCategory = async (): Promise<Record<string, EducationContent[]>> => {
   try {
     const categories = await getEducationCategories();
-    // Use a simple type annotation to prevent recursive inference
+    // Use a plain object with string keys and EducationContent[] values
     const result: Record<string, EducationContent[]> = {};
     
     // Use standard for loop to avoid complex type inference
