@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book } from "lucide-react";
@@ -167,17 +168,19 @@ const CourseDetail = () => {
                     
                     <div className="mt-6">
                       {course.source_url ? (
-                        <a 
-                          href={course.source_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
-                        >
-                          Start Learning Now
-                        </a>
-                        <p className="text-center text-xs text-gray-500 mt-2">
-                          You'll be redirected to the course provider
-                        </p>
+                        <div>
+                          <a 
+                            href={course.source_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
+                          >
+                            Start Learning Now
+                          </a>
+                          <p className="text-center text-xs text-gray-500 mt-2">
+                            You'll be redirected to the course provider
+                          </p>
+                        </div>
                       ) : (
                         <Button className="w-full bg-emerge-gold hover:bg-emerge-gold/90">
                           Enroll Now
