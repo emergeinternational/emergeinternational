@@ -1,13 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Check, 
   X, 
-  UserCheck, 
-  UserX, 
   Shield,
-  RefreshCw,
-  Filter,
+  UserCheck, 
+  UserX,
   AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +27,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -43,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import UserFilters, { UserFilterState, DateRange } from "./UserFilters";
 
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
@@ -54,12 +52,19 @@ interface UserWithRole {
   loading?: boolean;
   created_at?: string;
   is_new?: boolean;
+  is_verified?: boolean;
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAllUsers, setShowAllUsers] = useState(true);
+  const [filters, setFilters] = useState<UserFilterState>({
+    search: '',
+    role: 'all',
+    dateRange: 'all-time',
+    verified: null,
+    showAllUsers: true
+  });
   const [diagnosticInfo, setDiagnosticInfo] = useState<{
     authUsersCount: number | null;
     profilesCount: number | null;
@@ -74,6 +79,87 @@ const UserManagement = () => {
     fetchMethod: 'unknown',
   });
   const { toast } = useToast();
+  
+  // Filter users based on current filter state
+  const filteredUsers = useMemo(() => {
+    let result = [...users];
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(user => 
+        (user.full_name && user.full_name.toLowerCase().includes(searchLower)) || 
+        (user.email && user.email.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Apply role filter
+    if (filters.role !== 'all') {
+      result = result.filter(user => user.role === filters.role);
+    }
+    
+    // Apply date range filter
+    if (filters.dateRange !== 'all-time' && result.length > 0) {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (filters.dateRange) {
+        case 'today':
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case 'this-week': {
+          // Set to beginning of current week (Sunday)
+          const day = now.getDay();
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - day);
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        }
+        case 'last-30-days':
+          startDate = new Date();
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        default:
+          startDate = new Date(0); // Beginning of time
+      }
+      
+      result = result.filter(user => {
+        if (!user.created_at) return false;
+        const userCreatedAt = new Date(user.created_at);
+        return userCreatedAt >= startDate;
+      });
+    }
+    
+    // Apply verification filter
+    if (filters.verified !== null) {
+      result = result.filter(user => user.is_verified === filters.verified);
+    }
+    
+    return result;
+  }, [users, filters]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.search) count++;
+    if (filters.role !== 'all') count++;
+    if (filters.dateRange !== 'all-time') count++;
+    if (filters.verified !== null) count++;
+    return count;
+  }, [filters]);
+  
+  const handleFilterChange = (newFilters: Partial<UserFilterState>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+  
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      role: 'all',
+      dateRange: 'all-time',
+      verified: null,
+      showAllUsers: true
+    });
+  };
   
   useEffect(() => {
     fetchUsers();
@@ -101,7 +187,7 @@ const UserManagement = () => {
         }));
       }
       
-      // Get user roles
+      // Get user roles from the new user_roles table
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -129,13 +215,18 @@ const UserManagement = () => {
           // Find role in user_roles table (primary source)
           const userRole = userRoles?.find(ur => ur.user_id === profile.id);
           
+          // Determine if this is a verified user (placeholder logic)
+          // In a real scenario, this would check email verification status
+          const isVerified = Boolean(profile.email && profile.full_name);
+          
           return {
             id: profile.id,
             email: profile.email || 'No Email',
             full_name: profile.full_name || 'Unnamed User',
             role: (userRole?.role as UserRole) || profile.role as UserRole || 'user',
             created_at: profile.created_at,
-            is_new: profile.created_at ? new Date(profile.created_at) > oneHourAgo : false
+            is_new: profile.created_at ? new Date(profile.created_at) > oneHourAgo : false,
+            is_verified: isVerified
           };
         });
         
@@ -228,7 +319,8 @@ const UserManagement = () => {
         
         toast({
           title: "Role updated successfully",
-          description: `User role has been updated to ${newRole}`
+          description: `User role has been updated to ${newRole}`,
+          variant: "default"
         });
       } else {
         throw new Error("Failed to update role in both tables");
@@ -287,41 +379,17 @@ const UserManagement = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">User Management</h2>
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                size="sm" 
-                variant="outline"
-              >
-                <Filter className="h-4 w-4 mr-1" />
-                Filters
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>View Options</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setShowAllUsers(!showAllUsers)}>
-                {showAllUsers ? 
-                  <Check className="h-4 w-4 mr-2" /> : 
-                  <div className="w-4 h-4 mr-2" />
-                }
-                Show all users
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={fetchUsers}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
       </div>
+      
+      {/* User filters */}
+      <UserFilters 
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={resetFilters}
+        onRefresh={fetchUsers}
+        isLoading={loading}
+        activeFilterCount={activeFilterCount}
+      />
       
       {/* Diagnostic Info Panel */}
       <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-xs">
@@ -358,6 +426,7 @@ const UserManagement = () => {
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Current Role</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -365,18 +434,28 @@ const UserManagement = () => {
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
+              <TableCell colSpan={6} className="text-center py-8">
                 Loading users...
               </TableCell>
             </TableRow>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
-                No users found
+              <TableCell colSpan={6} className="text-center py-8">
+                {users.length > 0 ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertTriangle className="h-8 w-8 text-amber-500" />
+                    <p>No users match your current filters</p>
+                    <Button variant="outline" size="sm" onClick={resetFilters}>
+                      Clear all filters
+                    </Button>
+                  </div>
+                ) : (
+                  'No users found in the system'
+                )}
               </TableCell>
             </TableRow>
           ) : (
-            users.map((user) => (
+            filteredUsers.map((user) => (
               <TableRow key={user.id} className={user.is_new ? "bg-emerald-50" : undefined}>
                 <TableCell>
                   <div className="flex items-center">
@@ -399,6 +478,13 @@ const UserManagement = () => {
                     {getRoleIcon(user.role || 'user')}
                     {user.role || 'user'}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {user.is_verified ? (
+                    <Badge variant="verified">Verified</Badge>
+                  ) : (
+                    <Badge variant="pending">Unverified</Badge>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">
                   <div>{formatDate(user.created_at)}</div>
@@ -470,12 +556,12 @@ const UserManagement = () => {
         </TableBody>
       </Table>
       
-      {!loading && users.length > 0 && (
+      {!loading && filteredUsers.length > 0 && (
         <div className="text-xs text-gray-500 mt-2">
-          Showing {users.length} users
-          {users.filter(u => u.is_new).length > 0 && (
+          Showing {filteredUsers.length} of {users.length} users
+          {filteredUsers.filter(u => u.is_new).length > 0 && (
             <span className="ml-1">
-              including <span className="font-semibold text-emerald-600">{users.filter(u => u.is_new).length} new</span> in the last hour
+              including <span className="font-semibold text-emerald-600">{filteredUsers.filter(u => u.is_new).length} new</span> in the last hour
             </span>
           )}
         </div>
