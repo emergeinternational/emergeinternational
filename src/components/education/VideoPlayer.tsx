@@ -2,6 +2,8 @@
 import React from "react";
 
 const VideoPlayer = () => {
+  console.log("VideoPlayer component rendering");
+  
   return (
     <div style={{ width: "100%", maxWidth: "720px", margin: "0 auto" }}>
       <iframe

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -75,9 +76,11 @@ const CourseDetail = () => {
   }, [id, toast]);
 
   const renderContentSection = () => {
+    console.log("Rendering content section. Course:", course);
     if (!course) return null;
 
     if (course.content_type === 'video') {
+      console.log("Attempting to render video player");
       return <VideoPlayer />;
     }
 
