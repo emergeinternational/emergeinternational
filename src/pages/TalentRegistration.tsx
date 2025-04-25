@@ -34,7 +34,7 @@ const TalentRegistration = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1509924603848-aca5e5f276d7?auto=format&fit=crop&q=80')"
+            backgroundImage: "url('https://images.unsplash.com/photo-1552960562-daf630e9278b?auto=format&fit=crop&q=80&w=2070&h=1000&crop=entropy')"
           }}
         />
         <div className="emerge-container relative z-20 text-center py-20">
