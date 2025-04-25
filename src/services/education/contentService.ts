@@ -1,4 +1,3 @@
-
 // TODO: TEMPORARY WORKAROUND - Replace `any` types with flat validated interfaces once build is stable
 
 import { supabase } from "@/integrations/supabase/client";
@@ -86,18 +85,14 @@ export const getEducationContentByCategory = async (): Promise<Record<string, an
 
 /**
  * Groups education content by talent type
- * 
- * Implementation note: This function returns a simple object with talent types as keys and arrays as values
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<{ [key: string]: EducationContent[] }> => {
+): Promise<Record<string, EducationContent[]>> => {
   try {
-    // Use a simple object literal to avoid TypeScript recursion
-    const result: { [key: string]: EducationContent[] } = {};
+    const result: Record<string, EducationContent[]> = {};
     
-    // Process each talent type separately
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
@@ -108,8 +103,7 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Use the same approach for fallback
-    const result: { [key: string]: EducationContent[] } = {};
+    const result: Record<string, EducationContent[]> = {};
     
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
