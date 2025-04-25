@@ -1,6 +1,4 @@
 
-// TODO: TEMPORARY WORKAROUND - Replace `any` types with flat validated interfaces once build is stable
-
 import { supabase } from "@/integrations/supabase/client";
 import { EducationContent, TALENT_TYPES } from "./types";
 import { getFallbackContent } from "./fallbackData";
@@ -60,12 +58,15 @@ export const getEducationContent = async (
 /**
  * Groups education content by category
  */
-export const getEducationContentByCategory = async (): Promise<{[key: string]: EducationContent[]}> => {
+export const getEducationContentByCategory = async (): Promise<Record<string, EducationContent[]>> => {
   try {
     const categories = await getEducationCategories();
-    const result: {[key: string]: EducationContent[]} = {};
+    // Use a simple type annotation to prevent recursive inference
+    const result: Record<string, EducationContent[]> = {};
     
-    for (const category of categories) {
+    // Use standard for loop to avoid complex type inference
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
       const content = await getEducationContent(category.id, 5);
       result[category.id] = content;
     }
@@ -74,9 +75,12 @@ export const getEducationContentByCategory = async (): Promise<{[key: string]: E
   } catch (error) {
     console.error("Error in getEducationContentByCategory:", error);
     
-    // Create a fallback response with the static content
-    const result: {[key: string]: EducationContent[]} = {};
-    for (const category of await getEducationCategories()) {
+    // Use the same simple type for error case
+    const result: Record<string, EducationContent[]> = {};
+    const categories = await getEducationCategories();
+    
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
       result[category.id] = await getEducationContent(category.id, 5);
     }
     
