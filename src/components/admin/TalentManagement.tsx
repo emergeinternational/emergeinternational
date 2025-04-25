@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Shield, ExternalLink, MapPin } from "lucide-react";
+import { RefreshCw, ExternalLink, MapPin, Instagram } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -39,7 +38,10 @@ interface TalentApplication {
   skills: string[] | null;
   experience_years: number | null;
   portfolio_url: string | null;
-  social_media: any | null;
+  social_media: {
+    instagram?: string;
+    tiktok?: string;
+  } | null;
   status: TalentStatus;
   notes: string | null;
   created_at: string;
@@ -125,6 +127,7 @@ const TalentManagement = () => {
             <TableHead>Name</TableHead>
             <TableHead>Details</TableHead>
             <TableHead>Category</TableHead>
+            <TableHead>Social Media</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -132,13 +135,13 @@ const TalentManagement = () => {
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <TableCell colSpan={7} className="text-center py-8">
                 Loading applications...
               </TableCell>
             </TableRow>
           ) : !applications?.length ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <TableCell colSpan={7} className="text-center py-8">
                 No applications found
               </TableCell>
             </TableRow>
@@ -184,6 +187,28 @@ const TalentManagement = () => {
                     </span>
                   ) : (
                     'N/A'
+                  )}
+                </TableCell>
+                <TableCell>
+                  {app.social_media && (
+                    <div className="space-y-1">
+                      {app.social_media.instagram && (
+                        <a
+                          href={`https://instagram.com/${app.social_media.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center text-emerge-gold hover:underline"
+                        >
+                          <Instagram className="h-4 w-4 mr-1" />
+                          {app.social_media.instagram}
+                        </a>
+                      )}
+                      {app.social_media.tiktok && (
+                        <span className="text-sm text-gray-600">
+                          TikTok: {app.social_media.tiktok}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -237,6 +262,27 @@ const TalentManagement = () => {
                                   <p>Email: {selectedApplication.email}</p>
                                   {selectedApplication.phone && (
                                     <p>Phone: {selectedApplication.phone}</p>
+                                  )}
+                                  {selectedApplication.social_media && (
+                                    <div className="space-y-1">
+                                      <h4 className="text-sm font-medium">Social Media</h4>
+                                      {selectedApplication.social_media.instagram && (
+                                        <a
+                                          href={`https://instagram.com/${selectedApplication.social_media.instagram.replace('@', '')}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center text-emerge-gold hover:underline"
+                                        >
+                                          <Instagram className="h-4 w-4 mr-1" />
+                                          {selectedApplication.social_media.instagram}
+                                        </a>
+                                      )}
+                                      {selectedApplication.social_media.tiktok && (
+                                        <p className="text-sm">
+                                          TikTok: {selectedApplication.social_media.tiktok}
+                                        </p>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               </div>
