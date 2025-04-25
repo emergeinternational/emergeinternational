@@ -38,10 +38,14 @@ const Education = () => {
         const categoriesData = await getEducationCategories();
         setCategories(categoriesData);
         
+        // For "all", pass undefined as categoryId to get all content
+        // For specific categories, pass the category ID
         const contentData = await getEducationContent(
           activeLevel === "all" ? undefined : activeLevel,
           20
         );
+        
+        console.log(`Fetched ${contentData.length} courses for category: ${activeLevel}`);
         setEducationContent(contentData);
         
         const workshopsData = await getWorkshops();
@@ -62,13 +66,19 @@ const Education = () => {
     fetchData();
   }, [activeLevel, toast]);
 
+  // When activeLevel is "all", we want to show all content, not filter
+  // For specific levels, filter according to the category ID
   const filteredCourses = activeLevel === "all" 
     ? educationContent 
     : educationContent.filter(content => content.category_id === activeLevel);
 
+  console.log(`Displaying ${filteredCourses.length} courses after filtering`);
+
   // Format workshop data for the component
   const formattedWorkshops = upcomingWorkshops.map(workshop => ({
-    id: parseInt(workshop.id.substring(0, 8), 16),
+    id: typeof workshop.id === 'string' ? 
+      (workshop.id.startsWith('0x') ? parseInt(workshop.id.substring(0, 8), 16) : workshop.id) : 
+      workshop.id,
     name: workshop.name,
     date: new Date(workshop.date).toLocaleDateString('en-US', {
       month: 'long', 
@@ -121,23 +131,17 @@ const Education = () => {
             ALL
           </button>
           {levels.map(level => (
-            <Link
+            <button
               key={level.id}
-              to={`/education/category/${level.id}`}
+              onClick={() => setActiveLevel(level.id)}
               className={`px-4 py-2 mr-2 whitespace-nowrap ${
                 activeLevel === level.id
                   ? "text-emerge-gold border-b-2 border-emerge-gold"
                   : "text-gray-600"
               }`}
-              onClick={(e) => {
-                e.preventDefault(); // Prevent default link behavior
-                setActiveLevel(level.id); // Update local state
-                // Only navigate if we're not filtering locally
-                // window.location.href = `/education/category/${level.id}`;
-              }}
             >
               {level.name}
-            </Link>
+            </button>
           ))}
         </div>
         
@@ -150,7 +154,7 @@ const Education = () => {
             {filteredCourses.map(course => (
               <CourseCard
                 key={course.id}
-                id={parseInt(course.id.substring(0, 8), 16)}
+                id={course.id}
                 name={course.title}
                 level={course.category_id}
                 description={course.summary || ""}

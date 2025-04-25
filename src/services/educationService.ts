@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -21,7 +22,6 @@ export interface EducationContent {
   published_at: string;
   created_at: string;
   updated_at: string;
-  source?: string;
 }
 
 // Static fallback data for categories
@@ -159,10 +159,12 @@ export const getEducationCategories = async (): Promise<EducationCategory[]> => 
  */
 export const getEducationContent = async (
   categoryId?: string,
-  limit: number = 10,
+  limit: number = 50, // Increased limit to ensure we get more content
   featuredOnly: boolean = false
 ): Promise<EducationContent[]> => {
   try {
+    console.log(`Fetching education content. CategoryID: ${categoryId || 'all'}, Limit: ${limit}`);
+    
     let query = supabase
       .from('education_content')
       .select('*')
@@ -180,10 +182,18 @@ export const getEducationContent = async (
 
     if (error) {
       console.error("Error fetching education content:", error);
-      return getFallbackContent(categoryId, limit, featuredOnly);
+      const fallbackData = getFallbackContent(categoryId, limit, featuredOnly);
+      console.log(`Using fallback data: ${fallbackData.length} items`);
+      return fallbackData;
     }
 
-    return data || getFallbackContent(categoryId, limit, featuredOnly);
+    if (data && data.length > 0) {
+      console.log(`Fetched ${data.length} courses from database`);
+      return data;
+    } else {
+      console.log("No data returned from database, using fallback");
+      return getFallbackContent(categoryId, limit, featuredOnly);
+    }
   } catch (error) {
     console.error("Error in getEducationContent:", error);
     return getFallbackContent(categoryId, limit, featuredOnly);
@@ -191,7 +201,7 @@ export const getEducationContent = async (
 };
 
 // Helper function to filter fallback content
-const getFallbackContent = (categoryId?: string, limit: number = 10, featuredOnly: boolean = false): EducationContent[] => {
+const getFallbackContent = (categoryId?: string, limit: number = 50, featuredOnly: boolean = false): EducationContent[] => {
   let filtered = [...fallbackContent];
   
   if (categoryId) {
@@ -202,6 +212,7 @@ const getFallbackContent = (categoryId?: string, limit: number = 10, featuredOnl
     filtered = filtered.filter(item => item.is_featured);
   }
   
+  console.log(`Filtered fallback content: ${filtered.length} items`);
   return filtered.slice(0, limit);
 };
 

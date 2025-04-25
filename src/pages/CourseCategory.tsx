@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
@@ -43,6 +42,7 @@ const CourseCategory = () => {
         
         // Fetch courses for this category
         const coursesData = await getEducationContent(categoryId);
+        console.log(`Fetched ${coursesData.length} courses for category ${categoryId}`);
         
         if (foundCategory) {
           setCategory(foundCategory);
@@ -110,7 +110,7 @@ const CourseCategory = () => {
                               {typeCourses.map(course => (
                                 <CourseCard
                                   key={course.id}
-                                  id={parseInt(course.id.substring(0, 8), 16)}
+                                  id={course.id} // Pass the original ID directly
                                   name={course.title}
                                   level={course.category_id}
                                   description={course.summary || ""}
@@ -129,7 +129,7 @@ const CourseCategory = () => {
                       {courses.map(course => (
                         <CourseCard
                           key={course.id}
-                          id={parseInt(course.id.substring(0, 8), 16)}
+                          id={course.id} // Pass the original ID directly
                           name={course.title}
                           level={course.category_id}
                           description={course.summary || ""}

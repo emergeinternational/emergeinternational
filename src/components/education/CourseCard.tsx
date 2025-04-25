@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 interface CourseCardProps {
-  id: number;
+  id: number | string;
   name: string;
   level: string;
   description: string;
@@ -13,9 +13,12 @@ interface CourseCardProps {
 }
 
 const CourseCard = ({ id, name, level, description, image, duration, levelName }: CourseCardProps) => {
+  // Ensure id is always passed as a string to avoid type issues
+  const courseId = id.toString();
+  
   return (
     <Link 
-      to={`/education/course/${id}`} 
+      to={`/education/course/${courseId}`} 
       className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
     >
       <div className="aspect-video overflow-hidden">

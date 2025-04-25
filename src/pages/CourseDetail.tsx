@@ -28,13 +28,23 @@ const CourseDetail = () => {
       
       try {
         setIsLoading(true);
-        const courseId = parseInt(id).toString();
         const allCourses = await getEducationContent();
-        const foundCourse = allCourses.find(c => c.id === courseId);
+        let foundCourse = allCourses.find(c => c.id === id);
+        
+        if (!foundCourse) {
+          try {
+            const numericId = parseInt(id).toString();
+            foundCourse = allCourses.find(c => c.id === numericId);
+          } catch (e) {
+            console.log("ID is not numeric, skipping parseInt fallback");
+          }
+        }
         
         if (foundCourse) {
           setCourse(foundCourse);
+          console.log("Course found:", foundCourse);
         } else {
+          console.error("Course not found with ID:", id);
           toast({
             title: "Course not found",
             description: "The requested course could not be found.",
@@ -54,7 +64,7 @@ const CourseDetail = () => {
     };
 
     fetchCourseDetails();
-  }, [id, toast, navigate]);
+  }, [id, toast]);
 
   const courseLevel = course?.category_id || "beginner";
   const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
