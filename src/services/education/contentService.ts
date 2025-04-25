@@ -93,14 +93,13 @@ export const getEducationContentByCategory = async (): Promise<Record<string, an
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<Record<string, EducationContent[]>> => {
+): Promise<any> => {  // Using any to completely avoid type recursion
   try {
-    // Use explicit type to avoid recursion
-    const result: Record<string, EducationContent[]> = {};
+    // Use a plain object to avoid TypeScript recursion
+    const result: {[key: string]: any} = {};
     
-    // Use a simple for loop with string array to avoid TypeScript recursion
-    for (let i = 0; i < TALENT_TYPES.length; i++) {
-      const talentType = TALENT_TYPES[i];
+    // Iterate through talent types manually
+    for (const talentType of TALENT_TYPES) {
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
     }
@@ -110,10 +109,9 @@ export const getEducationContentByTalentType = async (
     console.error("Error in getEducationContentByTalentType:", error);
     
     // Use the same simple approach for fallback
-    const result: Record<string, EducationContent[]> = {};
+    const result: {[key: string]: any} = {};
     
-    for (let i = 0; i < TALENT_TYPES.length; i++) {
-      const talentType = TALENT_TYPES[i];
+    for (const talentType of TALENT_TYPES) {
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
