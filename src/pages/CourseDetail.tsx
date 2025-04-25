@@ -6,11 +6,11 @@ import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  getEducationContent,
-  getCourseWeeklyContent,
-  EducationContent
-} from "../services/education";
-import { WeeklyContent as WeeklyContentType } from "@/services/education/types";
+  loadCourseById,
+  loadWeeklyContent,
+  SimpleCourse,
+  WeeklyContentItem
+} from "../services/education/simpleCourseService";
 
 // Import our components
 import CourseOverview from "@/components/education/CourseOverview";
@@ -22,9 +22,9 @@ const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [course, setCourse] = useState<EducationContent | null>(null);
+  const [course, setCourse] = useState<SimpleCourse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [weeklyContent, setWeeklyContent] = useState<WeeklyContentType[]>([]);
+  const [weeklyContent, setWeeklyContent] = useState<WeeklyContentItem[]>([]);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -32,13 +32,12 @@ const CourseDetail = () => {
       
       try {
         setIsLoading(true);
-        const allCourses = await getEducationContent();
-        const foundCourse = allCourses.find(c => c.id === id);
+        const foundCourse = await loadCourseById(id);
         
         if (foundCourse) {
           setCourse(foundCourse);
           if (foundCourse.content_type === 'weekly') {
-            const weeklyData = await getCourseWeeklyContent(foundCourse.id);
+            const weeklyData = await loadWeeklyContent(foundCourse.id);
             setWeeklyContent(weeklyData.length > 0 ? weeklyData : [
               {
                 title: "Week 1: Introduction to Design Principles",

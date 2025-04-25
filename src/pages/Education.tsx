@@ -1,27 +1,46 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar } from "lucide-react";
 import CourseCard from "../components/education/CourseCard";
 import TalentCategoryFilter from "../components/education/TalentCategoryFilter";
 import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  getEducationCategories, 
-  getEducationContent,
-  EducationCategory, 
-  EducationContent,
-  TALENT_TYPES 
-} from "../services/educationService";
-import { getWorkshops, Workshop } from "../services/workshopService";
+  loadCategories, 
+  loadFilteredCourses,
+  SimpleCourse,
+  SimpleCategory
+} from "../services/education/simpleCourseService";
 import { useToast } from "@/hooks/use-toast";
+
+const PLACEHOLDER_WORKSHOPS = [
+  {
+    id: 1,
+    name: "Fashion Photography Workshop",
+    date: "June 15, 2025",
+    location: "Addis Ababa",
+    spots: 8
+  },
+  {
+    id: 2,
+    name: "Sustainable Design Masterclass",
+    date: "June 24, 2025",
+    location: "Virtual",
+    spots: 15
+  },
+  {
+    id: 3,
+    name: "Portfolio Building Session",
+    date: "July 5, 2025",
+    location: "Addis Ababa",
+    spots: 10
+  }
+];
 
 const Education = () => {
   const [activeLevel, setActiveLevel] = useState("all");
   const [activeTalentType, setActiveTalentType] = useState("all");
-  const [categories, setCategories] = useState<EducationCategory[]>([]);
-  const [educationContent, setEducationContent] = useState<EducationContent[]>([]);
-  const [upcomingWorkshops, setUpcomingWorkshops] = useState<Workshop[]>([]);
+  const [categories, setCategories] = useState<SimpleCategory[]>([]);
+  const [educationContent, setEducationContent] = useState<SimpleCourse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
@@ -37,25 +56,19 @@ const Education = () => {
       try {
         setIsLoading(true);
         
-        // Fetch categories, education content, and workshops
-        const categoriesData = await getEducationCategories();
+        // Fetch categories and education content
+        const categoriesData = await loadCategories();
         setCategories(categoriesData);
         
         // For "all", pass undefined as categoryId to get all content
         // For specific categories, pass the category ID
-        const contentData = await getEducationContent(
+        const contentData = await loadFilteredCourses(
           activeLevel === "all" ? undefined : activeLevel,
-          20,
-          false,
           activeTalentType === "all" ? undefined : activeTalentType
         );
         
         console.log(`Fetched ${contentData.length} courses for category: ${activeLevel} and talent type: ${activeTalentType}`);
         setEducationContent(contentData);
-        
-        const workshopsData = await getWorkshops();
-        setUpcomingWorkshops(workshopsData.slice(0, 3));
-        
       } catch (error) {
         console.error("Error fetching education data:", error);
         toast({
@@ -71,31 +84,7 @@ const Education = () => {
     fetchData();
   }, [activeLevel, activeTalentType, toast]);
 
-  // When activeLevel is "all", we want to show all content, not filter
-  // For specific levels, filter according to the category ID
-  // Also filter by talent type if selected
-  const filteredCourses = educationContent.filter(content => {
-    const levelMatch = activeLevel === "all" || content.category_id === activeLevel;
-    const talentMatch = activeTalentType === "all" || content.talent_type === activeTalentType;
-    return levelMatch && talentMatch;
-  });
-
-  console.log(`Displaying ${filteredCourses.length} courses after filtering`);
-
-  // Format workshop data for the component
-  const formattedWorkshops = upcomingWorkshops.map(workshop => ({
-    id: typeof workshop.id === 'string' ? 
-      (workshop.id.startsWith('0x') ? parseInt(workshop.id.substring(0, 8), 16) : workshop.id) : 
-      workshop.id,
-    name: workshop.name,
-    date: new Date(workshop.date).toLocaleDateString('en-US', {
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric'
-    }),
-    location: workshop.location,
-    spots: workshop.spots
-  }));
+  console.log(`Displaying ${educationContent.length} courses after filtering`);
 
   return (
     <MainLayout>
@@ -162,18 +151,18 @@ const Education = () => {
           <div className="flex justify-center py-12">
             <div className="animate-pulse text-emerge-gold">Loading educational content...</div>
           </div>
-        ) : filteredCourses.length > 0 ? (
+        ) : educationContent.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {filteredCourses.map(course => (
+            {educationContent.map(course => (
               <CourseCard
                 key={course.id}
                 id={course.id}
                 name={course.title}
-                level={course.category_id}
+                level={course.category_id || ""}
                 description={course.summary || ""}
                 image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
                 duration={course.content_type === "course" ? "10-12 weeks" : "1-2 days"}
-                levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id}
+                levelName={categories.find(c => c.id === course.category_id)?.name || course.level || ""}
                 talentType={course.talent_type}
                 contentType={course.content_type}
               />
@@ -186,7 +175,7 @@ const Education = () => {
           </div>
         )}
         
-        <UpcomingWorkshops workshops={formattedWorkshops} />
+        <UpcomingWorkshops workshops={PLACEHOLDER_WORKSHOPS} />
         
         <section className="mt-16">
           <h2 className="emerge-heading text-2xl mb-6">Latest Fashion Resources</h2>

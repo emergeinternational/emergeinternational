@@ -2,10 +2,10 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Book } from "lucide-react";
-import { EducationContent } from '@/services/education';
+import { SimpleCourse } from '@/services/education/simpleCourseService';
 
 interface CourseOverviewProps {
-  course: EducationContent;
+  course: SimpleCourse;
 }
 
 const CourseOverview = ({ course }: CourseOverviewProps) => {

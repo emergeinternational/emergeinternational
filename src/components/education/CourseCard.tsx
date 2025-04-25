@@ -1,7 +1,6 @@
 
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { trackCourseEngagement } from "@/services/education";
 
 interface CourseCardProps {
   id: number | string;
@@ -28,14 +27,6 @@ const CourseCard = ({
 }: CourseCardProps) => {
   const courseId = id.toString();
   
-  const handleClick = async () => {
-    try {
-      await trackCourseEngagement(courseId);
-    } catch (error) {
-      console.error('Error tracking engagement:', error);
-    }
-  };
-  
   const formatTalentType = (type?: string): string => {
     if (!type) return '';
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -45,7 +36,6 @@ const CourseCard = ({
     <Link 
       to={`/education/course/${courseId}`} 
       className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
-      onClick={handleClick}
     >
       <div className="aspect-video overflow-hidden">
         <img 

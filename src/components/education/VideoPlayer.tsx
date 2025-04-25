@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { getSafeVideoEmbedUrl } from '@/services/education/simpleCourseService';
 
 interface VideoPlayerProps {
   videoId?: string;
@@ -11,43 +12,9 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, source, title = "Video content" }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
-  const [embedId, setEmbedId] = useState<string | null>(videoId || null);
   
-  useEffect(() => {
-    // Extract video ID from URL if not directly provided
-    if (!embedId && source) {
-      try {
-        const extractedId = extractYouTubeId(source);
-        setEmbedId(extractedId);
-        setHasError(!extractedId);
-      } catch (error) {
-        console.error("Error processing video source:", error);
-        setHasError(true);
-      }
-    }
-  }, [videoId, source, embedId]);
-
-  const extractYouTubeId = (url: string): string | null => {
-    // Handle youtu.be short URLs
-    if (url.includes('youtu.be/')) {
-      const id = url.split('youtu.be/')[1]?.split(/[?&#]/)[0];
-      return id || null;
-    }
-    
-    // Handle youtube.com/watch?v= URLs
-    if (url.includes('youtube.com/watch')) {
-      const urlParams = new URLSearchParams(url.split('?')[1] || '');
-      return urlParams.get('v');
-    }
-    
-    // Handle youtube.com/embed/ URLs
-    if (url.includes('youtube.com/embed/')) {
-      const id = url.split('youtube.com/embed/')[1]?.split(/[?&#]/)[0];
-      return id || null;
-    }
-    
-    return null;
-  };
+  // Get safe embed URL from our utility function
+  const embedUrl = getSafeVideoEmbedUrl(source);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -58,7 +25,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, source, title = "Vid
     setHasError(true);
   };
 
-  if (!embedId || hasError) {
+  if (!embedUrl || hasError) {
     return (
       <div className="bg-gray-100 p-8 mb-6 rounded flex flex-col items-center justify-center text-center min-h-[250px]">
         <AlertCircle className="h-10 w-10 text-amber-500 mb-4" />
@@ -80,7 +47,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, source, title = "Vid
         </div>
       )}
       <iframe
-        src={`https://www.youtube.com/embed/${embedId}`}
+        src={embedUrl}
         loading="lazy"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen

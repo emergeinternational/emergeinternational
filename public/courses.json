@@ -1,0 +1,210 @@
+
+{
+  "courses": [
+    {
+      "id": "1",
+      "title": "Fashion Design Basics",
+      "summary": "Learn the fundamentals of fashion design, from sketching to creating your first collection.",
+      "category_id": "beginner",
+      "talent_type": "designer",
+      "content_type": "video",
+      "is_featured": true,
+      "source_url": "https://www.youtube.com/watch?v=modelwalk101",
+      "image_url": "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
+      "level": "Beginner"
+    },
+    {
+      "id": "2",
+      "title": "Advanced Modeling Techniques",
+      "summary": "Master the art of runway walking, posing, and professional modeling techniques.",
+      "category_id": "intermediate",
+      "talent_type": "model",
+      "content_type": "video",
+      "is_featured": true,
+      "source_url": "https://www.youtube.com/watch?v=advancedmodeling",
+      "image_url": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&auto=format&fit=crop",
+      "level": "Intermediate"
+    },
+    {
+      "id": "3",
+      "title": "Fashion Photography Masterclass",
+      "summary": "Professional techniques for capturing stunning fashion photography in any setting.",
+      "category_id": "advanced",
+      "talent_type": "photographer",
+      "content_type": "course",
+      "is_featured": true,
+      "source_url": "https://www.youtube.com/watch?v=fashionphoto",
+      "image_url": "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=800&auto=format&fit=crop",
+      "level": "Advanced"
+    },
+    {
+      "id": "4",
+      "title": "Textile Design Workshop",
+      "summary": "Explore the world of textile design from traditional techniques to digital printing.",
+      "category_id": "workshop",
+      "talent_type": "designer",
+      "content_type": "weekly",
+      "is_featured": false,
+      "image_url": "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=800&auto=format&fit=crop",
+      "level": "Beginner"
+    },
+    {
+      "id": "5",
+      "title": "Sustainable Fashion Practices",
+      "summary": "Learn how to incorporate sustainable practices into your fashion design process.",
+      "category_id": "intermediate",
+      "talent_type": "designer",
+      "content_type": "course",
+      "is_featured": false,
+      "image_url": "https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?w=800&auto=format&fit=crop",
+      "level": "Intermediate"
+    },
+    {
+      "id": "6",
+      "title": "Digital Fashion Marketing",
+      "summary": "Master the art of marketing fashion products and brands in the digital age.",
+      "category_id": "beginner",
+      "talent_type": "marketer",
+      "content_type": "video",
+      "is_featured": true,
+      "source_url": "https://www.youtube.com/watch?v=digitalmarketing",
+      "image_url": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&auto=format&fit=crop",
+      "level": "Beginner"
+    },
+    {
+      "id": "7",
+      "title": "Portfolio Building for Models",
+      "summary": "Create a professional modeling portfolio that showcases your versatility and skills.",
+      "category_id": "beginner",
+      "talent_type": "model",
+      "content_type": "course",
+      "is_featured": false,
+      "image_url": "https://images.unsplash.com/photo-1588117305388-c2631a279f82?w=800&auto=format&fit=crop",
+      "level": "Beginner"
+    },
+    {
+      "id": "8",
+      "title": "Editorial Styling Workshop",
+      "summary": "Learn the art of styling for editorial photoshoots and campaigns.",
+      "category_id": "workshop",
+      "talent_type": "stylist",
+      "content_type": "workshop",
+      "is_featured": true,
+      "image_url": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop",
+      "level": "Intermediate"
+    },
+    {
+      "id": "9",
+      "title": "Fashion Illustration Techniques",
+      "summary": "Master traditional and digital fashion illustration techniques for your design portfolio.",
+      "category_id": "advanced",
+      "talent_type": "designer",
+      "content_type": "video",
+      "is_featured": false,
+      "source_url": "https://www.youtube.com/watch?v=fashionillustration",
+      "image_url": "https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800&auto=format&fit=crop",
+      "level": "Advanced"
+    },
+    {
+      "id": "10",
+      "title": "Runway Modeling Walkthrough",
+      "summary": "A comprehensive guide to perfecting your runway walk for fashion shows.",
+      "category_id": "intermediate",
+      "talent_type": "model",
+      "content_type": "video",
+      "is_featured": true,
+      "source_url": "https://www.youtube.com/watch?v=modelwalk101",
+      "image_url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&auto=format&fit=crop",
+      "level": "Intermediate"
+    },
+    {
+      "id": "11",
+      "title": "Fashion Business Fundamentals",
+      "summary": "Learn the business side of fashion, from startup to scaling a successful brand.",
+      "category_id": "beginner",
+      "talent_type": "entrepreneur",
+      "content_type": "course",
+      "is_featured": false,
+      "image_url": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop",
+      "level": "Beginner"
+    },
+    {
+      "id": "12",
+      "title": "Fashion Show Production",
+      "summary": "A comprehensive guide to producing professional fashion shows from concept to execution.",
+      "category_id": "advanced",
+      "talent_type": "producer",
+      "content_type": "weekly",
+      "is_featured": false,
+      "image_url": "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&auto=format&fit=crop",
+      "level": "Advanced"
+    }
+  ],
+  "categories": [
+    {
+      "id": "beginner",
+      "name": "Beginner",
+      "description": "Courses for those just starting their fashion journey"
+    },
+    {
+      "id": "intermediate",
+      "name": "Intermediate",
+      "description": "For those with some experience in the fashion industry"
+    },
+    {
+      "id": "advanced",
+      "name": "Advanced",
+      "description": "Advanced techniques for fashion professionals"
+    },
+    {
+      "id": "workshop",
+      "name": "Workshops",
+      "description": "Intensive, hands-on learning experiences"
+    }
+  ],
+  "talent_types": [
+    "designer",
+    "model",
+    "photographer",
+    "stylist",
+    "marketer",
+    "entrepreneur",
+    "producer"
+  ],
+  "weekly_content": [
+    {
+      "course_id": "4",
+      "content": [
+        {
+          "title": "Week 1: Introduction to Textile Design",
+          "content": "This week covers the fundamentals of textile design and the different approaches used in the industry."
+        },
+        {
+          "title": "Week 2: Traditional Techniques",
+          "content": "Learn about traditional textile design techniques from around the world."
+        },
+        {
+          "title": "Week 3: Digital Printing Methods",
+          "content": "Explore modern digital printing methods and how they're transforming the textile industry."
+        }
+      ]
+    },
+    {
+      "course_id": "12",
+      "content": [
+        {
+          "title": "Week 1: Fashion Show Concepts",
+          "content": "Learn how to develop compelling concepts for fashion shows that tell a story."
+        },
+        {
+          "title": "Week 2: Venue Selection and Layout",
+          "content": "Understand the factors involved in selecting and designing the perfect venue for your fashion show."
+        },
+        {
+          "title": "Week 3: Model Casting and Coordination",
+          "content": "Master the process of casting the right models and coordinating the runway presentation."
+        }
+      ]
+    }
+  ]
+}
