@@ -3,19 +3,22 @@ import { Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar } from "lucide-react";
 import CourseCard from "../components/education/CourseCard";
+import TalentCategoryFilter from "../components/education/TalentCategoryFilter";
 import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   getEducationCategories, 
   getEducationContent,
   EducationCategory, 
-  EducationContent 
+  EducationContent,
+  TALENT_TYPES 
 } from "../services/educationService";
 import { getWorkshops, Workshop } from "../services/workshopService";
 import { useToast } from "@/hooks/use-toast";
 
 const Education = () => {
   const [activeLevel, setActiveLevel] = useState("all");
+  const [activeTalentType, setActiveTalentType] = useState("all");
   const [categories, setCategories] = useState<EducationCategory[]>([]);
   const [educationContent, setEducationContent] = useState<EducationContent[]>([]);
   const [upcomingWorkshops, setUpcomingWorkshops] = useState<Workshop[]>([]);
@@ -42,10 +45,12 @@ const Education = () => {
         // For specific categories, pass the category ID
         const contentData = await getEducationContent(
           activeLevel === "all" ? undefined : activeLevel,
-          20
+          20,
+          false,
+          activeTalentType === "all" ? undefined : activeTalentType
         );
         
-        console.log(`Fetched ${contentData.length} courses for category: ${activeLevel}`);
+        console.log(`Fetched ${contentData.length} courses for category: ${activeLevel} and talent type: ${activeTalentType}`);
         setEducationContent(contentData);
         
         const workshopsData = await getWorkshops();
@@ -64,13 +69,16 @@ const Education = () => {
     };
 
     fetchData();
-  }, [activeLevel, toast]);
+  }, [activeLevel, activeTalentType, toast]);
 
   // When activeLevel is "all", we want to show all content, not filter
   // For specific levels, filter according to the category ID
-  const filteredCourses = activeLevel === "all" 
-    ? educationContent 
-    : educationContent.filter(content => content.category_id === activeLevel);
+  // Also filter by talent type if selected
+  const filteredCourses = educationContent.filter(content => {
+    const levelMatch = activeLevel === "all" || content.category_id === activeLevel;
+    const talentMatch = activeTalentType === "all" || content.talent_type === activeTalentType;
+    return levelMatch && talentMatch;
+  });
 
   console.log(`Displaying ${filteredCourses.length} courses after filtering`);
 
@@ -97,10 +105,10 @@ const Education = () => {
             <h1 className="emerge-heading text-5xl mb-6">Emerge Fashion Academy</h1>
             <p className="text-xl mb-8">
               Discover our comprehensive range of courses and workshops designed to develop 
-              the next generation of African fashion talent. From beginner to advanced levels, 
-              learn from industry experts and build your future in fashion.
+              the next generation of African creative talent. From models and designers to photographers 
+              and entertainment talent, learn from industry experts and build your future in the creative industry.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <GraduationCap className="text-emerge-gold" size={24} />
                 <span>Expert Instructors</span>
@@ -119,6 +127,11 @@ const Education = () => {
       </section>
 
       <div className="emerge-container py-12">
+        <TalentCategoryFilter 
+          activeCategory={activeTalentType} 
+          onChange={setActiveTalentType}
+        />
+        
         <div className="mb-12 flex overflow-x-auto pb-2 hide-scrollbar">
           <button
             onClick={() => setActiveLevel("all")}
@@ -161,13 +174,15 @@ const Education = () => {
                 image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
                 duration={course.content_type === "course" ? "10-12 weeks" : "1-2 days"}
                 levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id}
+                talentType={course.talent_type}
+                contentType={course.content_type}
               />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-emerge-cream p-6 mb-16">
-            <p className="text-lg">No content available for this category.</p>
-            <p className="text-gray-600 mt-2">Please check back soon for new content!</p>
+            <p className="text-lg">No content available for {activeTalentType !== 'all' ? activeTalentType : ''} {activeLevel !== 'all' ? activeLevel : ''} category.</p>
+            <p className="text-gray-600 mt-2">New courses for this category will be available soon. Stay tuned!</p>
           </div>
         )}
         

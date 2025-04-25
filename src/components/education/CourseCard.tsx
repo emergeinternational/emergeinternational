@@ -12,6 +12,7 @@ interface CourseCardProps {
   duration?: string;
   levelName: string;
   contentType?: string;
+  talentType?: string;
 }
 
 const CourseCard = ({ 
@@ -22,7 +23,8 @@ const CourseCard = ({
   image, 
   duration, 
   levelName,
-  contentType = 'course' 
+  contentType = 'course',
+  talentType
 }: CourseCardProps) => {
   const courseId = id.toString();
   
@@ -32,6 +34,11 @@ const CourseCard = ({
     } catch (error) {
       console.error('Error tracking engagement:', error);
     }
+  };
+  
+  const formatTalentType = (type?: string): string => {
+    if (!type) return '';
+    return type.charAt(0).toUpperCase() + type.slice(1);
   };
   
   return (
@@ -49,11 +56,21 @@ const CourseCard = ({
       </div>
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xs text-gray-500 uppercase">
-            {levelName}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 uppercase">
+              {levelName}
+            </span>
+            {talentType && (
+              <>
+                <span className="text-xs text-gray-400">•</span>
+                <span className="text-xs text-emerge-gold">
+                  {formatTalentType(talentType)}
+                </span>
+              </>
+            )}
+          </div>
           {duration && (
-            <span className="text-xs text-emerge-gold">{duration}</span>
+            <span className="text-xs text-gray-500">{duration}</span>
           )}
         </div>
         <h3 className="font-medium text-lg mb-2">{name}</h3>

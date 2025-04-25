@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -24,6 +23,8 @@ export interface EducationContent {
   updated_at: string;
   is_archived?: boolean;
   archive_date?: string;
+  talent_type?: string;
+  level?: string;
 }
 
 // Add new interfaces for course progress and engagement
@@ -43,6 +44,16 @@ export interface CourseEngagement {
   total_clicks: number;
   last_click_date: string;
 }
+
+// Define talent types
+export const TALENT_TYPES = [
+  'models',
+  'designers',
+  'photographers',
+  'videographers',
+  'influencers',
+  'entertainment'
+];
 
 // Static fallback data for categories
 const fallbackCategories: EducationCategory[] = [
@@ -76,11 +87,14 @@ const fallbackCategories: EducationCategory[] = [
   }
 ];
 
-// Static fallback content with added content types
+// Enhanced fallback content with talent types
 const fallbackContent: EducationContent[] = [
+  // DESIGNERS
   { 
     id: "1", 
     category_id: "beginner",
+    talent_type: "designers",
+    level: "beginner",
     title: "Fashion Design 101", 
     summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
     content_type: "course",
@@ -91,33 +105,10 @@ const fallbackContent: EducationContent[] = [
     updated_at: new Date().toISOString()
   },
   { 
-    id: "2", 
-    category_id: "beginner",
-    title: "Digital Fashion Marketing", 
-    summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
-    content_type: "weekly",
-    image_url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop",
-    is_featured: false,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
-    id: "3", 
-    category_id: "advanced",
-    title: "Advanced Pattern Making", 
-    summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
-    content_type: "video",
-    source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    image_url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&auto=format&fit=crop",
-    is_featured: false,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
     id: "4", 
     category_id: "intermediate",
+    talent_type: "designers",
+    level: "intermediate",
     title: "Sustainable Fashion", 
     summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
     content_type: "course",
@@ -128,26 +119,153 @@ const fallbackContent: EducationContent[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
+  // MODELS
   { 
-    id: "5", 
+    id: "10", 
+    category_id: "beginner",
+    talent_type: "models",
+    level: "beginner",
+    title: "Runway Walking Basics", 
+    summary: "Master the fundamentals of runway walking techniques, posture, and presentation needed for fashion shows and photo shoots.",
+    content_type: "video",
+    source_url: "https://www.youtube.com/watch?v=modelwalk101",
+    image_url: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&auto=format&fit=crop",
+    is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  { 
+    id: "11", 
     category_id: "intermediate",
-    title: "Fashion Portfolio", 
-    summary: "Create a professional portfolio showcasing your designs. Learn photography, styling, and digital presentation techniques.",
+    talent_type: "models",
+    level: "intermediate",
+    title: "Portfolio Development for Models", 
+    summary: "Learn to build a professional modeling portfolio that showcases your range and attracts top clients and agencies.",
     content_type: "course",
-    image_url: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=800&auto=format&fit=crop",
+    source_url: "https://www.modelingclass.com/portfolio",
+    image_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop",
+    is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  // PHOTOGRAPHERS
+  { 
+    id: "20", 
+    category_id: "beginner",
+    talent_type: "photographers",
+    level: "beginner",
+    title: "Fashion Photography Essentials", 
+    summary: "Learn the basics of fashion photography including lighting, composition, and directing models for compelling fashion imagery.",
+    content_type: "weekly",
+    image_url: "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&auto=format&fit=crop",
+    is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  { 
+    id: "21", 
+    category_id: "advanced",
+    talent_type: "photographers",
+    level: "advanced",
+    title: "Editorial Fashion Photography", 
+    summary: "Master the art of creating compelling fashion narratives for editorial publications with advanced lighting and conceptual techniques.",
+    content_type: "video",
+    source_url: "https://www.youtube.com/watch?v=editorialphoto",
+    image_url: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=800&auto=format&fit=crop",
+    is_featured: false,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  // VIDEOGRAPHERS
+  { 
+    id: "30", 
+    category_id: "beginner",
+    talent_type: "videographers",
+    level: "beginner",
+    title: "Fashion Film Fundamentals", 
+    summary: "Learn the essentials of creating compelling fashion films, from concept development to editing and post-production.",
+    content_type: "course",
+    image_url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&auto=format&fit=crop",
     is_featured: false,
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   { 
-    id: "6", 
-    category_id: "workshop",
-    title: "Innovation Workshop", 
-    summary: "Explore cutting-edge textile techniques and innovative materials in this intensive hands-on workshop.",
-    content_type: "workshop",
-    image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
+    id: "31", 
+    category_id: "intermediate",
+    talent_type: "videographers",
+    level: "intermediate",
+    title: "Advanced Fashion Video Editing", 
+    summary: "Take your fashion videos to the next level with professional editing techniques, color grading, and visual effects.",
+    content_type: "video",
+    source_url: "https://www.youtube.com/watch?v=fashionediting",
+    image_url: "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop",
     is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  // INFLUENCERS
+  { 
+    id: "40", 
+    category_id: "beginner",
+    talent_type: "influencers",
+    level: "beginner",
+    title: "Building Your Fashion Brand on Social Media", 
+    summary: "Learn strategies to build an authentic fashion brand on social platforms and grow your audience organically.",
+    content_type: "weekly",
+    image_url: "https://images.unsplash.com/photo-1516251193007-4d28214057c2?w=800&auto=format&fit=crop",
+    is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  { 
+    id: "41", 
+    category_id: "advanced",
+    talent_type: "influencers",
+    level: "advanced",
+    title: "Monetizing Your Fashion Influence", 
+    summary: "Advanced strategies for fashion influencers to secure brand partnerships, create revenue streams, and build sustainable businesses.",
+    content_type: "course",
+    source_url: "https://www.influencercourse.com/monetization",
+    image_url: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop",
+    is_featured: false,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  // ENTERTAINMENT TALENT
+  { 
+    id: "50", 
+    category_id: "beginner",
+    talent_type: "entertainment",
+    level: "beginner",
+    title: "Fashion Performance Basics", 
+    summary: "Learn the fundamentals of movement, expression, and performance for fashion shows and branded entertainment events.",
+    content_type: "video",
+    source_url: "https://www.youtube.com/watch?v=fashionperformance",
+    image_url: "https://images.unsplash.com/photo-1517230878791-4d28214057c2?w=800&auto=format&fit=crop",
+    is_featured: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  { 
+    id: "51", 
+    category_id: "intermediate",
+    talent_type: "entertainment",
+    level: "intermediate",
+    title: "Choreography for Fashion Events", 
+    summary: "Develop your skills in choreographing and performing in fashion shows, brand activations, and promotional events.",
+    content_type: "weekly",
+    image_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop",
+    is_featured: false,
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -177,15 +295,16 @@ export const getEducationCategories = async (): Promise<EducationCategory[]> => 
 };
 
 /**
- * Gets education content with fallback to static data
+ * Gets education content with talent type filtering
  */
 export const getEducationContent = async (
   categoryId?: string,
-  limit: number = 50, // Increased limit to ensure we get more content
-  featuredOnly: boolean = false
+  limit: number = 50, 
+  featuredOnly: boolean = false,
+  talentType?: string
 ): Promise<EducationContent[]> => {
   try {
-    console.log(`Fetching education content. CategoryID: ${categoryId || 'all'}, Limit: ${limit}`);
+    console.log(`Fetching education content. CategoryID: ${categoryId || 'all'}, Talent Type: ${talentType || 'all'}, Limit: ${limit}`);
     
     let query = supabase
       .from('education_content')
@@ -199,12 +318,16 @@ export const getEducationContent = async (
     if (featuredOnly) {
       query = query.eq('is_featured', true);
     }
+    
+    if (talentType) {
+      query = query.eq('talent_type', talentType);
+    }
 
     const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching education content:", error);
-      const fallbackData = getFallbackContent(categoryId, limit, featuredOnly);
+      const fallbackData = getFallbackContent(categoryId, limit, featuredOnly, talentType);
       console.log(`Using fallback data: ${fallbackData.length} items`);
       return fallbackData;
     }
@@ -214,16 +337,21 @@ export const getEducationContent = async (
       return data;
     } else {
       console.log("No data returned from database, using fallback");
-      return getFallbackContent(categoryId, limit, featuredOnly);
+      return getFallbackContent(categoryId, limit, featuredOnly, talentType);
     }
   } catch (error) {
     console.error("Error in getEducationContent:", error);
-    return getFallbackContent(categoryId, limit, featuredOnly);
+    return getFallbackContent(categoryId, limit, featuredOnly, talentType);
   }
 };
 
 // Helper function to filter fallback content
-const getFallbackContent = (categoryId?: string, limit: number = 50, featuredOnly: boolean = false): EducationContent[] => {
+const getFallbackContent = (
+  categoryId?: string, 
+  limit: number = 50, 
+  featuredOnly: boolean = false,
+  talentType?: string
+): EducationContent[] => {
   let filtered = [...fallbackContent];
   
   if (categoryId) {
@@ -232,6 +360,10 @@ const getFallbackContent = (categoryId?: string, limit: number = 50, featuredOnl
   
   if (featuredOnly) {
     filtered = filtered.filter(item => item.is_featured);
+  }
+  
+  if (talentType) {
+    filtered = filtered.filter(item => item.talent_type === talentType);
   }
   
   console.log(`Filtered fallback content: ${filtered.length} items`);
@@ -261,6 +393,34 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
       result[category.id] = fallbackContent
         .filter(item => item.category_id === category.id)
         .slice(0, 5);
+    }
+    
+    return result;
+  }
+};
+
+export const getEducationContentByTalentType = async (
+  limit: number = 5,
+  featuredOnly: boolean = false
+): Promise<Record<string, EducationContent[]>> => {
+  try {
+    const result: Record<string, EducationContent[]> = {};
+    
+    for (const talentType of TALENT_TYPES) {
+      const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
+      result[talentType] = content;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error in getEducationContentByTalentType:", error);
+    
+    // Create a fallback response with the static content
+    const result: Record<string, EducationContent[]> = {};
+    for (const talentType of TALENT_TYPES) {
+      result[talentType] = fallbackContent
+        .filter(item => item.talent_type === talentType)
+        .slice(0, limit);
     }
     
     return result;
@@ -329,7 +489,6 @@ export const trackCourseProgress = async (courseId: string, category: string): P
   }
 };
 
-// New function to mark a course as completed
 export const markCourseCompleted = async (courseId: string): Promise<void> => {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -353,11 +512,8 @@ export const markCourseCompleted = async (courseId: string): Promise<void> => {
   }
 };
 
-// Function to get course content for weekly courses
 export const getCourseWeeklyContent = async (courseId: string) => {
   try {
-    // In a real application, this would fetch from the database
-    // For now, we'll return mock data
     return [
       {
         title: "Week 1: Introduction to Design Principles",

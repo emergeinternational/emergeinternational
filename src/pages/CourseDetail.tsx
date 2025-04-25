@@ -14,8 +14,6 @@ import {
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const isValidUrl = (url: string): boolean => {
   try {
@@ -38,8 +36,10 @@ const CourseDetail = () => {
   // Default values for when course data is loading or not available
   const courseType = course?.content_type || 'online course';
   const formattedDuration = course?.content_type === 'workshop' ? '3-5 hours' : '10-15 hours';
-  const courseLevel = course?.category_id || "beginner";
+  const courseLevel = course?.level || course?.category_id || "beginner";
   const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
+  const talentType = course?.talent_type || '';
+  const formattedTalentType = talentType ? talentType.charAt(0).toUpperCase() + talentType.slice(1) : '';
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -263,6 +263,11 @@ const CourseDetail = () => {
             <div>
               <div className="mb-8">
                 <h1 className="emerge-heading text-3xl mb-4">{course.title}</h1>
+                {talentType && (
+                  <Badge className="bg-emerge-gold text-white mb-4">
+                    {formattedTalentType}
+                  </Badge>
+                )}
                 <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-emerge-gold" />
@@ -359,6 +364,12 @@ const CourseDetail = () => {
                         <span className="text-gray-600">Level:</span>
                         <span className="capitalize">{formattedLevel}</span>
                       </p>
+                      {talentType && (
+                        <p className="flex justify-between">
+                          <span className="text-gray-600">For:</span>
+                          <span className="capitalize">{formattedTalentType}</span>
+                        </p>
+                      )}
                       <p className="flex justify-between">
                         <span className="text-gray-600">Prerequisites:</span>
                         <span>None</span>
@@ -379,6 +390,16 @@ const CourseDetail = () => {
                   <div className="mt-6 bg-white border border-gray-200 p-5">
                     <h3 className="text-lg font-medium mb-3">Similar Courses</h3>
                     <ul className="space-y-3 text-sm">
+                      {talentType && (
+                        <li>
+                          <a 
+                            href={`/education?talent=${talentType}`} 
+                            className="text-emerge-gold hover:underline"
+                          >
+                            More {formattedTalentType} Courses
+                          </a>
+                        </li>
+                      )}
                       <li>
                         <a href="/education" className="text-emerge-gold hover:underline">
                           View More {formattedLevel} Courses

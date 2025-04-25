@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -24,6 +23,16 @@ const LEVELS = [
   { id: 'beginner', name: 'Beginner' },
   { id: 'intermediate', name: 'Intermediate' },
   { id: 'advanced', name: 'Advanced' }
+];
+
+// Define talent types that map to our six creative industries
+const TALENT_TYPES = [
+  { id: 'designers', name: 'Designers' },
+  { id: 'models', name: 'Models' },
+  { id: 'photographers', name: 'Photographers' },
+  { id: 'videographers', name: 'Videographers' },
+  { id: 'influencers', name: 'Social Media Influencers' },
+  { id: 'entertainment', name: 'Entertainment Talent' }
 ];
 
 // Sources for course content
@@ -69,9 +78,9 @@ const SOURCES = [
   }
 ];
 
-// Sample course data to use as fallback
+// Enhanced sample course data with talent types for all six creative industries
 const FALLBACK_COURSES = [
-  // Fashion Design - Beginner
+  // DESIGNERS
   {
     title: "Fashion Design for Beginners: Sketching and Illustration",
     summary: "Learn the basics of fashion sketching and how to illustrate your designs from concept to final presentation. This course covers proportions, fabric rendering, and digital techniques.",
@@ -81,20 +90,9 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "YouTube",
-    duration: "2 hours"
+    duration: "2 hours",
+    talent_type: "designers"
   },
-  {
-    title: "Pattern Making Fundamentals",
-    summary: "Understand the basics of pattern making for clothing. This course takes you through the process of creating patterns from measurements, making alterations, and preparing for production.",
-    category_id: "beginner",
-    content_type: "course",
-    source_url: "https://www.coursera.org/learn/pattern-making",
-    image_url: "https://images.unsplash.com/photo-1475695752828-6d2de6463206?w=800&auto=format&fit=crop",
-    is_featured: false,
-    source: "Coursera",
-    duration: "4 weeks"
-  },
-  // Fashion Design - Intermediate
   {
     title: "Advanced Draping Techniques",
     summary: "Take your draping skills to the next level with this comprehensive course on creating complex garment structures directly on the dress form. Learn to translate three-dimensional ideas into finished patterns.",
@@ -104,21 +102,10 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "edX",
-    duration: "6 weeks"
+    duration: "6 weeks",
+    talent_type: "designers"
   },
-  // Fashion Design - Advanced
-  {
-    title: "Sustainable Fashion Collection Development",
-    summary: "Learn how to develop a complete fashion collection with sustainability at its core. This course covers concept development, ethical material sourcing, zero-waste pattern cutting, and marketing strategies.",
-    category_id: "advanced",
-    content_type: "course",
-    source_url: "https://www.youtube.com/watch?v=sustainable-fashion",
-    image_url: "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=800&auto=format&fit=crop",
-    is_featured: true,
-    source: "YouTube",
-    duration: "8 hours"
-  },
-  // Modeling - Beginner
+  // MODELS
   {
     title: "Introduction to Fashion Modeling",
     summary: "Learn the fundamentals of fashion modeling including posing, walking techniques, and portfolio development. This course is perfect for those just starting their modeling journey.",
@@ -128,21 +115,9 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "YouTube",
-    duration: "3 hours"
+    duration: "3 hours",
+    talent_type: "models"
   },
-  // Modeling - Intermediate
-  {
-    title: "Commercial and Editorial Posing",
-    summary: "Master the art of posing for both commercial and editorial work. This course covers techniques for communicating different emotions and concepts through body language and facial expressions.",
-    category_id: "intermediate",
-    content_type: "course",
-    source_url: "https://www.coursera.org/learn/fashion-posing",
-    image_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop",
-    is_featured: false,
-    source: "Coursera",
-    duration: "3 weeks"
-  },
-  // Modeling - Advanced
   {
     title: "Runway Masterclass",
     summary: "Perfect your runway walk with this advanced course taught by industry professionals. Learn technical variations for different designers and how to handle complex runway scenarios.",
@@ -152,9 +127,10 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "edX",
-    duration: "2 weeks"
+    duration: "2 weeks",
+    talent_type: "models"
   },
-  // Photography - Beginner
+  // PHOTOGRAPHERS
   {
     title: "Fashion Photography Essentials",
     summary: "Learn the basics of fashion photography including camera settings, lighting setups, directing models, and basic retouching. This comprehensive course is perfect for beginners.",
@@ -164,21 +140,9 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "YouTube",
-    duration: "5 hours"
+    duration: "5 hours",
+    talent_type: "photographers"
   },
-  // Photography - Intermediate
-  {
-    title: "Studio Lighting for Fashion",
-    summary: "Master studio lighting techniques specifically for fashion photography. This course covers multiple lighting setups, modifiers, and how to achieve various moods and aesthetics.",
-    category_id: "intermediate",
-    content_type: "course",
-    source_url: "https://www.coursera.org/learn/studio-lighting",
-    image_url: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=800&auto=format&fit=crop",
-    is_featured: false,
-    source: "Coursera",
-    duration: "4 weeks"
-  },
-  // Photography - Advanced
   {
     title: "Editorial Fashion Photography",
     summary: "Take your fashion photography to publication level with this advanced course on editorial shooting. Learn about concept development, team collaboration, and creating cohesive visual narratives.",
@@ -188,7 +152,83 @@ const FALLBACK_COURSES = [
     image_url: "https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop",
     is_featured: true,
     source: "edX",
-    duration: "6 weeks"
+    duration: "6 weeks",
+    talent_type: "photographers"
+  },
+  // VIDEOGRAPHERS
+  {
+    title: "Fashion Video Production Basics",
+    summary: "Learn essential techniques for filming fashion content, from lookbooks to runway shows. Master camera movement, lighting, and basic editing for compelling fashion videos.",
+    category_id: "beginner",
+    content_type: "course",
+    source_url: "https://www.youtube.com/watch?v=fashion-video-basics",
+    image_url: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&auto=format&fit=crop",
+    is_featured: true,
+    source: "YouTube",
+    duration: "4 hours",
+    talent_type: "videographers"
+  },
+  {
+    title: "Advanced Fashion Film Direction",
+    summary: "Master the art of conceptualizing and directing fashion films that tell compelling brand stories. Learn advanced techniques for working with models, stylists, and post-production teams.",
+    category_id: "advanced",
+    content_type: "course",
+    source_url: "https://www.coursera.org/learn/fashion-film-direction",
+    image_url: "https://images.unsplash.com/photo-1565130838609-c3a86655db61?w=800&auto=format&fit=crop",
+    is_featured: false,
+    source: "Coursera", 
+    duration: "8 weeks",
+    talent_type: "videographers"
+  },
+  // INFLUENCERS
+  {
+    title: "Building Your Fashion Brand on Social Media",
+    summary: "Learn how to build an authentic fashion presence on Instagram, TikTok, and YouTube. Master content planning, photography basics, and audience growth strategies.",
+    category_id: "beginner",
+    content_type: "course",
+    source_url: "https://www.youtube.com/watch?v=influence-basics",
+    image_url: "https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=800&auto=format&fit=crop",
+    is_featured: true,
+    source: "YouTube",
+    duration: "3 hours",
+    talent_type: "influencers"
+  },
+  {
+    title: "Fashion Collaboration and Monetization Strategies",
+    summary: "Learn advanced techniques for partnering with brands, negotiating deals, and creating multiple revenue streams as a fashion influencer.",
+    category_id: "intermediate",
+    content_type: "course",
+    source_url: "https://www.coursera.org/learn/fashion-influencer-business",
+    image_url: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&auto=format&fit=crop",
+    is_featured: false,
+    source: "Coursera",
+    duration: "5 weeks",
+    talent_type: "influencers"
+  },
+  // ENTERTAINMENT TALENT
+  {
+    title: "Fashion Runway Performance",
+    summary: "Master the art of runway performance for fashion shows. Learn walking techniques, posing, choreography basics, and how to embody different brand aesthetics.",
+    category_id: "beginner",
+    content_type: "course",
+    source_url: "https://www.youtube.com/watch?v=runway-performance",
+    image_url: "https://images.unsplash.com/photo-1517230878791-4d28214057c2?w=800&auto=format&fit=crop",
+    is_featured: true,
+    source: "YouTube", 
+    duration: "2 hours",
+    talent_type: "entertainment"
+  },
+  {
+    title: "Advanced Performance Art for Fashion Events",
+    summary: "Take your fashion performance skills to the next level with techniques from performance art, contemporary dance, and theatrical presentation for high-concept fashion shows.",
+    category_id: "advanced",
+    content_type: "course",
+    source_url: "https://www.edx.org/learn/fashion/performance-art",
+    image_url: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&auto=format&fit=crop",
+    is_featured: false,
+    source: "edX",
+    duration: "7 weeks",
+    talent_type: "entertainment"
   },
 ];
 
@@ -241,35 +281,42 @@ async function updateCourseContent() {
     let updatedCoursesCount = 0;
     let failedCategories = [];
 
-    // For now, use fallback courses instead of actual scraping
-    // In a real implementation, you would integrate with APIs or use web scraping here
-    for (const course of FALLBACK_COURSES) {
-      // Check if course already exists (by title)
-      const { data: existingCourse, error: checkError } = await supabase
-        .from('education_content')
-        .select('id, title')
-        .eq('title', course.title)
-        .maybeSingle();
+    // For each talent type, ensure we have courses at every level
+    for (const talentType of TALENT_TYPES) {
+      // Filter fallback courses for this talent type
+      const talentTypeCourses = FALLBACK_COURSES.filter(course => 
+        course.talent_type === talentType.id
+      );
       
-      if (checkError) throw checkError;
-      
-      if (!existingCourse) {
-        // Insert new course
-        const { error: insertError } = await supabase
+      // Add these courses to the database if they don't exist
+      for (const course of talentTypeCourses) {
+        // Check if course already exists (by title)
+        const { data: existingCourse, error: checkError } = await supabase
           .from('education_content')
-          .insert({
-            ...course,
-            published_at: new Date().toISOString()
-          });
+          .select('id, title')
+          .eq('title', course.title)
+          .maybeSingle();
         
-        if (insertError) throw insertError;
+        if (checkError) throw checkError;
         
-        updatedCoursesCount++;
-        console.log(`Added new course: ${course.title}`);
+        if (!existingCourse) {
+          // Insert new course
+          const { error: insertError } = await supabase
+            .from('education_content')
+            .insert({
+              ...course,
+              published_at: new Date().toISOString()
+            });
+          
+          if (insertError) throw insertError;
+          
+          updatedCoursesCount++;
+          console.log(`Added new course for ${talentType.name}: ${course.title}`);
+        }
       }
     }
 
-    await logActivity('update_courses', 'success', `Updated ${updatedCoursesCount} courses`);
+    await logActivity('update_courses', 'success', `Updated ${updatedCoursesCount} courses across all talent categories`);
     
     return {
       success: true,
@@ -326,6 +373,40 @@ async function ensureLogTableExists() {
   }
 }
 
+// Ensure education content has the necessary columns
+async function ensureEducationContentColumns() {
+  try {
+    // Check if talent_type column exists
+    const { data: columnInfo, error } = await supabase
+      .from('education_content')
+      .select('talent_type')
+      .limit(1);
+    
+    // If we get an error about the column not existing, add it
+    if (error && error.message.includes('column "talent_type" does not exist')) {
+      // Add the talent_type column
+      await supabase.rpc('exec_sql', { 
+        sql_string: `
+          ALTER TABLE public.education_content 
+          ADD COLUMN talent_type TEXT;
+        `
+      });
+      console.log('Added talent_type column to education_content table');
+      
+      // Add the level column if it doesn't exist
+      await supabase.rpc('exec_sql', { 
+        sql_string: `
+          ALTER TABLE public.education_content 
+          ADD COLUMN level TEXT;
+        `
+      });
+      console.log('Added level column to education_content table');
+    }
+  } catch (err) {
+    console.error('Error checking or adding columns:', err);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -335,6 +416,9 @@ serve(async (req) => {
   try {
     // Ensure log table exists
     await ensureLogTableExists();
+    
+    // Ensure education_content has talent_type column
+    await ensureEducationContentColumns();
     
     if (req.method === 'POST') {
       // For manual trigger or scheduled execution
