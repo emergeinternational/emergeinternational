@@ -60,18 +60,20 @@ const TalentManagement = () => {
   const { toast } = useToast();
   const [debugRecords, setDebugRecords] = useState<any[]>([]);
 
-  // Debug function to check database schema
+  // Debug function to check table columns
   const checkTableSchema = async () => {
     try {
-      const { data: columns, error } = await supabase.rpc(
-        'select_columns_info',
-        { table_name: 'talent_applications' }
-      ).select('*');
+      console.log("Checking talent_applications columns...");
+      
+      // Make a direct fetch call to the edge function
+      const { data, error } = await supabase.functions.invoke('select_columns_info', {
+        body: { table_name: 'talent_applications' }
+      });
       
       if (error) {
         console.error("Failed to check schema:", error);
       } else {
-        console.log("Talent applications table schema:", columns);
+        console.log("Talent applications table schema:", data?.columns);
       }
       
     } catch (err) {

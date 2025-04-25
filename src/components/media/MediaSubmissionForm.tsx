@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -80,6 +79,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   // Debug function to check table columns
   const checkTableColumns = async () => {
     try {
+      console.log("Checking talent_applications table structure...");
+      
+      // Check for basic table structure
       const { data, error } = await supabase
         .from('talent_applications')
         .select('*')
@@ -87,11 +89,10 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       
       console.log("Table structure check:", data);
       
-      // Check if the 'gender' column exists
-      const { data: columns, error: columnsError } = await supabase.rpc(
-        'select_columns_info', 
-        { table_name: 'talent_applications' }
-      ).select('*');
+      // Check columns using the edge function
+      const { data: columns, error: columnsError } = await supabase.functions.invoke('select_columns_info', {
+        body: { table_name: 'talent_applications' }
+      });
       
       if (columnsError) {
         console.error("Failed to check columns:", columnsError);

@@ -9,21 +9,33 @@ const TalentsPage = () => {
   // Debug function to check database schema
   const checkDatabaseSchema = async () => {
     try {
-      // Check if gender column exists in talent_applications table
-      const { data, error } = await supabase
-        .from('information_schema.columns')
-        .select('column_name')
-        .eq('table_name', 'talent_applications')
-        .eq('table_schema', 'public');
+      console.log("Checking if talent_applications table exists...");
       
-      if (error) {
-        console.error("Error checking schema:", error);
+      // Check for records in the talent_applications table instead
+      const { data: tableData, error: tableError } = await supabase
+        .from('talent_applications')
+        .select('id')
+        .limit(1);
+      
+      if (tableError) {
+        console.error("Error checking talent_applications table:", tableError);
       } else {
-        console.log("Available columns in talent_applications:", data);
+        console.log("talent_applications table exists, sample data:", tableData);
         
-        // Check if gender column exists
-        const hasGenderColumn = data?.some(col => col.column_name === 'gender');
-        console.log("Gender column exists:", hasGenderColumn);
+        // Make a direct fetch call to the edge function
+        const { data, error } = await supabase.functions.invoke('select_columns_info', {
+          body: { table_name: 'talent_applications' }
+        });
+        
+        if (error) {
+          console.error("Error calling select_columns_info function:", error);
+        } else {
+          console.log("Columns information:", data);
+          
+          // Check if gender column exists
+          const hasGenderColumn = data?.columns?.some(col => col.column_name === 'gender');
+          console.log("Gender column exists:", hasGenderColumn);
+        }
       }
     } catch (err) {
       console.error("Error checking database schema:", err);
