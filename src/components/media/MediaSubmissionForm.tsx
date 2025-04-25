@@ -27,6 +27,9 @@ import { ModelMeasurementsSection } from "../talent/FormSections/ModelMeasuremen
 import { PerformerSection } from "../talent/FormSections/PerformerSection";
 import { SocialSection } from "../talent/FormSections/SocialSection";
 
+// Define the type for talent_status to match what's in the database
+type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
+
 const mediaFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
@@ -93,7 +96,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         travel_availability: data.travelAvailability,
         experience_level: data.experienceLevel,
         portfolio_url: data.portfolioUrl,
-        status: "pending"
+        status: "pending" as TalentStatus // Explicitly type this as TalentStatus
       };
       
       const { error } = await supabase
