@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book } from "lucide-react";
@@ -20,8 +19,6 @@ const CourseDetail = () => {
       
       try {
         setIsLoading(true);
-        // Convert the route param (which is a numeric id) to fetch the actual content
-        // In a production app, we'd use the actual UUID from the database
         const courseId = parseInt(id).toString();
         const allCourses = await getEducationContent();
         const foundCourse = allCourses.find(c => c.id === courseId);
@@ -34,7 +31,6 @@ const CourseDetail = () => {
             description: "The requested course could not be found.",
             variant: "destructive",
           });
-          // Don't navigate away, just show the error
         }
       } catch (error) {
         console.error("Error fetching course details:", error);
@@ -51,16 +47,13 @@ const CourseDetail = () => {
     fetchCourseDetails();
   }, [id, toast, navigate]);
 
-  // Format course data for better display
   const courseLevel = course?.category_id || "beginner";
   const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
   const courseType = course?.content_type || "course";
   const formattedDuration = courseType === "course" ? "10-12 weeks" : "1-2 days";
   
-  // Get nextStartDate (for display purposes)
   const getNextStartDate = () => {
     const now = new Date();
-    // Add between 1-14 days to the current date
     const daysToAdd = Math.floor(Math.random() * 14) + 1;
     now.setDate(now.getDate() + daysToAdd);
     return now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -159,10 +152,15 @@ const CourseDetail = () => {
                         <span className="text-gray-600">Prerequisites:</span>
                         <span>None</span>
                       </p>
-                      {course.source && (
+                      {course.source_url ? (
                         <p className="flex justify-between">
                           <span className="text-gray-600">Provider:</span>
-                          <span>{course.source}</span>
+                          <span>{course.source_url}</span>
+                        </p>
+                      ) : (
+                        <p className="flex justify-between">
+                          <span className="text-gray-600">Provider:</span>
+                          <span>None</span>
                         </p>
                       )}
                     </div>
@@ -177,16 +175,13 @@ const CourseDetail = () => {
                         >
                           Start Learning Now
                         </a>
+                        <p className="text-center text-xs text-gray-500 mt-2">
+                          You'll be redirected to the course provider
+                        </p>
                       ) : (
                         <Button className="w-full bg-emerge-gold hover:bg-emerge-gold/90">
                           Enroll Now
                         </Button>
-                      )}
-                      
-                      {course.source_url && (
-                        <p className="text-center text-xs text-gray-500 mt-2">
-                          You'll be redirected to the course provider
-                        </p>
                       )}
                     </div>
                   </div>
