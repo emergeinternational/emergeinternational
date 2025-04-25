@@ -23,7 +23,6 @@ export const useStorage = () => {
       if (listError) {
         console.error("Error checking buckets:", listError);
         console.error("Error message:", listError.message);
-        // Remove references to error.code and error.status
         throw new Error(`Failed to check storage buckets: ${listError.message}`);
       }
       
@@ -44,7 +43,6 @@ export const useStorage = () => {
         if (createError) {
           console.error("Error creating bucket:", createError);
           console.error("Error message:", createError.message);
-          // Remove references to error.code and error.status
           throw new Error(`Failed to create storage bucket: ${createError.message}`);
         }
         
@@ -89,6 +87,10 @@ export const useStorage = () => {
       
       console.log(`Attempting to upload file to ${bucketName}/${filePath}`);
       console.log(`File size: ${file.size} bytes`);
+      console.log("Upload options:", { 
+        cacheControl: options?.cacheControl || '3600',
+        upsert: options?.upsert !== undefined ? options.upsert : true
+      });
       
       // Upload file
       const { data, error } = await supabase.storage
@@ -101,7 +103,6 @@ export const useStorage = () => {
       if (error) {
         console.error("Storage upload error:", error);
         console.error("Error message:", error.message);
-        // Remove references to error.code and error.status
         throw error;
       }
       
