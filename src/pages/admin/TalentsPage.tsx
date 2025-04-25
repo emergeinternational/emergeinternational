@@ -4,6 +4,9 @@ import TalentManagement from "../../components/admin/TalentManagement";
 import { Toaster } from "@/components/ui/toaster";
 
 const TalentsPage = () => {
+  // Debug log to verify page mount
+  console.log("Admin TalentsPage mounted");
+
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 py-6">

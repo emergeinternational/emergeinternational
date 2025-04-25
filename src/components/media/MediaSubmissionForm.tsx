@@ -77,12 +77,15 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       setIsSubmitting(true);
       console.log("Form submission data:", data);
 
+      // Debug: Check what the database schema expects
+      console.log("Preparing talent application data with gender:", data.gender);
+
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
         age: parseInt(data.age, 10),
-        gender: data.gender, // Ensure gender is included
+        gender: data.gender, // Ensure gender field is explicitly included
         category_type: data.category,
         notes: data.description,
         social_media: {
@@ -100,7 +103,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         status: "pending" as TalentStatus
       };
       
-      console.log("Preparing to send to Supabase:", submissionData);
+      console.log("Submitting to Supabase with data:", submissionData);
       
       const { data: insertedData, error } = await supabase
         .from('talent_applications')
