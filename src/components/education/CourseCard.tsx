@@ -1,5 +1,7 @@
+
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { trackCourseEngagement } from "@/services/educationService";
 
 interface CourseCardProps {
   id: number | string;

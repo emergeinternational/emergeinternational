@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -294,24 +295,26 @@ export const trackCourseEngagement = async (courseId: string): Promise<void> => 
 
 export const trackCourseProgress = async (courseId: string, category: string): Promise<void> => {
   try {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session?.user) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user) {
       console.log('User not authenticated, skipping progress tracking');
       return;
     }
+    
+    const userId = sessionData.session.user.id;
 
     const { data: existingProgress } = await supabase
       .from('user_course_progress')
       .select('*')
       .eq('course_id', courseId)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .single();
 
     if (!existingProgress) {
       await supabase
         .from('user_course_progress')
         .insert({
-          user_id: session.user.id,
+          user_id: userId,
           course_id: courseId,
           course_category: category,
           status: 'started',

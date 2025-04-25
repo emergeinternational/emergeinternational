@@ -1,13 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book, Link2Off } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
-import { getEducationContent, EducationContent } from "../services/educationService";
+import { getEducationContent, EducationContent, trackCourseProgress } from "../services/educationService";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { trackCourseProgress } from "@/services/educationService";
 
 const isValidUrl = (url: string): boolean => {
   try {
@@ -25,6 +25,11 @@ const CourseDetail = () => {
   const { user } = useAuth();
   const [course, setCourse] = useState<EducationContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Add default formatted duration
+  const formattedDuration = course?.content_type === 'workshop' ? '3-5 hours' : '10-15 hours';
+  // Add course type 
+  const courseType = course?.content_type || 'online course';
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -114,6 +119,7 @@ const CourseDetail = () => {
               target="_blank" 
               rel="noopener noreferrer"
               className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
+              onClick={handleEnrollClick}
             >
               <ExternalLink className="mr-2 h-4 w-4" /> Start Learning Now
             </a>
@@ -200,6 +206,17 @@ const CourseDetail = () => {
                     <li>Career opportunities and networking in the industry</li>
                   </ul>
                   
+                  {/* Add How to Enroll section */}
+                  <h2 className="text-xl font-medium mb-4">How to Enroll</h2>
+                  <p className="text-gray-700 mb-6">
+                    Click the course link below to sign up and begin learning on the original platform. 
+                    {nextStartDate ? (
+                      <span> This course begins on {nextStartDate}.</span>
+                    ) : (
+                      <span> Start anytime — this course is available on-demand.</span>
+                    )}
+                  </p>
+                  
                   <div className="p-4 bg-emerge-cream mt-8 rounded-sm">
                     <h3 className="font-medium mb-2">Course Updates</h3>
                     <p className="text-sm text-gray-600">
@@ -225,15 +242,10 @@ const CourseDetail = () => {
                         <span className="text-gray-600">Prerequisites:</span>
                         <span>None</span>
                       </p>
-                      {course.source_url ? (
+                      {course.source_url && (
                         <p className="flex justify-between">
                           <span className="text-gray-600">Provider:</span>
-                          <span>{course.source_url}</span>
-                        </p>
-                      ) : (
-                        <p className="flex justify-between">
-                          <span className="text-gray-600">Provider:</span>
-                          <span>None</span>
+                          <span>{new URL(course.source_url).hostname}</span>
                         </p>
                       )}
                     </div>
