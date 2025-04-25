@@ -1,36 +1,34 @@
 
 import React from 'react';
-import { Clock } from "lucide-react";
 
 interface VideoPlayerProps {
   videoId: string;
-  source: string;
+  source?: string;
 }
 
-const VideoPlayer = ({ videoId, source }: VideoPlayerProps) => {
-  // Example duration - in a real app, this would come from an API
-  const videoDuration = "8 minutes 30 seconds";
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, source }) => {
+  // Logic to determine video platform
+  const isYoutube = source?.includes('youtube.com') || source?.includes('youtu.be');
   
-  return (
-    <div className="mt-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-medium">Watch Lesson</h2>
-        <div className="flex items-center text-sm text-gray-600">
-          <Clock className="mr-2 h-4 w-4 text-emerge-gold" />
-          <span>Duration: {videoDuration}</span>
-        </div>
-      </div>
-      <div className="aspect-video w-full">
-        <iframe 
-          width="100%" 
-          height="100%" 
+  if (isYoutube) {
+    return (
+      <div className="aspect-w-16 aspect-h-9 mb-6">
+        <iframe
           src={`https://www.youtube.com/embed/${videoId}`}
-          title="Video Lesson" 
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
+          className="w-full h-full rounded"
+          title="Video content"
         ></iframe>
       </div>
+    );
+  }
+  
+  return (
+    <div className="bg-gray-100 p-4 mb-6 rounded">
+      <p className="text-gray-500 text-center">
+        Video source not supported or unavailable. Please check the link.
+      </p>
     </div>
   );
 };

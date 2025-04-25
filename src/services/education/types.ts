@@ -49,7 +49,7 @@ export interface WeeklyContent {
   content: string;
 }
 
-// Define talent types as a string array without complex typing
+// Define talent types using simple string constants instead of complex typing
 export const TALENT_TYPES = [
   'models',
   'designers',
