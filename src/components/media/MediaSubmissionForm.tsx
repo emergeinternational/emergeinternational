@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ModelMeasurementsSection } from "@/components/talent/FormSections/ModelMeasurementsSection";
 
 const mediaFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -34,6 +34,15 @@ const mediaFormSchema = z.object({
   tiktokHandle: z.string().optional(),
   telegramHandle: z.string().optional(),
   description: z.string().min(10, "Please provide a description").max(300, "Description must not exceed 300 characters"),
+  height: z.string().optional(),
+  weight: z.string().optional(),
+  measurements: z.object({
+    bust: z.string().optional(),
+    waist: z.string().optional(),
+    hips: z.string().optional()
+  }).optional(),
+  dressSize: z.string().optional(),
+  shoeSize: z.string().optional()
 });
 
 type MediaFormData = z.infer<typeof mediaFormSchema>;
@@ -53,6 +62,8 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       category: undefined,
     },
   });
+
+  const selectedCategory = form.watch("category");
 
   const onSubmit = async (data: MediaFormData) => {
     try {
@@ -124,61 +135,65 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
       ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your full name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="your@email.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="your@email.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="phoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Phone Number</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="+1234567890" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Phone Number</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="+1234567890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="age"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Age</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your age" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Age</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your age" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -206,47 +221,51 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="instagramHandle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Instagram Handle</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@yourusername" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <FormField
+                control={form.control}
+                name="instagramHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Instagram Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourusername" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="tiktokHandle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">TikTok Handle</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@yourtiktok" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="tiktokHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">TikTok Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourtiktok" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="telegramHandle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Telegram Handle</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@yourtelegram" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="telegramHandle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Telegram Handle</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourtelegram" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <ModelMeasurementsSection form={form} show={selectedCategory === "Model"} />
 
             <FormField
               control={form.control}
