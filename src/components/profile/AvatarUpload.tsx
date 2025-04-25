@@ -59,8 +59,9 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       
       // Detailed bucket and storage logging
       console.log("Checking Supabase storage configuration...");
-      console.log("Supabase URL:", supabase.supabaseUrl);
-      console.log("Storage client:", JSON.stringify(supabase.storage, null, 2));
+      // Remove the reference to protected property supabaseUrl
+      console.log("Storage client details being logged...");
+      console.log("Storage client:", typeof supabase.storage);
       
       // Check if bucket exists
       console.log("Listing available buckets...");
@@ -155,4 +156,3 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
 };
 
 export default AvatarUpload;
-
