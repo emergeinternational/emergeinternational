@@ -6,7 +6,8 @@ import {
   UserCheck, 
   UserX, 
   Shield,
-  RefreshCw 
+  RefreshCw,
+  Filter
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -39,6 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
@@ -48,11 +51,14 @@ interface UserWithRole {
   full_name: string | null;
   role: UserRole;
   loading?: boolean;
+  created_at?: string;
+  last_sign_in_at?: string;
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllUsers, setShowAllUsers] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -62,10 +68,73 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
+      // First fetch all auth users directly using the auth API
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching auth users:', authError);
+        // If we can't access auth.admin API, fallback to profiles table
+        fallbackToProfilesTable();
+        return;
+      }
+      
+      if (authUsers) {
+        console.log(`Fetched ${authUsers.users.length} users from auth API`);
+        
+        // Get user roles
+        const { data: userRoles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        if (rolesError) {
+          console.error('Error fetching user roles:', rolesError);
+        }
+        
+        // Get profiles for additional user data
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, role');
+          
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+        }
+        
+        // Map users with roles and profile data
+        const enhancedUsers: UserWithRole[] = authUsers.users.map(user => {
+          // Find role in user_roles table (primary source)
+          const userRole = userRoles?.find(ur => ur.user_id === user.id);
+          
+          // Find profile data
+          const profile = profiles?.find(p => p.id === user.id);
+          
+          return {
+            id: user.id,
+            email: user.email || 'No Email',
+            full_name: profile?.full_name || user.user_metadata?.full_name || 'Unnamed User',
+            role: (userRole?.role as UserRole) || profile?.role as UserRole || 'user',
+            created_at: user.created_at,
+            last_sign_in_at: user.last_sign_in_at
+          };
+        });
+        
+        setUsers(enhancedUsers);
+      }
+    } catch (error) {
+      console.error('Error in primary user fetch method:', error);
+      // Fallback to profiles table if auth API fails
+      fallbackToProfilesTable();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fallbackToProfilesTable = async () => {
+    try {
+      console.log('Falling back to profiles table for user data');
       // Instead of using the admin API, we'll fetch from profiles and user_roles tables
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name');
+        .select('id, email, full_name, created_at');
       
       if (profilesError) throw profilesError;
       
@@ -84,18 +153,20 @@ const UserManagement = () => {
           id: profile.id,
           email: profile.email || 'No Email',
           full_name: profile.full_name,
-          role: (userRole?.role as UserRole) || 'user'
+          role: (userRole?.role as UserRole) || 'user',
+          created_at: profile.created_at
         };
       });
       
       setUsers(enhancedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error in fallback user fetch:', error);
       toast({
         title: "Error fetching users",
         description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive"
       });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -221,19 +292,49 @@ const UserManagement = () => {
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">User Management</h2>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={fetchUsers}
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="outline"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>View Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowAllUsers(!showAllUsers)}>
+                {showAllUsers ? 
+                  <Check className="h-4 w-4 mr-2" /> : 
+                  <div className="w-4 h-4 mr-2" />
+                }
+                Show all users
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={fetchUsers}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
       
       <Table>
@@ -242,19 +343,20 @@ const UserManagement = () => {
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Current Role</TableHead>
+            <TableHead>Created</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-8">
+              <TableCell colSpan={5} className="text-center py-8">
                 Loading users...
               </TableCell>
             </TableRow>
           ) : users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center py-8">
+              <TableCell colSpan={5} className="text-center py-8">
                 No users found
               </TableCell>
             </TableRow>
@@ -275,6 +377,14 @@ const UserManagement = () => {
                     {getRoleIcon(user.role || 'user')}
                     {user.role || 'user'}
                   </div>
+                </TableCell>
+                <TableCell className="text-sm">
+                  <div>{formatDate(user.created_at)}</div>
+                  {user.last_sign_in_at && (
+                    <div className="text-xs text-gray-500">
+                      Last sign in: {formatDate(user.last_sign_in_at)}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">

@@ -54,6 +54,7 @@ export type Database = {
           portfolio_url: string | null
           talent_description: string | null
           telegram: string | null
+          tiktok: string | null
           updated_at: string | null
         }
         Insert: {
@@ -70,6 +71,7 @@ export type Database = {
           portfolio_url?: string | null
           talent_description?: string | null
           telegram?: string | null
+          tiktok?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -86,6 +88,7 @@ export type Database = {
           portfolio_url?: string | null
           talent_description?: string | null
           telegram?: string | null
+          tiktok?: string | null
           updated_at?: string | null
         }
         Relationships: []
