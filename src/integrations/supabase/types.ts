@@ -39,6 +39,51 @@ export type Database = {
         }
         Relationships: []
       }
+      emerge_submissions: {
+        Row: {
+          age: number | null
+          category: string
+          created_at: string | null
+          email: string
+          full_name: string
+          gender: string
+          id: string
+          instagram: string | null
+          phone_number: string | null
+          talent_description: string | null
+          telegram: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          age?: number | null
+          category: string
+          created_at?: string | null
+          email: string
+          full_name: string
+          gender: string
+          id?: string
+          instagram?: string | null
+          phone_number?: string | null
+          talent_description?: string | null
+          telegram?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          age?: number | null
+          category?: string
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          gender?: string
+          id?: string
+          instagram?: string | null
+          phone_number?: string | null
+          talent_description?: string | null
+          telegram?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           capacity: number | null
