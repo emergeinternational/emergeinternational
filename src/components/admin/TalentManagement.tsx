@@ -74,7 +74,8 @@ const TalentManagement = () => {
       }
       
       console.log("Fetched applications:", data);
-      return data as TalentApplication[]; // Type assertion to match our interface
+      // Cast through unknown first to avoid TypeScript error
+      return (data as unknown) as TalentApplication[];
     }
   });
 
