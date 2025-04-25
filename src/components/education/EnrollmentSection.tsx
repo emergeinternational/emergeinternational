@@ -1,11 +1,10 @@
 
 import React from 'react';
 import { ExternalLink, Link2Off } from "lucide-react";
-import { EducationContent } from '@/services/education';
-import { trackCourseProgress } from '@/services/education';
+import { SimpleCourse, trackCourseProgress } from '@/services/education/simpleCourseService';
 
 interface EnrollmentSectionProps {
-  course: EducationContent;
+  course: SimpleCourse;
 }
 
 const EnrollmentSection = ({ course }: EnrollmentSectionProps) => {

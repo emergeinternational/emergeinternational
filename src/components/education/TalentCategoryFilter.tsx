@@ -1,54 +1,57 @@
 
-import { useState } from 'react';
-import { TALENT_TYPES } from '@/services/educationService';
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
-interface TalentCategoryFilterProps {
-  activeCategory: string;
-  onChange: (category: string) => void;
+// Define talent types directly in the component
+const TALENT_TYPES = [
+  { id: "model", name: "Model" },
+  { id: "designer", name: "Designer" },
+  { id: "photographer", name: "Photographer" },
+  { id: "business", name: "Business" }
+];
+
+export interface TalentCategoryFilterProps {
+  activeFilter?: string;
+  onFilterChange?: (filter: string) => void;
 }
 
-const TalentCategoryFilter = ({ 
-  activeCategory, 
-  onChange 
-}: TalentCategoryFilterProps) => {
-  const talentLabels: Record<string, string> = {
-    all: 'All Categories',
-    models: 'Models',
-    designers: 'Designers',
-    photographers: 'Photographers',
-    videographers: 'Videographers',
-    influencers: 'Social Media Influencers',
-    entertainment: 'Entertainment Talent'
+const TalentCategoryFilter = ({ activeFilter, onFilterChange }: TalentCategoryFilterProps) => {
+  const navigate = useNavigate();
+
+  const handleCategoryClick = (id: string) => {
+    if (onFilterChange) {
+      onFilterChange(id);
+    } else {
+      navigate(`/education?talent=${id}`);
+    }
   };
 
   return (
-    <div className="mb-8">
-      <h2 className="text-lg font-medium mb-3">Browse by Talent Category</h2>
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 mt-4 mb-6">
+      <button
+        onClick={() => handleCategoryClick("all")}
+        className={`px-4 py-2 rounded-full text-sm ${
+          activeFilter === "all" || !activeFilter
+            ? "bg-emerge-gold text-white"
+            : "bg-gray-100 hover:bg-gray-200"
+        }`}
+      >
+        All
+      </button>
+      
+      {TALENT_TYPES.map((type) => (
         <button
-          onClick={() => onChange('all')}
-          className={`px-4 py-2 rounded-full ${
-            activeCategory === 'all'
+          key={type.id}
+          onClick={() => handleCategoryClick(type.id)}
+          className={`px-4 py-2 rounded-full text-sm ${
+            activeFilter === type.id
               ? "bg-emerge-gold text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 hover:bg-gray-200"
           }`}
         >
-          {talentLabels.all}
+          {type.name}
         </button>
-        {TALENT_TYPES.map(type => (
-          <button
-            key={type}
-            onClick={() => onChange(type)}
-            className={`px-4 py-2 rounded-full ${
-              activeCategory === type
-                ? "bg-emerge-gold text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {talentLabels[type] || type.charAt(0).toUpperCase() + type.slice(1)}
-          </button>
-        ))}
-      </div>
+      ))}
     </div>
   );
 };
