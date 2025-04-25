@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -189,52 +188,44 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       
       if (photoUrls.length === 0) {
         setUploadingFiles(false);
-        return; // Error already shown in handleFileUpload
+        return;
       }
 
-      // Upload video (optional)
-      const videoInput = document.querySelector<HTMLInputElement>('#video');
-      const videoUrls = await handleFileUpload(videoInput?.files || null, "video");
-
-      // Upload portfolio (optional)
-      const portfolioInput = document.querySelector<HTMLInputElement>('#portfolio');
-      const portfolioUrls = await handleFileUpload(portfolioInput?.files || null, "portfolio");
+      // Prepare social media data
+      const socialMedia = {
+        instagram: data.socialMediaHandle || null,
+        tiktok: data.telegramHandle || null,
+      };
 
       // Prepare submission data
       const submissionData = {
-        ...data,
-        photo_urls: photoUrls,
-        video_url: videoUrls[0] || null,
-        portfolio_url: portfolioUrls[0] || data.portfolioUrl || null,
+        full_name: data.fullName,
+        email: data.email,
+        phone: data.phoneNumber,
+        age: data.age,
+        country: data.country,
+        photo_url: photoUrls[0], // Use the first photo as the main photo
+        portfolio_url: data.portfolioUrl || null,
+        category_type: data.category,
+        social_media: socialMedia,
+        status: 'pending',
       };
 
       // Submit to Supabase
-      const response = await fetch("https://dqfnetchkvnzrtacgvfw.supabase.co/rest/v1/talent_registrations", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZm5ldGNoa3ZuenJ0YWNndmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0ODkyNTgsImV4cCI6MjA2MTA2NTI1OH0.h6eC1M8Kxt1r-kATr_dXNfL41jQFd8khGqf7XLSupvg',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify(submissionData),
-      });
+      const { error } = await supabase
+        .from('talent_applications')
+        .insert([submissionData]);
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} - ${await response.text()}`);
-      }
+      if (error) throw error;
 
       toast({
         title: "Success!",
         description: "Your registration has been submitted successfully.",
       });
       
-      // Reset form
+      // Reset form and files
       form.reset();
-      
-      // Reset file inputs
       if (photoInput) photoInput.value = '';
-      if (videoInput) videoInput.value = '';
-      if (portfolioInput) portfolioInput.value = '';
       setPhotoFilesCount(0);
       
       // Call success callback
