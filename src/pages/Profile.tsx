@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -9,6 +8,7 @@ import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
@@ -16,7 +16,6 @@ const Profile = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    // If not loading and no user, redirect to login
     if (!isLoading && !user) {
       console.log("No authenticated user found in Profile page, redirecting to login");
       navigate("/login");
@@ -25,7 +24,6 @@ const Profile = () => {
     }
   }, [user, isLoading, navigate]);
 
-  // Show loading state while authentication is being checked
   if (isLoading) {
     return (
       <div className="min-h-screen bg-emerge-darkBg flex items-center justify-center">
@@ -34,17 +32,13 @@ const Profile = () => {
     );
   }
 
-  // If there's no user and we're not loading, the useEffect will redirect
-  // But just in case, return null
   if (!user) {
     return null;
   }
   
   const handleRequestPasswordReset = async () => {
     try {
-      // Get the current origin (protocol + domain)
       const origin = window.location.origin;
-      // Create the reset redirect URL
       const redirectTo = `${origin}/email-login`;
       
       console.log("Reset password redirect URL:", redirectTo);
@@ -102,6 +96,7 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      <Toaster />
     </div>
   );
 };

@@ -28,29 +28,33 @@ const ProfileForm = () => {
     const fetchProfile = async () => {
       if (!user?.id) return;
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-      
-      if (data) {
-        setFormData({
-          full_name: data.full_name || "",
-          country: data.country || "",
-          city: data.city || "",
-          language: data.language || "",
-          email: data.email || "",
-          phone_number: data.phone_number || "",
-          social_media_handle: data.social_media_handle || "",
-          telegram_name: data.telegram_name || "",
-          avatar_url: data.avatar_url || ""
-        });
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return;
+        }
+        
+        if (data) {
+          setFormData({
+            full_name: data.full_name || "",
+            country: data.country || "",
+            city: data.city || "",
+            language: data.language || "",
+            email: data.email || "",
+            phone_number: data.phone_number || "",
+            social_media_handle: data.social_media_handle || "",
+            telegram_name: data.telegram_name || "",
+            avatar_url: data.avatar_url || ""
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile data:", err);
       }
     };
 
@@ -62,7 +66,9 @@ const ProfileForm = () => {
     if (!user) return;
 
     try {
+      console.log("Submitting profile data:", formData);
       const success = await createProfile(user.id, formData);
+      
       if (success) {
         toast({
           title: "Profile updated",
@@ -70,6 +76,7 @@ const ProfileForm = () => {
         });
       }
     } catch (error) {
+      console.error("Profile update error:", error);
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -83,18 +90,23 @@ const ProfileForm = () => {
   };
 
   const handleAvatarUpload = (url: string) => {
+    console.log("Avatar URL updated:", url);
     setFormData(prev => ({
       ...prev,
       avatar_url: url
     }));
   };
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <AvatarUpload 
         url={formData.avatar_url} 
         onUpload={handleAvatarUpload}
-        userId={user?.id || ''}
+        userId={user.id}
       />
       
       <BasicInfoSection formData={formData} onChange={handleChange} />
