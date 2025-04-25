@@ -1,5 +1,5 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 
@@ -31,7 +31,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
               <FormControl>
                 <Input placeholder="175 cm" {...field} />
               </FormControl>
-              <p className="text-xs text-gray-500">Enter height in centimeters</p>
+              <FormDescription className="text-xs text-gray-500">
+                Enter height in centimeters
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -46,7 +48,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
               <FormControl>
                 <Input placeholder="65 kg" {...field} />
               </FormControl>
-              <p className="text-xs text-gray-500">Enter weight in kilograms</p>
+              <FormDescription className="text-xs text-gray-500">
+                Enter weight in kilograms
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -63,7 +67,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="100 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure around the fullest part of chest</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure around the fullest part of chest
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -78,7 +84,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="80 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure at natural waistline</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure at natural waistline
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -93,7 +101,26 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="45 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure shoulder width</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure shoulder width
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="measurements.inseam"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">Inseam</FormLabel>
+                  <FormControl>
+                    <Input placeholder="82 cm" {...field} />
+                  </FormControl>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure from crotch to ankle
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -110,7 +137,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="90 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure around fullest part of bust</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure around fullest part of bust
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -125,7 +154,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="60 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure at smallest part of waist</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure at smallest part of waist
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -140,7 +171,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   <FormControl>
                     <Input placeholder="90 cm" {...field} />
                   </FormControl>
-                  <p className="text-xs text-gray-500">Measure at fullest part of hips</p>
+                  <FormDescription className="text-xs text-gray-500">
+                    Measure at fullest part of hips
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -159,7 +192,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
               <FormControl>
                 <Input placeholder="US 4 / EU 34" {...field} />
               </FormControl>
-              <p className="text-xs text-gray-500">US/EU size preferred</p>
+              <FormDescription className="text-xs text-gray-500">
+                US/EU size preferred
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -174,7 +209,9 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
               <FormControl>
                 <Input placeholder="US 7 / EU 37.5" {...field} />
               </FormControl>
-              <p className="text-xs text-gray-500">US/EU size preferred</p>
+              <FormDescription className="text-xs text-gray-500">
+                US/EU size preferred
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
