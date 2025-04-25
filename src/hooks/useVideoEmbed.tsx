@@ -64,7 +64,7 @@ export const useVideoEmbed = (
     } finally {
       setIsLoading(false);
     }
-  }, [sourceUrl]);
+  }, [sourceUrl, options]);
   
   return {
     embedUrl,

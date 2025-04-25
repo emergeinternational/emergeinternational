@@ -36,7 +36,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoId, source, title = "Vid
     
     // Handle youtube.com/watch?v= URLs
     if (url.includes('youtube.com/watch')) {
-      const urlParams = new URLSearchParams(url.split('?')[1]);
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
       return urlParams.get('v');
     }
     

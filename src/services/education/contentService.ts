@@ -60,10 +60,10 @@ export const getEducationContent = async (
 /**
  * Groups education content by category
  */
-export const getEducationContentByCategory = async (): Promise<Record<string, any[]>> => {
+export const getEducationContentByCategory = async (): Promise<{[key: string]: EducationContent[]}> => {
   try {
     const categories = await getEducationCategories();
-    const result: Record<string, any[]> = {};
+    const result: {[key: string]: EducationContent[]} = {};
     
     for (const category of categories) {
       const content = await getEducationContent(category.id, 5);
@@ -75,7 +75,7 @@ export const getEducationContentByCategory = async (): Promise<Record<string, an
     console.error("Error in getEducationContentByCategory:", error);
     
     // Create a fallback response with the static content
-    const result: Record<string, any[]> = {};
+    const result: {[key: string]: EducationContent[]} = {};
     for (const category of await getEducationCategories()) {
       result[category.id] = await getEducationContent(category.id, 5);
     }
@@ -92,10 +92,10 @@ export const getEducationContentByTalentType = async (
   featuredOnly: boolean = false
 ): Promise<{[key: string]: EducationContent[]}> => {
   try {
-    // Use object literal type to avoid recursive type instantiation
+    // Use simple object type to avoid recursive type instantiation
     const result: {[key: string]: EducationContent[]} = {};
     
-    // Use a for loop instead of map to avoid potential issues with type inference
+    // Use for loop instead of map to avoid type inference issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
@@ -106,7 +106,7 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Also use object literal type in the error case
+    // Also use simple object type in the error case
     const result: {[key: string]: EducationContent[]} = {};
     
     for (let i = 0; i < TALENT_TYPES.length; i++) {

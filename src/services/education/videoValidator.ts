@@ -23,7 +23,7 @@ export const validateYoutubeUrl = (url?: string): boolean => {
     if (url.includes('youtu.be/')) {
       videoId = url.split('youtu.be/')[1]?.split(/[?&#]/)[0];
     } else if (url.includes('youtube.com/watch')) {
-      const urlParams = new URLSearchParams(url.split('?')[1]);
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
       videoId = urlParams.get('v');
     } else if (url.includes('youtube.com/embed/')) {
       videoId = url.split('youtube.com/embed/')[1]?.split(/[?&#]/)[0];
@@ -47,7 +47,7 @@ export const formatYoutubeEmbedUrl = (url: string): string | null => {
     if (url.includes('youtu.be/')) {
       videoId = url.split('youtu.be/')[1]?.split(/[?&#]/)[0];
     } else if (url.includes('youtube.com/watch')) {
-      const urlParams = new URLSearchParams(url.split('?')[1]);
+      const urlParams = new URLSearchParams(url.split('?')[1] || '');
       videoId = urlParams.get('v');
     } else if (url.includes('youtube.com/embed/')) {
       videoId = url.split('youtube.com/embed/')[1]?.split(/[?&#]/)[0];

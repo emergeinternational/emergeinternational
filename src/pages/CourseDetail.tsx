@@ -8,9 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   getEducationContent,
   getCourseWeeklyContent,
-  EducationContent,
-  WeeklyContent as WeeklyContentType
+  EducationContent
 } from "../services/education";
+import { WeeklyContent as WeeklyContentType } from "@/services/education/types";
 
 // Import our components
 import CourseOverview from "@/components/education/CourseOverview";
