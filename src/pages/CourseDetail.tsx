@@ -1,45 +1,29 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book, Link2Off } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
-import { getEducationContent, EducationContent, trackCourseProgress } from "../services/educationService";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Accordion, 
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
-
-const isValidUrl = (url: string): boolean => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
+import { 
+  getEducationContent, 
+  trackCourseProgress, 
+  EducationContent 
+} from "../services/educationService";
 
 const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [course, setCourse] = useState<EducationContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [weeklyContent, setWeeklyContent] = useState<{title: string, content: string}[]>([]);
-
-  // Default values for when course data is loading or not available
-  const courseType = course?.content_type || 'online course';
-  const formattedDuration = course?.content_type === 'workshop' ? '3-5 hours' : '10-15 hours';
-  const courseLevel = course?.level || course?.category_id || "beginner";
-  const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
-  const talentType = course?.talent_type || '';
-  const formattedTalentType = talentType ? talentType.charAt(0).toUpperCase() + talentType.slice(1) : '';
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -48,21 +32,10 @@ const CourseDetail = () => {
       try {
         setIsLoading(true);
         const allCourses = await getEducationContent();
-        let foundCourse = allCourses.find(c => c.id === id);
-        
-        if (!foundCourse) {
-          try {
-            const numericId = parseInt(id).toString();
-            foundCourse = allCourses.find(c => c.id === numericId);
-          } catch (e) {
-            console.log("ID is not numeric, skipping parseInt fallback");
-          }
-        }
+        const foundCourse = allCourses.find(c => c.id === id);
         
         if (foundCourse) {
           setCourse(foundCourse);
-          
-          // Simulate weekly content (in a real app, this would come from the database)
           if (foundCourse.content_type === 'weekly') {
             setWeeklyContent([
               {
@@ -79,9 +52,7 @@ const CourseDetail = () => {
               }
             ]);
           }
-          console.log("Course found:", foundCourse);
         } else {
-          console.error("Course not found with ID:", id);
           toast({
             title: "Course not found",
             description: "The requested course could not be found.",
@@ -102,15 +73,6 @@ const CourseDetail = () => {
 
     fetchCourseDetails();
   }, [id, toast]);
-  
-  const getNextStartDate = () => {
-    const now = new Date();
-    const daysToAdd = Math.floor(Math.random() * 14) + 1;
-    now.setDate(now.getDate() + daysToAdd);
-    return now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
-  
-  const nextStartDate = getNextStartDate();
 
   const handleEnrollClick = async () => {
     if (course) {
@@ -121,69 +83,116 @@ const CourseDetail = () => {
     }
   };
 
-  const renderCourseLink = () => {
+  const isVideoEmbed = (url?: string) => {
+    if (!url) return false;
+    return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
+  };
+
+  const getVideoId = (url: string) => {
+    if (url.includes('youtube.com/watch?v=')) {
+      return url.split('v=')[1].split('&')[0];
+    } else if (url.includes('youtu.be/')) {
+      return url.split('youtu.be/')[1];
+    }
+    return null;
+  };
+
+  const renderContentSection = () => {
     if (!course) return null;
-    
-    // For weekly content hosted on our platform
+
+    if (course.content_type === 'video' && course.source_url && isVideoEmbed(course.source_url)) {
+      const videoId = getVideoId(course.source_url);
+      if (videoId) {
+        return (
+          <div className="mt-8">
+            <h2 className="text-xl font-medium mb-4">Watch Lesson</h2>
+            <div className="aspect-video w-full">
+              <iframe 
+                width="100%" 
+                height="100%" 
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title="Video Lesson" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        );
+      }
+    }
+
     if (course.content_type === 'weekly') {
+      return renderWeeklyContent();
+    }
+
+    return null;
+  };
+
+  const renderEnrollmentSection = () => {
+    if (!course) return null;
+
+    const isEmbeddedVideo = course.content_type === 'video' && isVideoEmbed(course.source_url);
+    
+    if (isEmbeddedVideo) {
+      return (
+        <div className="space-y-2">
+          <p className="text-gray-700">
+            This video lesson is available directly on this page. Click play to begin learning.
+          </p>
+        </div>
+      );
+    }
+
+    if (course.source_url && isValidUrl(course.source_url)) {
+      const hostname = new URL(course.source_url).hostname;
+      const platform = hostname.replace('www.', '').split('.')[0];
+      const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+
       return (
         <div className="space-y-2">
           <p className="text-gray-700 mb-2">
-            This course is available directly on Emerge International. Lessons will be released weekly.
+            Click the course link below to access this course on {platformName}.
           </p>
-          <Button 
+          <a 
+            href={course.source_url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
             onClick={handleEnrollClick}
-            className="w-full bg-emerge-gold hover:bg-emerge-gold/90"
           >
-            Start Learning Now
-          </Button>
+            <ExternalLink className="mr-2 h-4 w-4" /> Visit Course
+          </a>
+          <p className="text-center text-xs text-gray-500 flex items-center justify-center mt-2">
+            <Link2Off className="mr-2 h-3 w-3 text-emerge-gold" />
+            You'll be redirected to {hostname}
+          </p>
         </div>
       );
     }
-    
-    // For external links
-    if (course?.source_url) {
-      const isValidLink = isValidUrl(course.source_url);
-      const hostname = isValidLink ? new URL(course.source_url).hostname : '';
-      const platform = hostname.replace('www.', '').split('.')[0];
-      const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
-      
-      return (
-        <div className="space-y-2">
-          {isValidLink ? (
-            <>
-              <p className="text-gray-700 mb-2">
-                Access this course on {platformName} by clicking the link below.
-              </p>
-              <a 
-                href={course.source_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
-                onClick={handleEnrollClick}
-              >
-                <ExternalLink className="mr-2 h-4 w-4" /> Visit Course
-              </a>
-              <p className="text-center text-xs text-gray-500 flex items-center justify-center">
-                <Link2Off className="mr-2 h-3 w-3 text-emerge-gold" />
-                You'll be redirected to {hostname}
-              </p>
-            </>
-          ) : (
-            <div className="p-4 border border-yellow-200 bg-yellow-50 rounded">
-              <p className="text-orange-700 mb-2">External course link coming soon. Check back within 24 hours.</p>
-            </div>
-          )}
-        </div>
-      );
-    } else {
-      // No link available
-      return (
-        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded">
-          <p className="text-orange-700 mb-2">External course link coming soon. Check back within 24 hours.</p>
-        </div>
-      );
+
+    // Missing or invalid link
+    return (
+      <div className="p-4 border border-yellow-200 bg-yellow-50 rounded">
+        <p className="text-orange-700">External course link coming soon. Check back within 24 hours.</p>
+      </div>
+    );
+  };
+
+  const isValidUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
     }
+  };
+
+  const getNextStartDate = () => {
+    const now = new Date();
+    const daysToAdd = Math.floor(Math.random() * 14) + 1;
+    now.setDate(now.getDate() + daysToAdd);
+    return now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const renderWeeklyContent = () => {
@@ -207,42 +216,6 @@ const CourseDetail = () => {
     );
   };
 
-  const renderVideoEmbed = () => {
-    if (!course || course.content_type !== 'video' || !course.source_url) return null;
-    
-    // Simple YouTube embed check - would need to be extended for other providers
-    if (course.source_url.includes('youtube.com') || course.source_url.includes('youtu.be')) {
-      let videoId = '';
-      
-      if (course.source_url.includes('youtube.com/watch?v=')) {
-        videoId = course.source_url.split('v=')[1].split('&')[0];
-      } else if (course.source_url.includes('youtu.be/')) {
-        videoId = course.source_url.split('youtu.be/')[1];
-      }
-      
-      if (videoId) {
-        return (
-          <div className="mt-8">
-            <h2 className="text-xl font-medium mb-4">Watch Lesson</h2>
-            <div className="aspect-video">
-              <iframe 
-                width="100%" 
-                height="100%" 
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title="YouTube video player" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
-        );
-      }
-    }
-    
-    return null;
-  };
-
   return (
     <MainLayout>
       <div className="emerge-container py-16">
@@ -261,43 +234,35 @@ const CourseDetail = () => {
             </div>
           ) : course ? (
             <div>
+              {/* Course Header */}
               <div className="mb-8">
                 <h1 className="emerge-heading text-3xl mb-4">{course.title}</h1>
-                {talentType && (
+                {course.talent_type && (
                   <Badge className="bg-emerge-gold text-white mb-4">
-                    {formattedTalentType}
+                    {course.talent_type.charAt(0).toUpperCase() + course.talent_type.slice(1)}
                   </Badge>
                 )}
                 <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Duration: {formattedDuration}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Next Start: {nextStartDate}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Capacity: 15-20 students</span>
-                  </div>
+                  {!isVideoEmbed(course.source_url) && (
+                    <>
+                      <div className="flex items-center">
+                        <Calendar className="mr-2 h-4 w-4 text-emerge-gold" />
+                        <span>Next Start: {getNextStartDate()}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Users className="mr-2 h-4 w-4 text-emerge-gold" />
+                        <span>Capacity: 15-20 students</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-center">
                     <Book className="mr-2 h-4 w-4 text-emerge-gold" />
-                    <span>Level: {formattedLevel}</span>
+                    <span>Level: {course.level || 'Beginner'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="aspect-video mb-8 overflow-hidden bg-emerge-cream">
-                {course.image_url && (
-                  <img 
-                    src={course.image_url} 
-                    alt={course.title} 
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </div>
-
+              {/* Course Content */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2">
                   <h2 className="text-xl font-medium mb-4">Course Overview</h2>
@@ -305,104 +270,32 @@ const CourseDetail = () => {
                     {course.summary || "No description available."}
                   </p>
                   
-                  <h2 className="text-xl font-medium mb-4">What You'll Learn</h2>
-                  <ul className="list-disc pl-5 mb-6 space-y-2">
-                    <li>Understanding fundamentals and principles of the subject matter</li>
-                    <li>Practical skills development through hands-on exercises</li>
-                    <li>Professional-level techniques and industry best practices</li>
-                    <li>Building a portfolio and showcasing your work effectively</li>
-                    <li>Career opportunities and networking in the industry</li>
-                  </ul>
-                  
-                  {/* Render video embed if available */}
-                  {renderVideoEmbed()}
-                  
-                  {/* Render weekly content if available */}
-                  {renderWeeklyContent()}
-                  
-                  {/* Add How to Enroll section */}
-                  <h2 className="text-xl font-medium mb-4 mt-6">How to Enroll</h2>
-                  <p className="text-gray-700 mb-4">
-                    {course.content_type === 'weekly' ? (
-                      "Access this course directly on Emerge International. Content will be released weekly."
-                    ) : (
-                      <>
-                        Click the course link below to sign up and begin learning 
-                        {course.source_url && isValidUrl(course.source_url) ? (
-                          <> on {new URL(course.source_url).hostname.replace('www.', '')}</>
-                        ) : (
-                          <> on the original platform</>
-                        )}
-                        .
-                      </>
-                    )}
-                    {nextStartDate ? (
-                      <span> This course begins on {nextStartDate}.</span>
-                    ) : (
-                      <span> Start anytime — this course is available on-demand.</span>
-                    )}
-                  </p>
-                  
-                  <div className="p-4 bg-emerge-cream mt-8 rounded-sm">
-                    <h3 className="font-medium mb-2">Course Updates</h3>
-                    <p className="text-sm text-gray-600">
-                      This course content is automatically curated from top educational platforms and updated weekly
-                      to ensure you have access to the most current learning materials.
-                    </p>
-                  </div>
+                  {renderContentSection()}
                 </div>
                 
                 <div>
                   <div className="bg-emerge-cream p-5">
                     <h3 className="text-lg font-medium mb-4">Course Information</h3>
-                    <div className="space-y-3">
-                      <p className="flex justify-between">
-                        <span className="text-gray-600">Format:</span>
-                        <span className="capitalize">{courseType}</span>
-                      </p>
-                      <p className="flex justify-between">
-                        <span className="text-gray-600">Level:</span>
-                        <span className="capitalize">{formattedLevel}</span>
-                      </p>
-                      {talentType && (
-                        <p className="flex justify-between">
-                          <span className="text-gray-600">For:</span>
-                          <span className="capitalize">{formattedTalentType}</span>
-                        </p>
-                      )}
-                      <p className="flex justify-between">
-                        <span className="text-gray-600">Prerequisites:</span>
-                        <span>None</span>
-                      </p>
-                      {course.source_url && isValidUrl(course.source_url) && (
-                        <p className="flex justify-between">
-                          <span className="text-gray-600">Provider:</span>
-                          <span>{new URL(course.source_url).hostname.replace('www.', '')}</span>
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="mt-6">
-                      {renderCourseLink()}
-                    </div>
+                    {renderEnrollmentSection()}
                   </div>
                   
+                  {/* Similar Courses */}
                   <div className="mt-6 bg-white border border-gray-200 p-5">
                     <h3 className="text-lg font-medium mb-3">Similar Courses</h3>
                     <ul className="space-y-3 text-sm">
-                      {talentType && (
+                      {course.talent_type && (
                         <li>
                           <a 
-                            href={`/education?talent=${talentType}`} 
+                            href={`/education?talent=${course.talent_type}`} 
                             className="text-emerge-gold hover:underline"
                           >
-                            More {formattedTalentType} Courses
+                            More {course.talent_type.charAt(0).toUpperCase() + course.talent_type.slice(1)} Courses
                           </a>
                         </li>
                       )}
                       <li>
                         <a href="/education" className="text-emerge-gold hover:underline">
-                          View More {formattedLevel} Courses
+                          View More {course.level || 'Beginner'} Courses
                         </a>
                       </li>
                       <li>
