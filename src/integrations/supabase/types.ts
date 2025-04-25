@@ -49,7 +49,9 @@ export type Database = {
           gender: string
           id: string
           instagram: string | null
+          measurements: Json | null
           phone_number: string | null
+          portfolio_url: string | null
           talent_description: string | null
           telegram: string | null
           updated_at: string | null
@@ -63,7 +65,9 @@ export type Database = {
           gender: string
           id?: string
           instagram?: string | null
+          measurements?: Json | null
           phone_number?: string | null
+          portfolio_url?: string | null
           talent_description?: string | null
           telegram?: string | null
           updated_at?: string | null
@@ -77,7 +81,9 @@ export type Database = {
           gender?: string
           id?: string
           instagram?: string | null
+          measurements?: Json | null
           phone_number?: string | null
+          portfolio_url?: string | null
           talent_description?: string | null
           telegram?: string | null
           updated_at?: string | null

@@ -25,6 +25,8 @@ interface EmergingTalent {
   instagram: string | null;
   telegram: string | null;
   talent_description: string | null;
+  measurements: Record<string, string> | null;
+  portfolio_url: string | null;
   created_at: string;
 }
 
@@ -93,7 +95,7 @@ const EmergingTalentList = () => {
             <TableHead>Age</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Social Media</TableHead>
-            <TableHead>Description</TableHead>
+            <TableHead>Details</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -135,8 +137,25 @@ const EmergingTalentList = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="max-w-xs truncate">
-                    {submission.talent_description}
+                  <div className="space-y-2">
+                    <div className="text-sm truncate max-w-xs">
+                      {submission.talent_description}
+                    </div>
+                    {submission.category === "Model" && submission.measurements && (
+                      <div className="text-xs text-gray-500">
+                        Measurements provided
+                      </div>
+                    )}
+                    {submission.category === "Designer" && submission.portfolio_url && (
+                      <a 
+                        href={submission.portfolio_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-500 hover:underline"
+                      >
+                        View Portfolio
+                      </a>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
