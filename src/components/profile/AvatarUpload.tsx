@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { compressImage } from "@/utils/imageCompression"; // Import compression utility
+import { compressImage } from "@/utils/imageCompression";
 
 interface AvatarUploadProps {
   url: string | null;
@@ -23,40 +22,27 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       }
       
       setUploading(true);
-      const originalFile = event.target.files[0];
+      const file = event.target.files[0];
       
-      // Compress the image before upload
-      const compressedFile = await compressImage(originalFile, 2); // Allow up to 2MB
-      
-      // Validate compressed file size
-      if (compressedFile.size > 2 * 1024 * 1024) {
+      // Validate original file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please select an image smaller than 2MB",
+          description: "Please select an image smaller than 5MB",
           variant: "destructive",
         });
         return;
       }
 
-      const fileExt = originalFile.name.split('.').pop();
+      // Compress image if needed
+      const compressedFile = await compressImage(file);
+      const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = fileName;
-      
-      // Check and create bucket if needed
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-      
-      if (!bucketExists) {
-        await supabase.storage.createBucket('avatars', { 
-          public: true,
-          fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-        });
-      }
       
       // Upload compressed image
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, compressedFile, {
+        .upload(fileName, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });
@@ -69,7 +55,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
       
       onUpload(publicUrlData.publicUrl);
       
