@@ -192,13 +192,22 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         return;
       }
 
+      // Check if the talent_media bucket exists
+      const { error: storageError } = await supabase.storage.getBucket('talent_media');
+      
+      if (storageError) {
+        // If bucket doesn't exist, create it
+        console.log("Creating talent_media bucket...");
+        await supabase.storage.createBucket('talent_media', { public: true });
+      }
+
       // Prepare social media data
       const socialMedia = {
         instagram: data.socialMediaHandle || null,
         tiktok: data.telegramHandle || null,
       };
 
-      // Prepare submission data - fix: don't wrap in array and use explicit typing for status
+      // Prepare submission data
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
@@ -209,15 +218,22 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         portfolio_url: data.portfolioUrl || null,
         category_type: data.category,
         social_media: socialMedia,
-        status: 'pending' as 'pending' | 'approved' | 'rejected' | 'on_hold', // Fix: use type assertion
+        status: 'pending' as 'pending' | 'approved' | 'rejected' | 'on_hold',
       };
 
-      // Submit to Supabase - fix: don't wrap in array brackets
-      const { error } = await supabase
+      console.log("Submitting talent application:", submissionData);
+
+      // Submit to Supabase
+      const { data: insertedData, error } = await supabase
         .from('talent_applications')
         .insert(submissionData);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error details:", error);
+        throw error;
+      }
+
+      console.log("Talent application submitted successfully:", insertedData);
 
       toast({
         title: "Success!",
