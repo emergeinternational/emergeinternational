@@ -49,6 +49,7 @@ const talentFormSchema = z.object({
 });
 
 type TalentFormData = z.infer<typeof talentFormSchema>;
+type TalentStatus = 'pending' | 'approved' | 'rejected' | 'on_hold';
 
 interface TalentRegistrationFormProps {
   onSubmitSuccess: () => void;
@@ -119,28 +120,51 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
     return true;
   };
 
+  const ensureBucketExists = async () => {
+    try {
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error("Error checking buckets:", listError);
+        return false;
+      }
+      
+      const bucketExists = buckets?.some(bucket => bucket.name === 'talent_media');
+      
+      if (!bucketExists) {
+        const { data, error: createError } = await supabase.storage
+          .createBucket('talent_media', { 
+            public: true,
+            fileSizeLimit: MAX_FILE_SIZE
+          });
+        
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          return false;
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error ensuring bucket exists:", error);
+      return false;
+    }
+  }
+
   const uploadFile = async (file: File, path: string) => {
     try {
-      const { data: bucketData, error: bucketError } = await supabase.storage
-        .getBucket('talent_media');
+      const bucketReady = await ensureBucketExists();
       
-      if (bucketError && bucketError.message.includes('does not exist')) {
-        console.log("Creating talent_media bucket");
-        const { error: createBucketError } = await supabase.storage
-          .createBucket('talent_media', { public: true });
-          
-        if (createBucketError) {
-          console.error("Error creating bucket:", createBucketError);
-          throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
-        }
-      } else if (bucketError) {
-        console.error("Error checking bucket:", bucketError);
-        throw bucketError;
+      if (!bucketReady) {
+        throw new Error("Storage bucket could not be created or accessed");
       }
       
       const { data, error } = await supabase.storage
         .from("talent_media")
-        .upload(path, file);
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
       if (error) {
         console.error("Upload error:", error);
@@ -218,7 +242,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
       const socialMedia = {
         instagram: data.socialMediaHandle || null,
-        tiktok: data.telegramHandle || null,
+        telegram: data.telegramHandle || null,
       };
 
       const submissionData = {
@@ -231,7 +255,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         portfolio_url: data.portfolioUrl || null,
         category_type: data.category,
         social_media: socialMedia,
-        status: 'pending' as 'pending' | 'approved' | 'rejected' | 'on_hold',
+        status: 'pending' as TalentStatus,
       };
 
       console.log("Submitting talent application:", submissionData);
@@ -449,7 +473,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
               name="socialMediaHandle"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Instagram or TikTok Handle</FormLabel>
+                  <FormLabel>Instagram Handle</FormLabel>
                   <FormControl>
                     <Input placeholder="@yourusername" {...field} />
                   </FormControl>

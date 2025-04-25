@@ -27,6 +27,18 @@ const TalentRegistration = () => {
     }
   ];
 
+  const handleSubmitSuccess = () => {
+    setIsSubmitted(true);
+    
+    // Scroll to the top of the success message
+    setTimeout(() => {
+      window.scrollTo({ 
+        top: document.querySelector('.emerge-container.max-w-3xl')?.getBoundingClientRect().top,
+        behavior: 'smooth'
+      });
+    }, 100);
+  };
+
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -88,7 +100,7 @@ const TalentRegistration = () => {
               </Button>
             </div>
           ) : (
-            <TalentRegistrationForm onSubmitSuccess={() => setIsSubmitted(true)} />
+            <TalentRegistrationForm onSubmitSuccess={handleSubmitSuccess} />
           )}
         </div>
       </section>
