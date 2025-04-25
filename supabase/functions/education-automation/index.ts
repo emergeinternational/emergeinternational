@@ -1,8 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.29.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
-// Configure CORS headers for browser requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -15,109 +14,48 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Running education-automation function");
+    // Get Supabase client using environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Archive past workshops
+    console.log("Starting to archive past workshops...");
+    const { data: archivedWorkshops, error: archiveError } = await supabase.rpc('archive_past_workshops');
     
-    // Initialize Supabase client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
-    );
-    
-    // Parse request to determine operation
-    let operation = 'all';
-    try {
-      const body = await req.json();
-      operation = body.operation || 'all';
-    } catch (e) {
-      // If body parsing fails, default to 'all'
-      console.log("Error parsing request body, defaulting to 'all' operation");
+    if (archiveError) {
+      console.error("Error archiving workshops:", archiveError);
+      return new Response(
+        JSON.stringify({ error: "Failed to archive past workshops", details: archiveError }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
 
-    // Execute requested operation(s)
-    const results = {
-      success: true,
-      operations: {},
-      message: "Automation tasks completed",
-    };
-    
-    // 1. Archive past workshops
-    if (operation === 'all' || operation === 'archive-workshops') {
-      try {
-        const { data, error } = await supabaseAdmin.rpc('archive_past_workshops');
-        
-        if (error) throw error;
-        
-        const { count: archivedCount } = await supabaseAdmin
-          .from('workshops')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_archived', true);
-          
-        results.operations.archivedWorkshops = {
-          success: true,
-          count: archivedCount || 0,
-        };
-        
-        console.log(`Successfully archived past workshops. Total archived: ${archivedCount || 0}`);
-      } catch (error) {
-        console.error("Error archiving past workshops:", error);
-        results.operations.archivedWorkshops = {
-          success: false,
-          error: error.message,
-        };
-      }
+    // Log execution to automation_logs table
+    const { error: logError } = await supabase
+      .from('automation_logs')
+      .insert({
+        function_name: 'education-automation',
+        executed_at: new Date().toISOString(),
+        results: { message: "Past workshops archived successfully" }
+      });
+
+    if (logError) {
+      console.error("Error logging automation execution:", logError);
     }
-    
-    // 2. Log function execution for monitoring
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('automation_logs')
-        .insert([
-          { 
-            function_name: 'education-automation',
-            executed_at: new Date().toISOString(),
-            results: results
-          }
-        ])
-        .select();
-        
-      if (error) {
-        console.warn("Error logging automation execution:", error);
-      }
-    } catch (e) {
-      console.warn("Error inserting log record:", e);
-      // Create the logs table if it doesn't exist
-      try {
-        await supabaseAdmin.rpc('create_automation_logs_table');
-      } catch (tableError) {
-        console.error("Failed to create logs table:", tableError);
-      }
-    }
-    
-    return new Response(
-      JSON.stringify(results),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    );
-  } catch (error) {
-    console.error("Error in education-automation function:", error);
-    
+
     return new Response(
       JSON.stringify({ 
-        success: false, 
-        error: error.message 
+        success: true, 
+        message: "Education automation tasks completed successfully",
       }),
-      { 
-        status: 500, 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error", details: error.message }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

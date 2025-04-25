@@ -28,7 +28,7 @@ export const getWorkshops = async (showArchived: boolean = false): Promise<Works
       throw error;
     }
     
-    return data || [];
+    return data as unknown as Workshop[] || [];
   } catch (error) {
     console.error("Unexpected error in getWorkshops:", error);
     return [];

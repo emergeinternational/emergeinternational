@@ -35,7 +35,7 @@ export const getEducationCategories = async (): Promise<EducationCategory[]> => 
       throw error;
     }
     
-    return data || [];
+    return data as unknown as EducationCategory[] || [];
   } catch (error) {
     console.error("Unexpected error in getEducationCategories:", error);
     return [];
@@ -69,7 +69,7 @@ export const getEducationContent = async (
       throw error;
     }
     
-    return data || [];
+    return data as unknown as EducationContent[] || [];
   } catch (error) {
     console.error("Unexpected error in getEducationContent:", error);
     return [];
