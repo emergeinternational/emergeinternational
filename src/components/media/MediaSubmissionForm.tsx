@@ -29,8 +29,9 @@ const mediaFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
-  category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Designer"]),
+  category: z.enum(["Model", "Dancer", "Singer", "Actor", "Designer", "Other"]),
   instagramHandle: z.string().optional(),
+  tiktokHandle: z.string().optional(),
   telegramHandle: z.string().optional(),
   description: z.string().min(10, "Please provide a description").max(300, "Description must not exceed 300 characters"),
 });
@@ -64,6 +65,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         notes: data.description,
         social_media: {
           instagram: data.instagramHandle || null,
+          tiktok: data.tiktokHandle || null,
           telegram: data.telegramHandle || null
         },
         status: "pending" as TalentStatus
@@ -101,15 +103,15 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   };
 
   return (
-    <div className="bg-gray-900 border border-emerge-gold rounded-lg p-6 md:p-8">
-      <h2 className="text-2xl font-serif text-emerge-gold mb-6 text-center">
+    <div className="bg-white rounded-lg p-6 md:p-8 shadow-lg">
+      <h2 className="text-2xl font-bold text-black mb-6 text-center">
         Talent Registration Form
       </h2>
 
       {isSubmitted ? (
         <div className="text-center space-y-4">
-          <h3 className="text-xl text-white">Thank you for registering!</h3>
-          <p className="text-gray-300">
+          <h3 className="text-xl text-black font-bold">Thank you for registering!</h3>
+          <p className="text-gray-700">
             Our team will review your information and reach out to selected talent for the next stage.
           </p>
           <Button 
@@ -127,9 +129,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Full Name</FormLabel>
+                  <FormLabel className="font-bold text-black">Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your full name" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input placeholder="Enter your full name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,9 +143,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Email</FormLabel>
+                  <FormLabel className="font-bold text-black">Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="your@email.com" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input type="email" placeholder="your@email.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -155,9 +157,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Phone Number</FormLabel>
+                  <FormLabel className="font-bold text-black">Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+1234567890" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input type="tel" placeholder="+1234567890" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -169,9 +171,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="age"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Age</FormLabel>
+                  <FormLabel className="font-bold text-black">Age</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your age" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input placeholder="Your age" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -183,18 +185,20 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Category</FormLabel>
+                  <FormLabel className="font-bold text-black">Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                      <SelectItem value="Top Model">Top Model</SelectItem>
-                      <SelectItem value="Top Performer">Top Performer</SelectItem>
-                      <SelectItem value="Top Dancer">Top Dancer</SelectItem>
+                    <SelectContent>
+                      <SelectItem value="Model">Model</SelectItem>
+                      <SelectItem value="Dancer">Dancer</SelectItem>
+                      <SelectItem value="Singer">Singer</SelectItem>
+                      <SelectItem value="Actor">Actor</SelectItem>
                       <SelectItem value="Designer">Designer</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -207,9 +211,23 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="instagramHandle"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Instagram Handle</FormLabel>
+                  <FormLabel className="font-bold text-black">Instagram Handle</FormLabel>
                   <FormControl>
-                    <Input placeholder="@yourusername" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input placeholder="@yourusername" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tiktokHandle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold text-black">TikTok Handle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@yourtiktok" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -221,9 +239,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="telegramHandle"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Telegram Handle</FormLabel>
+                  <FormLabel className="font-bold text-black">Telegram Handle</FormLabel>
                   <FormControl>
-                    <Input placeholder="@yourtelegram" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                    <Input placeholder="@yourtelegram" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -235,12 +253,12 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-white">Talent Description</FormLabel>
+                  <FormLabel className="font-bold text-black">Talent Description</FormLabel>
                   <FormControl>
                     <Textarea 
                       placeholder="Tell us about yourself (max 300 characters)" 
                       {...field} 
-                      className="bg-gray-800 border-gray-700 text-white min-h-[100px]"
+                      className="min-h-[100px]"
                     />
                   </FormControl>
                   <FormMessage />
