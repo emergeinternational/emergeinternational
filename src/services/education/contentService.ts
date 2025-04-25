@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 import { EducationContent, TALENT_TYPES } from "./types";
 import { getFallbackContent } from "./fallbackData";
@@ -58,7 +59,7 @@ export const getEducationContent = async (
 /**
  * Groups education content by category
  */
-export const getEducationContentByCategory = async () => {
+export const getEducationContentByCategory = async (): Promise<Record<string, EducationContent[]>> => {
   try {
     const categories = await getEducationCategories();
     const result: Record<string, EducationContent[]> = {};
@@ -83,37 +84,40 @@ export const getEducationContentByCategory = async () => {
 };
 
 /**
- * Groups education content by talent type using a safe approach
- * that avoids any complex type recursion
+ * Groups education content by talent type using a completely flat approach
+ * with explicit typing and no type recursion
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-) => {
+): Promise<Record<string, EducationContent[]>> => {
   try {
-    // Use a simple Record type with string keys
-    const result: Record<string, any[]> = {};
+    // Create a simple record to store results
+    const result: Record<string, EducationContent[]> = {};
     
-    // Loop through the talent types array by index
+    // Iterate through the talent types array by index to avoid type recursion
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
+      // Fetch content for this talent type
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
+      // Store in the result object
       result[talentType] = content;
     }
     
-    return result as Record<string, EducationContent[]>;
+    return result;
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
     // Create a fallback with a simple structure
-    const result: Record<string, any[]> = {};
+    const result: Record<string, EducationContent[]> = {};
     
+    // Use simple for loop to avoid any potential typing issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
-    return result as Record<string, EducationContent[]>;
+    return result;
   }
 };
 
@@ -134,3 +138,4 @@ export const getCourseWeeklyContent = async (courseId: string) => {
     return [];
   }
 };
+

@@ -1,4 +1,5 @@
 
+
 // Define our interfaces for education data
 export interface EducationCategory {
   id: string;
@@ -58,3 +59,4 @@ export const TALENT_TYPES = [
   'influencers',
   'entertainment'
 ];
+
