@@ -4,6 +4,7 @@ import MainLayout from "../layouts/MainLayout";
 import { Globe, Search, TrendingUp } from "lucide-react";
 import TalentRegistrationForm from "../components/talent/TalentRegistrationForm";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 
 const TalentRegistration = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -103,6 +104,9 @@ const TalentRegistration = () => {
           </p>
         </div>
       </section>
+      
+      {/* Make sure toast notifications are visible */}
+      <Toaster />
     </MainLayout>
   );
 };

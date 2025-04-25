@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,7 +71,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
   const validateFiles = (files: FileList | null, type: "photo" | "video" | "portfolio") => {
     if (!files || files.length === 0) return true;
     
-    // Check file count for photos (limit to 3)
     if (type === "photo" && files.length > 3) {
       toast({
         title: "Too many files",
@@ -82,11 +80,9 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       return false;
     }
     
-    // Check file types
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      // Check file size
       if (file.size > MAX_FILE_SIZE) {
         toast({
           title: "File too large",
@@ -96,7 +92,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         return false;
       }
       
-      // Check file type
       let acceptedTypes: string[] = [];
       let typeDescription = "";
       
@@ -126,20 +121,39 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
   const uploadFile = async (file: File, path: string) => {
     try {
+      const { data: bucketData, error: bucketError } = await supabase.storage
+        .getBucket('talent_media');
+      
+      if (bucketError && bucketError.message.includes('does not exist')) {
+        console.log("Creating talent_media bucket");
+        const { error: createBucketError } = await supabase.storage
+          .createBucket('talent_media', { public: true });
+          
+        if (createBucketError) {
+          console.error("Error creating bucket:", createBucketError);
+          throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
+        }
+      } else if (bucketError) {
+        console.error("Error checking bucket:", bucketError);
+        throw bucketError;
+      }
+      
       const { data, error } = await supabase.storage
         .from("talent_media")
         .upload(path, file);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Upload error:", error);
+        throw error;
+      }
       
-      // Get public URL for the file
       const { data: publicUrlData } = supabase.storage
         .from("talent_media")
         .getPublicUrl(data.path);
         
       return publicUrlData.publicUrl;
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("Error in uploadFile function:", error);
       throw error;
     }
   };
@@ -173,7 +187,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
       const photoInput = document.querySelector<HTMLInputElement>('#photos');
       
-      // Validate photos are provided
       if (!photoInput?.files || photoInput.files.length === 0) {
         toast({
           title: "Photos required",
@@ -184,37 +197,37 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         return;
       }
       
-      // Upload photos
-      const photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
-      
-      if (photoUrls.length === 0) {
+      let photoUrls: string[] = [];
+      try {
+        photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
+        
+        if (photoUrls.length === 0) {
+          setUploadingFiles(false);
+          return;
+        }
+      } catch (uploadError) {
+        console.error("Error uploading photos:", uploadError);
+        toast({
+          title: "Upload Error",
+          description: "Failed to upload photos. Please try again.",
+          variant: "destructive",
+        });
         setUploadingFiles(false);
         return;
       }
 
-      // Check if the talent_media bucket exists
-      const { error: storageError } = await supabase.storage.getBucket('talent_media');
-      
-      if (storageError) {
-        // If bucket doesn't exist, create it
-        console.log("Creating talent_media bucket...");
-        await supabase.storage.createBucket('talent_media', { public: true });
-      }
-
-      // Prepare social media data
       const socialMedia = {
         instagram: data.socialMediaHandle || null,
         tiktok: data.telegramHandle || null,
       };
 
-      // Prepare submission data
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
         age: data.age,
         country: data.country,
-        photo_url: photoUrls[0], // Use the first photo as the main photo
+        photo_url: photoUrls[0],
         portfolio_url: data.portfolioUrl || null,
         category_type: data.category,
         social_media: socialMedia,
@@ -223,14 +236,25 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
       console.log("Submitting talent application:", submissionData);
 
-      // Submit to Supabase
       const { data: insertedData, error } = await supabase
         .from('talent_applications')
         .insert(submissionData);
 
       if (error) {
-        console.error("Supabase error details:", error);
-        throw error;
+        console.error("Supabase insertion error:", error);
+        let errorMessage = "There was a problem submitting your registration.";
+        
+        if (error.message) {
+          errorMessage += ` ${error.message}`;
+        }
+        
+        toast({
+          title: "Submission Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setUploadingFiles(false);
+        return;
       }
 
       console.log("Talent application submitted successfully:", insertedData);
@@ -240,18 +264,18 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         description: "Your registration has been submitted successfully.",
       });
       
-      // Reset form and files
       form.reset();
       if (photoInput) photoInput.value = '';
       setPhotoFilesCount(0);
       
-      // Call success callback
       onSubmitSuccess();
     } catch (error) {
       console.error('Submission error:', error);
       toast({
         title: "Error",
-        description: "There was a problem submitting your registration. Please try again.",
+        description: error instanceof Error 
+          ? `Submission error: ${error.message}` 
+          : "There was a problem submitting your registration. Please try again.",
         variant: "destructive",
       });
     } finally {
