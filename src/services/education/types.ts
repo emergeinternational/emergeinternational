@@ -1,4 +1,3 @@
-
 // Define our interfaces for education data
 export interface EducationCategory {
   id: string;
