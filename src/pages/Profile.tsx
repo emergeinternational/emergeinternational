@@ -7,7 +7,6 @@ import ShippingAddresses from "@/components/profile/ShippingAddresses";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { useStorage } from "@/hooks/useStorage"; // Import our hook
@@ -53,32 +52,6 @@ const Profile = () => {
   if (!user) {
     return null;
   }
-  
-  const handleRequestPasswordReset = async () => {
-    try {
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/email-login`;
-      
-      console.log("Reset password redirect URL:", redirectTo);
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
-        redirectTo: redirectTo
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Reset email sent",
-        description: "Check your email for the password reset link."
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Could not send reset email",
-        variant: "destructive"
-      });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-emerge-darkBg">
@@ -99,12 +72,6 @@ const Profile = () => {
           
           <div className="mb-6 text-center text-white">
             <p>Signed in as: <span className="font-bold">{user.email}</span></p>
-            <button 
-              onClick={handleRequestPasswordReset}
-              className="text-emerge-gold text-sm hover:underline mt-2"
-            >
-              Change Password
-            </button>
           </div>
           
           <ProfileForm />

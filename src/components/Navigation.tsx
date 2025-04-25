@@ -16,10 +16,10 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
 
   const navLinks = [
     { name: "Home", href: "/" },
+    { name: "Events", href: "/events" },
     { name: "Shop", href: "/shop" },
     { name: "Education", href: "/education" },
     { name: "Talent", href: "/talent-registration" },
-    { name: "Events", href: "/events" },
   ];
 
   const bgClass = variant === "dark" ? "bg-emerge-darkBg" : "bg-white";
