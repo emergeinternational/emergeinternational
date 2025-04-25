@@ -1,5 +1,4 @@
 
-
 // Define our interfaces for education data
 export interface EducationCategory {
   id: string;
@@ -50,7 +49,7 @@ export interface WeeklyContent {
   content: string;
 }
 
-// List of valid talent types as simple strings
+// Define talent types as simple string literals to avoid complex type inferencing
 export const TALENT_TYPES = [
   'models',
   'designers',
@@ -62,4 +61,3 @@ export const TALENT_TYPES = [
 
 // Create a type from the array for better type safety
 export type TalentType = typeof TALENT_TYPES[number];
-

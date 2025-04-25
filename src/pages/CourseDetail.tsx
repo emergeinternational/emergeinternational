@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { 
   getEducationContent,
-  trackCourseProgress,
+  getCourseWeeklyContent,
   EducationContent,
   WeeklyContent as WeeklyContentType
 } from "../services/education";
 
-// Import our new components
+// Import our components
 import CourseOverview from "@/components/education/CourseOverview";
 import VideoPlayer from "@/components/education/VideoPlayer";
 import WeeklyContent from "@/components/education/WeeklyContent";
@@ -38,7 +38,8 @@ const CourseDetail = () => {
         if (foundCourse) {
           setCourse(foundCourse);
           if (foundCourse.content_type === 'weekly') {
-            setWeeklyContent([
+            const weeklyData = await getCourseWeeklyContent(foundCourse.id);
+            setWeeklyContent(weeklyData.length > 0 ? weeklyData : [
               {
                 title: "Week 1: Introduction to Design Principles",
                 content: "This week covers the fundamentals of design thinking and principles that form the foundation of fashion design. You'll learn about color theory, balance, proportion, and how these elements work together."
@@ -75,28 +76,11 @@ const CourseDetail = () => {
     fetchCourseDetails();
   }, [id, toast]);
 
-  const isVideoEmbed = (url?: string) => {
-    if (!url) return false;
-    return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('vimeo.com');
-  };
-
-  const getVideoId = (url: string) => {
-    if (url.includes('youtube.com/watch?v=')) {
-      return url.split('v=')[1].split('&')[0];
-    } else if (url.includes('youtu.be/')) {
-      return url.split('youtu.be/')[1];
-    }
-    return null;
-  };
-
   const renderContentSection = () => {
     if (!course) return null;
 
-    if (course.content_type === 'video' && course.source_url && isVideoEmbed(course.source_url)) {
-      const videoId = getVideoId(course.source_url);
-      if (videoId) {
-        return <VideoPlayer videoId={videoId} source={course.source_url} />;
-      }
+    if (course.content_type === 'video' && course.source_url) {
+      return <VideoPlayer source={course.source_url} title={course.title} />;
     }
 
     if (course.content_type === 'weekly') {

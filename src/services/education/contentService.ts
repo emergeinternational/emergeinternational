@@ -83,18 +83,20 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
 };
 
 /**
- * Groups education content by talent type using a simple iteration approach
+ * Groups education content by talent type using basic iteration
+ * to avoid complex type inference that could cause infinite recursion
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
 ): Promise<Record<string, EducationContent[]>> => {
   try {
-    // Create a simple record to store results
-    const result: Record<string, EducationContent[]> = {};
+    // Use a simple object to store results
+    const result: { [key: string]: EducationContent[] } = {};
     
-    // Use a simple for loop to avoid any complex type inference
+    // Use a basic for loop with indices to avoid type recursion issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
+      // Get the talent type as a string
       const talentType = TALENT_TYPES[i];
       // Fetch content for this talent type
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
@@ -107,7 +109,7 @@ export const getEducationContentByTalentType = async (
     console.error("Error in getEducationContentByTalentType:", error);
     
     // Create a fallback with a simple structure
-    const result: Record<string, EducationContent[]> = {};
+    const result: { [key: string]: EducationContent[] } = {};
     
     // Use simple for loop to avoid any potential typing issues
     for (let i = 0; i < TALENT_TYPES.length; i++) {
@@ -119,7 +121,7 @@ export const getEducationContentByTalentType = async (
   }
 };
 
-export const getCourseWeeklyContent = async (courseId: string) => {
+export const getCourseWeeklyContent = async (courseId: string): Promise<WeeklyContent[]> => {
   try {
     return [
       {
@@ -136,3 +138,8 @@ export const getCourseWeeklyContent = async (courseId: string) => {
     return [];
   }
 };
+
+interface WeeklyContent {
+  title: string;
+  content: string;
+}
