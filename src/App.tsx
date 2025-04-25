@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
 import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
@@ -36,6 +35,7 @@ import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
