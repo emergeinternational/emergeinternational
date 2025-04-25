@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -53,7 +54,10 @@ export const TALENT_TYPES = [
   'videographers',
   'influencers',
   'entertainment'
-];
+] as const;
+
+// Define talent type as a union of string literals
+export type TalentType = typeof TALENT_TYPES[number];
 
 // Static fallback data for categories
 const fallbackCategories: EducationCategory[] = [
