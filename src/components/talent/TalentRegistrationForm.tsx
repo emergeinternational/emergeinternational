@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -131,13 +130,15 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       const videoInput = document.querySelector<HTMLInputElement>('#video');
       const videoUrls = await handleFileUpload(videoInput?.files || null, "video");
 
-      // Instead of using the typed interface, use a direct fetch call to the REST API
-      // This bypasses the TypeScript type checking for the table that isn't in the types yet
-      const response = await fetch(`${supabase.supabaseUrl}/rest/v1/talent_registrations`, {
+      // Use Supabase's server side REST endpoint with the public anon key from the client
+      const SUPABASE_URL = "https://dqfnetchkvnzrtacgvfw.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZm5ldGNoa3ZuenJ0YWNndmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0ODkyNTgsImV4cCI6MjA2MTA2NTI1OH0.h6eC1M8Kxt1r-kATr_dXNfL41jQFd8khGqf7XLSupvg";
+
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/talent_registrations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey,
+          'apikey': SUPABASE_ANON_KEY,
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
