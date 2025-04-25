@@ -94,7 +94,7 @@ export const getEducationContentByTalentType = async (
   try {
     const result: Record<string, EducationContent[]> = {};
     
-    // Using simple string iteration to avoid TypeScript recursion
+    // Using simple string array iteration to avoid TypeScript recursion
     for (const talentType of TALENT_TYPES) {
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
