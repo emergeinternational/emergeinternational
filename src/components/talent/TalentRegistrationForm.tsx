@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -197,7 +198,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         tiktok: data.telegramHandle || null,
       };
 
-      // Prepare submission data
+      // Prepare submission data - fix: don't wrap in array and use explicit typing for status
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
@@ -208,13 +209,13 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         portfolio_url: data.portfolioUrl || null,
         category_type: data.category,
         social_media: socialMedia,
-        status: 'pending',
+        status: 'pending' as 'pending' | 'approved' | 'rejected' | 'on_hold', // Fix: use type assertion
       };
 
-      // Submit to Supabase
+      // Submit to Supabase - fix: don't wrap in array brackets
       const { error } = await supabase
         .from('talent_applications')
-        .insert([submissionData]);
+        .insert(submissionData);
 
       if (error) throw error;
 
