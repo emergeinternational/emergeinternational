@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      course_engagement: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          id: string
+          last_click_date: string | null
+          total_clicks: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          id?: string
+          last_click_date?: string | null
+          total_clicks?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          last_click_date?: string | null
+          total_clicks?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number
@@ -65,11 +92,13 @@ export type Database = {
       }
       education_content: {
         Row: {
+          archive_date: string | null
           category_id: string | null
           content_type: string
           created_at: string | null
           id: string
           image_url: string | null
+          is_archived: boolean | null
           is_featured: boolean
           published_at: string | null
           source_url: string | null
@@ -78,11 +107,13 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archive_date?: string | null
           category_id?: string | null
           content_type: string
           created_at?: string | null
           id?: string
           image_url?: string | null
+          is_archived?: boolean | null
           is_featured?: boolean
           published_at?: string | null
           source_url?: string | null
@@ -91,11 +122,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archive_date?: string | null
           category_id?: string | null
           content_type?: string
           created_at?: string | null
           id?: string
           image_url?: string | null
+          is_archived?: boolean | null
           is_featured?: boolean
           published_at?: string | null
           source_url?: string | null
@@ -474,6 +507,42 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           weight?: number | null
+        }
+        Relationships: []
+      }
+      user_course_progress: {
+        Row: {
+          course_category: string | null
+          course_id: string
+          created_at: string | null
+          date_completed: string | null
+          date_started: string | null
+          id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          course_category?: string | null
+          course_id: string
+          created_at?: string | null
+          date_completed?: string | null
+          date_started?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          course_category?: string | null
+          course_id?: string
+          created_at?: string | null
+          date_completed?: string | null
+          date_started?: string | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

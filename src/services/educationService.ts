@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define our interfaces for education data
@@ -22,6 +21,24 @@ export interface EducationContent {
   published_at: string;
   created_at: string;
   updated_at: string;
+}
+
+// Add new interfaces for course progress and engagement
+export interface CourseProgress {
+  id: string;
+  user_id: string;
+  course_id: string;
+  course_category: string | null;
+  date_started: string;
+  date_completed: string | null;
+  status: 'started' | 'completed';
+}
+
+export interface CourseEngagement {
+  id: string;
+  course_id: string;
+  total_clicks: number;
+  last_click_date: string;
 }
 
 // Static fallback data for categories
@@ -242,5 +259,65 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
     }
     
     return result;
+  }
+};
+
+export const trackCourseEngagement = async (courseId: string): Promise<void> => {
+  try {
+    const { data: existingEngagement } = await supabase
+      .from('course_engagement')
+      .select('*')
+      .eq('course_id', courseId)
+      .single();
+
+    if (existingEngagement) {
+      await supabase
+        .from('course_engagement')
+        .update({
+          total_clicks: existingEngagement.total_clicks + 1,
+          last_click_date: new Date().toISOString(),
+        })
+        .eq('course_id', courseId);
+    } else {
+      await supabase
+        .from('course_engagement')
+        .insert({
+          course_id: courseId,
+          total_clicks: 1,
+          last_click_date: new Date().toISOString(),
+        });
+    }
+  } catch (error) {
+    console.error('Error tracking course engagement:', error);
+  }
+};
+
+export const trackCourseProgress = async (courseId: string, category: string): Promise<void> => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.log('User not authenticated, skipping progress tracking');
+      return;
+    }
+
+    const { data: existingProgress } = await supabase
+      .from('user_course_progress')
+      .select('*')
+      .eq('course_id', courseId)
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (!existingProgress) {
+      await supabase
+        .from('user_course_progress')
+        .insert({
+          user_id: session.user.id,
+          course_id: courseId,
+          course_category: category,
+          status: 'started',
+        });
+    }
+  } catch (error) {
+    console.error('Error tracking course progress:', error);
   }
 };

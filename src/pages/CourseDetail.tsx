@@ -5,6 +5,9 @@ import MainLayout from "../layouts/MainLayout";
 import { getEducationContent, EducationContent } from "../services/educationService";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { trackCourseProgress } from "@/services/educationService";
 
 const isValidUrl = (url: string): boolean => {
   try {
@@ -19,6 +22,7 @@ const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [course, setCourse] = useState<EducationContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,9 +72,16 @@ const CourseDetail = () => {
 
   const courseLevel = course?.category_id || "beginner";
   const formattedLevel = courseLevel.charAt(0).toUpperCase() + courseLevel.slice(1);
-  const courseType = course?.content_type || "course";
-  const formattedDuration = courseType === "course" ? "10-12 weeks" : "1-2 days";
   
+  const handleEnrollClick = async () => {
+    if (course) {
+      await trackCourseProgress(course.id, course.category_id || '');
+      if (course.source_url) {
+        window.open(course.source_url, '_blank');
+      }
+    }
+  };
+
   const getNextStartDate = () => {
     const now = new Date();
     const daysToAdd = Math.floor(Math.random() * 14) + 1;
