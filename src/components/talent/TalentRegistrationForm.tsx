@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +34,7 @@ const talentFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
-  age: z.number().min(16, "Must be at least 16 years old"),
+  age: z.coerce.number().min(16, "Must be at least 16 years old"),
   gender: z.enum(["Male", "Female", "Non-binary", "Prefer not to say", "Other"]),
   city: z.string().min(2, "City is required"),
   country: z.string().min(2, "Country is required"),
@@ -56,67 +57,114 @@ interface TalentRegistrationFormProps {
 
 const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps) => {
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [photoFilesCount, setPhotoFilesCount] = useState(0);
   const { toast } = useToast();
   const form = useForm<TalentFormData>({
     resolver: zodResolver(talentFormSchema),
     defaultValues: {
       consent: false,
+      age: undefined,
+      gender: undefined,
+      category: undefined,
     },
   });
 
-  const uploadFile = async (file: File, path: string) => {
-    const { data, error } = await supabase.storage
-      .from("talent_media")
-      .upload(path, file);
+  const validateFiles = (files: FileList | null, type: "photo" | "video" | "portfolio") => {
+    if (!files || files.length === 0) return true;
+    
+    // Check file count for photos (limit to 3)
+    if (type === "photo" && files.length > 3) {
+      toast({
+        title: "Too many files",
+        description: "Please upload a maximum of 3 photos",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Check file types
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is too large. Files must be less than 100MB`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Check file type
+      let acceptedTypes: string[] = [];
+      let typeDescription = "";
+      
+      if (type === "photo") {
+        acceptedTypes = ACCEPTED_IMAGE_TYPES;
+        typeDescription = "image files (JPG, PNG, WebP)";
+      } else if (type === "video") {
+        acceptedTypes = ACCEPTED_VIDEO_TYPES;
+        typeDescription = "video files (MP4, MOV, AVI)";
+      } else if (type === "portfolio") {
+        acceptedTypes = ACCEPTED_PORTFOLIO_TYPES;
+        typeDescription = "image or PDF files";
+      }
+      
+      if (!acceptedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not valid. Please upload only ${typeDescription}`,
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    return true;
+  };
 
-    if (error) throw error;
-    return data.path;
+  const uploadFile = async (file: File, path: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("talent_media")
+        .upload(path, file);
+
+      if (error) throw error;
+      
+      // Get public URL for the file
+      const { data: publicUrlData } = supabase.storage
+        .from("talent_media")
+        .getPublicUrl(data.path);
+        
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      throw error;
+    }
   };
 
   const handleFileUpload = async (files: FileList | null, type: "photo" | "video" | "portfolio") => {
     if (!files || files.length === 0) return [];
+    
+    if (!validateFiles(files, type)) {
+      return [];
+    }
 
     const uploadPromises = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (type === "photo" && !ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload only image files (JPG, PNG, WebP)",
-          variant: "destructive",
-        });
-        continue;
-      }
-      if (type === "video" && !ACCEPTED_VIDEO_TYPES.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload only video files (MP4, MOV, AVI)",
-          variant: "destructive",
-        });
-        continue;
-      }
-      if (type === "portfolio" && !ACCEPTED_PORTFOLIO_TYPES.includes(file.type)) {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload image or PDF files",
-          variant: "destructive",
-        });
-        continue;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        toast({
-          title: "File too large",
-          description: "Files must be less than 100MB",
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      const path = `${type}s/${Date.now()}-${file.name}`;
+      const path = `${type}s/${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
       uploadPromises.push(uploadFile(file, path));
     }
 
     return await Promise.all(uploadPromises);
+  };
+
+  const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setPhotoFilesCount(e.target.files.length);
+    }
   };
 
   const onSubmit = async (data: TalentFormData) => {
@@ -124,23 +172,43 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       setUploadingFiles(true);
 
       const photoInput = document.querySelector<HTMLInputElement>('#photos');
-      const photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
-
-      if (photoUrls.length === 0) {
+      
+      // Validate photos are provided
+      if (!photoInput?.files || photoInput.files.length === 0) {
         toast({
           title: "Photos required",
           description: "Please upload at least one photo",
           variant: "destructive",
         });
+        setUploadingFiles(false);
         return;
       }
+      
+      // Upload photos
+      const photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
+      
+      if (photoUrls.length === 0) {
+        setUploadingFiles(false);
+        return; // Error already shown in handleFileUpload
+      }
 
+      // Upload video (optional)
       const videoInput = document.querySelector<HTMLInputElement>('#video');
       const videoUrls = await handleFileUpload(videoInput?.files || null, "video");
 
+      // Upload portfolio (optional)
       const portfolioInput = document.querySelector<HTMLInputElement>('#portfolio');
       const portfolioUrls = await handleFileUpload(portfolioInput?.files || null, "portfolio");
 
+      // Prepare submission data
+      const submissionData = {
+        ...data,
+        photo_urls: photoUrls,
+        video_url: videoUrls[0] || null,
+        portfolio_url: portfolioUrls[0] || data.portfolioUrl || null,
+      };
+
+      // Submit to Supabase
       const response = await fetch("https://dqfnetchkvnzrtacgvfw.supabase.co/rest/v1/talent_registrations", {
         method: 'POST',
         headers: {
@@ -148,16 +216,11 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZm5ldGNoa3ZuenJ0YWNndmZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0ODkyNTgsImV4cCI6MjA2MTA2NTI1OH0.h6eC1M8Kxt1r-kATr_dXNfL41jQFd8khGqf7XLSupvg',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({
-          ...data,
-          photo_urls: photoUrls,
-          video_url: videoUrls[0],
-          portfolio_url: portfolioUrls[0] || data.portfolioUrl,
-        }),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        throw new Error(`Error: ${response.status} - ${await response.text()}`);
       }
 
       toast({
@@ -165,6 +228,16 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         description: "Your registration has been submitted successfully.",
       });
       
+      // Reset form
+      form.reset();
+      
+      // Reset file inputs
+      if (photoInput) photoInput.value = '';
+      if (videoInput) videoInput.value = '';
+      if (portfolioInput) portfolioInput.value = '';
+      setPhotoFilesCount(0);
+      
+      // Call success callback
       onSubmitSuccess();
     } catch (error) {
       console.error('Submission error:', error);
@@ -240,8 +313,9 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                   <FormControl>
                     <Input 
                       type="number" 
+                      placeholder="Age"
                       {...field} 
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : '')}
                     />
                   </FormControl>
                   <FormMessage />
@@ -255,7 +329,10 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Gender Identity</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
@@ -280,7 +357,10 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
@@ -359,21 +439,21 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="portfolioUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Portfolio or Website (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://yourportfolio.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
+
+          <FormField
+            control={form.control}
+            name="portfolioUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Portfolio or Website URL (Optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="https://yourportfolio.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
@@ -411,18 +491,23 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
           <div className="space-y-4">
             <div>
-              <FormLabel>Professional Photos (1-3 photos)</FormLabel>
+              <FormLabel className={photoFilesCount === 0 ? "text-destructive" : ""}>
+                Professional Photos (1-3 photos)*
+              </FormLabel>
               <Input
                 id="photos"
                 type="file"
                 accept={ACCEPTED_IMAGE_TYPES.join(",")}
                 multiple
-                max={3}
-                className="mt-1"
+                className={`mt-1 ${photoFilesCount === 0 ? "border-destructive" : ""}`}
+                onChange={handlePhotoInputChange}
               />
               <p className="text-sm text-gray-500 mt-1">
                 Upload 1-3 professional photos (JPG, PNG, WebP)
               </p>
+              {photoFilesCount === 0 && (
+                <p className="text-sm text-destructive">At least one photo is required</p>
+              )}
             </div>
 
             <div>
