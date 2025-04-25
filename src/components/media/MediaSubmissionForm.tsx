@@ -309,11 +309,13 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
           )}
 
           {/* Model Measurements Section */}
-          <ModelMeasurementsSection 
-            form={form} 
-            show={showModelMeasurements} 
-            gender={gender || ""} 
-          />
+          {showModelMeasurements && (
+            <ModelMeasurementsSection 
+              form={form} 
+              show={!!showModelMeasurements} 
+              gender={gender || ""} 
+            />
+          )}
 
           {/* Talent Description Section */}
           <div className="space-y-6">

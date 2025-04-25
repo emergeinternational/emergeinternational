@@ -5,7 +5,7 @@ import { UseFormReturn } from "react-hook-form";
 
 interface ModelMeasurementsSectionProps {
   form: UseFormReturn<any>;
-  show: boolean;
+  show: boolean;  // Explicitly typed as boolean
   gender: string;
 }
 
@@ -24,7 +24,7 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <FormField
           control={form.control}
-          name="height"
+          name="measurements.height"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="font-bold text-black">Height</FormLabel>
@@ -33,23 +33,6 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
               </FormControl>
               <FormDescription className="text-xs text-gray-500">
                 Enter height in centimeters
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="weight"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="font-bold text-black">Weight</FormLabel>
-              <FormControl>
-                <Input placeholder="65 kg" {...field} />
-              </FormControl>
-              <FormDescription className="text-xs text-gray-500">
-                Enter weight in kilograms
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -86,23 +69,6 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
                   </FormControl>
                   <FormDescription className="text-xs text-gray-500">
                     Measure at natural waistline
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="measurements.shoulders"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Shoulders</FormLabel>
-                  <FormControl>
-                    <Input placeholder="45 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure shoulder width
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -183,14 +149,12 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
 
         <FormField
           control={form.control}
-          name="dressSize"
+          name="shoeSize"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">
-                {gender === "Male" ? "Suit Size" : "Dress Size"}
-              </FormLabel>
+              <FormLabel className="font-bold text-black">Shoe Size</FormLabel>
               <FormControl>
-                <Input placeholder="US 4 / EU 34" {...field} />
+                <Input placeholder="US 7 / EU 37.5" {...field} />
               </FormControl>
               <FormDescription className="text-xs text-gray-500">
                 US/EU size preferred
@@ -202,12 +166,14 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
 
         <FormField
           control={form.control}
-          name="shoeSize"
+          name="dressSize"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">Shoe Size</FormLabel>
+              <FormLabel className="font-bold text-black">
+                {gender === "Male" ? "Suit Size" : "Dress Size"}
+              </FormLabel>
               <FormControl>
-                <Input placeholder="US 7 / EU 37.5" {...field} />
+                <Input placeholder="US 4 / EU 34" {...field} />
               </FormControl>
               <FormDescription className="text-xs text-gray-500">
                 US/EU size preferred
