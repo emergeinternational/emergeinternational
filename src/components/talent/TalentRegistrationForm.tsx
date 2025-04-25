@@ -132,6 +132,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       const bucketExists = buckets?.some(bucket => bucket.name === 'talent_media');
       
       if (!bucketExists) {
+        console.log("Creating talent_media bucket");
         const { data, error: createError } = await supabase.storage
           .createBucket('talent_media', { 
             public: true,
@@ -142,6 +143,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
           console.error("Error creating bucket:", createError);
           return false;
         }
+        
+        const { error: policyError } = await supabase.storage
+          .from('talent_media')
+          .createSignedUrl('dummy.txt', 1);
+          
+        if (policyError && !policyError.message.includes('does not exist')) {
+          console.error("Error setting bucket policy:", policyError);
+        }
       }
       
       return true;
@@ -149,7 +158,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       console.error("Error ensuring bucket exists:", error);
       return false;
     }
-  }
+  };
 
   const uploadFile = async (file: File, path: string) => {
     try {
@@ -159,11 +168,18 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         throw new Error("Storage bucket could not be created or accessed");
       }
       
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File ${file.name} exceeds maximum size limit`);
+      }
+      
+      console.log(`Uploading file ${file.name} to ${path}`);
+      
       const { data, error } = await supabase.storage
         .from("talent_media")
         .upload(path, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true,
+          contentType: file.type
         });
 
       if (error) {
@@ -175,6 +191,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         .from("talent_media")
         .getPublicUrl(data.path);
         
+      console.log("File uploaded successfully, URL:", publicUrlData.publicUrl);
       return publicUrlData.publicUrl;
     } catch (error) {
       console.error("Error in uploadFile function:", error);
@@ -196,7 +213,12 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       uploadPromises.push(uploadFile(file, path));
     }
 
-    return await Promise.all(uploadPromises);
+    try {
+      return await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error(`Error uploading ${type} files:`, error);
+      throw new Error(`Failed to upload ${type} files: ${error.message || "Unknown error"}`);
+    }
   };
 
   const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,14 +248,21 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         photoUrls = await handleFileUpload(photoInput?.files || null, "photo");
         
         if (photoUrls.length === 0) {
+          toast({
+            title: "Upload Error",
+            description: "Failed to upload photos. Please try again with smaller files or different format.",
+            variant: "destructive",
+          });
           setUploadingFiles(false);
           return;
         }
+        
+        console.log("Successfully uploaded photos:", photoUrls);
       } catch (uploadError) {
         console.error("Error uploading photos:", uploadError);
         toast({
           title: "Upload Error",
-          description: "Failed to upload photos. Please try again.",
+          description: "Failed to upload photos: " + (uploadError.message || "Please try again with smaller files."),
           variant: "destructive",
         });
         setUploadingFiles(false);
@@ -262,7 +291,8 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
 
       const { data: insertedData, error } = await supabase
         .from('talent_applications')
-        .insert(submissionData);
+        .insert(submissionData)
+        .select();
 
       if (error) {
         console.error("Supabase insertion error:", error);
