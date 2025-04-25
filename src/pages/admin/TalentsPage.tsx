@@ -1,6 +1,7 @@
 
 import AdminLayout from "../../layouts/AdminLayout";
 import TalentManagement from "../../components/admin/TalentManagement";
+import { Toaster } from "@/components/ui/toaster";
 
 const TalentsPage = () => {
   return (
@@ -17,6 +18,7 @@ const TalentsPage = () => {
           <TalentManagement />
         </div>
       </div>
+      <Toaster />
     </AdminLayout>
   );
 };

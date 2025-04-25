@@ -14,6 +14,42 @@ interface AvatarUploadProps {
 const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  
+  // Create the profile-pictures bucket if it doesn't exist
+  const createBucketIfNotExists = async () => {
+    try {
+      // Check if bucket exists
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error("Error checking buckets:", listError);
+        throw new Error(`Failed to check storage buckets: ${listError.message}`);
+      }
+      
+      const bucketExists = buckets?.some(bucket => bucket.name === 'profile-pictures');
+      
+      if (!bucketExists) {
+        console.log("Creating profile-pictures bucket");
+        const { data, error: createError } = await supabase.storage
+          .createBucket('profile-pictures', { 
+            public: true,
+            fileSizeLimit: 5 * 1024 * 1024 // 5MB limit for profile pictures
+          });
+        
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          throw new Error(`Failed to create storage bucket: ${createError.message}`);
+        }
+        
+        console.log("Bucket created successfully:", data);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error ensuring bucket exists:", error);
+      throw error;
+    }
+  };
 
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -24,14 +60,29 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       }
 
       const file = event.target.files[0];
+      
+      // Check file size - limit to 5MB
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        throw new Error(`File size too large. Please select an image less than 5MB.`);
+      }
+      
+      // Ensure proper bucket exists
+      await createBucketIfNotExists();
+      
       const fileExt = file.name.split('.').pop();
       const filePath = `${userId}/${Math.random()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('profile-pictures')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type // Explicitly set content type
+        });
 
       if (uploadError) {
+        console.error("Upload error:", uploadError);
         throw uploadError;
       }
 
@@ -46,6 +97,7 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
         description: "Avatar updated successfully",
       });
     } catch (error) {
+      console.error("Upload error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Error uploading avatar",
