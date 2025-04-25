@@ -51,7 +51,7 @@ interface TalentApplication {
   age: number | null;
   category_type: string | null;
   photo_url: string | null;
-  gender: string | null;
+  gender: string | null; // Modified to be nullable to match database structure
 }
 
 const TalentManagement = () => {
@@ -74,7 +74,7 @@ const TalentManagement = () => {
       }
       
       console.log("Fetched applications:", data);
-      return data as TalentApplication[];
+      return data as TalentApplication[]; // Type assertion to match our interface
     }
   });
 
