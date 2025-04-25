@@ -268,57 +268,84 @@ export type Database = {
           category_type: string | null
           country: string | null
           created_at: string | null
+          demo_reel_url: string | null
+          dress_size: string | null
           email: string
+          experience_level: string | null
           experience_years: number | null
           full_name: string
+          height: number | null
           id: string
+          languages_spoken: string[] | null
+          measurements: Json | null
           notes: string | null
           phone: string | null
           photo_url: string | null
           portfolio_url: string | null
+          shoe_size: string | null
           skills: string[] | null
           social_media: Json | null
           status: Database["public"]["Enums"]["talent_status"] | null
+          travel_availability: string | null
           updated_at: string | null
           user_id: string | null
+          weight: number | null
         }
         Insert: {
           age?: number | null
           category_type?: string | null
           country?: string | null
           created_at?: string | null
+          demo_reel_url?: string | null
+          dress_size?: string | null
           email: string
+          experience_level?: string | null
           experience_years?: number | null
           full_name: string
+          height?: number | null
           id?: string
+          languages_spoken?: string[] | null
+          measurements?: Json | null
           notes?: string | null
           phone?: string | null
           photo_url?: string | null
           portfolio_url?: string | null
+          shoe_size?: string | null
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null
+          weight?: number | null
         }
         Update: {
           age?: number | null
           category_type?: string | null
           country?: string | null
           created_at?: string | null
+          demo_reel_url?: string | null
+          dress_size?: string | null
           email?: string
+          experience_level?: string | null
           experience_years?: number | null
           full_name?: string
+          height?: number | null
           id?: string
+          languages_spoken?: string[] | null
+          measurements?: Json | null
           notes?: string | null
           phone?: string | null
           photo_url?: string | null
           portfolio_url?: string | null
+          shoe_size?: string | null
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null
+          weight?: number | null
         }
         Relationships: []
       }
