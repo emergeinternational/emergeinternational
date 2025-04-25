@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +49,9 @@ type MediaFormData = z.infer<typeof mediaFormSchema>;
 interface MediaSubmissionFormProps {
   onSubmitSuccess: () => void;
 }
+
+// Defining the valid status types based on the Supabase schema
+type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -217,7 +221,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
           instagram: data.instagramHandle || null,
           tiktok: data.tiktokHandle || null
         },
-        status: 'pending'
+        status: "pending" as TalentStatus // explicitly typed as TalentStatus
       };
       
       console.log("Submitting entry:", submissionData);
