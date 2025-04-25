@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Check, 
@@ -52,7 +53,6 @@ interface UserWithRole {
   role: UserRole;
   loading?: boolean;
   created_at?: string;
-  last_sign_in_at?: string;
   is_new?: boolean;
 }
 
@@ -85,7 +85,7 @@ const UserManagement = () => {
       // Get profiles for additional user data
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, role, created_at, last_sign_in_at');
+        .select('id, full_name, email, role, created_at');
         
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
@@ -135,7 +135,6 @@ const UserManagement = () => {
             full_name: profile.full_name || 'Unnamed User',
             role: (userRole?.role as UserRole) || profile.role as UserRole || 'user',
             created_at: profile.created_at,
-            last_sign_in_at: profile.last_sign_in_at,
             is_new: profile.created_at ? new Date(profile.created_at) > oneHourAgo : false
           };
         });
@@ -403,11 +402,6 @@ const UserManagement = () => {
                 </TableCell>
                 <TableCell className="text-sm">
                   <div>{formatDate(user.created_at)}</div>
-                  {user.last_sign_in_at && (
-                    <div className="text-xs text-gray-500">
-                      Last sign in: {formatDate(user.last_sign_in_at)}
-                    </div>
-                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
