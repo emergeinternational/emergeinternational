@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
+import MediaSubmission from "./pages/MediaSubmission";
 
 // Import all page components
 import Landing from "./pages/Landing";
@@ -45,84 +46,89 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return !user ? <>{children}</> : <Navigate to="/" replace />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-              <Route path="/home" element={<Landing />} />
-              
-              {/* Public Routes - Accessible without authentication */}
-              <Route path="/education" element={<Education />} />
-              <Route path="/workshops" element={<Workshops />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/contact" element={<Contact />} />
-              
-              {/* Protected Routes - Require authentication */}
-              <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
-              <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
-              <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
-              <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
-              <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
-              <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
-              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-              
-              {/* Admin Routes - Require specific roles */}
-              <Route path="/admin" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
-                  <Dashboard />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/users" element={
-                <RoleBasedRoute allowedRoles={['admin']}>
-                  <UsersPage />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/talents" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <TalentsPage />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/events" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <EventsPage />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/donations" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <DonationsPage />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/orders" element={
-                <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                  <OrdersPage />
-                </RoleBasedRoute>
-              } />
-              <Route path="/admin/settings" element={
-                <RoleBasedRoute allowedRoles={['admin']}>
-                  <SettingsPage />
-                </RoleBasedRoute>
-              } />
-              
-              {/* Add the new talent registration route */}
-              <Route path="/talent-registration" element={<TalentRegistration />} />
-              
-              <Route path="*" element={<Navigate to="/home" replace />} />
-            </Routes>
-          </TooltipProvider>
-        </CartProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
+                <Route path="/home" element={<Landing />} />
+                
+                {/* Public Routes - Accessible without authentication */}
+                <Route path="/education" element={<Education />} />
+                <Route path="/workshops" element={<Workshops />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/contact" element={<Contact />} />
+                
+                {/* Protected Routes - Require authentication */}
+                <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
+                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
+                <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
+                <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
+                <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
+                <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                
+                {/* Admin Routes - Require specific roles */}
+                <Route path="/admin" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
+                    <Dashboard />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <UsersPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/talents" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <TalentsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/events" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <EventsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/donations" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <DonationsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/orders" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <OrdersPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/settings" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <SettingsPage />
+                  </RoleBasedRoute>
+                } />
+                
+                {/* Add the new talent registration route */}
+                <Route path="/talent-registration" element={<TalentRegistration />} />
+                
+                {/* Add the new media submission route */}
+                <Route path="/submit" element={<MediaSubmission />} />
+                
+                <Route path="*" element={<Navigate to="/home" replace />} />
+              </Routes>
+            </TooltipProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

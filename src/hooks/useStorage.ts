@@ -43,7 +43,10 @@ export const useStorage = () => {
         if (createError) {
           console.error("Error creating bucket:", createError);
           console.error("Error message:", createError.message);
-          throw new Error(`Failed to create storage bucket: ${createError.message}`);
+          // Don't throw here - just log the error and continue
+          // This allows the function to handle both admin and non-admin users
+          console.warn(`Unable to create bucket ${bucketName}, but continuing operation`);
+          return false;
         }
         
         console.log(`Successfully created bucket: ${bucketName}`);
