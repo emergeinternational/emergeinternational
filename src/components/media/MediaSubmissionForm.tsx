@@ -29,10 +29,10 @@ const mediaFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
-  category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Fashion Designer"]),
-  description: z.string().min(10, "Please provide a description").max(500, "Description must not exceed 500 characters"),
+  category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Designer"]),
   instagramHandle: z.string().optional(),
-  tiktokHandle: z.string().optional(),
+  telegramHandle: z.string().optional(),
+  description: z.string().min(10, "Please provide a description").max(300, "Description must not exceed 300 characters"),
 });
 
 type MediaFormData = z.infer<typeof mediaFormSchema>;
@@ -64,19 +64,16 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         notes: data.description,
         social_media: {
           instagram: data.instagramHandle || null,
-          tiktok: data.tiktokHandle || null
+          telegram: data.telegramHandle || null
         },
         status: "pending" as TalentStatus
       };
-      
-      console.log("Submitting entry:", submissionData);
       
       const { error } = await supabase
         .from('talent_applications')
         .insert(submissionData);
       
       if (error) {
-        console.error("Database insertion error:", error);
         toast({
           title: "Submission Error",
           description: `Failed to save your submission: ${error.message}`,
@@ -106,7 +103,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   return (
     <div className="bg-gray-900 border border-emerge-gold rounded-lg p-6 md:p-8">
       <h2 className="text-2xl font-serif text-emerge-gold mb-6 text-center">
-        Submit Your Entry
+        Talent Registration Form
       </h2>
 
       {isSubmitted ? (
@@ -117,7 +114,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
           </p>
           <Button 
             onClick={() => setIsSubmitted(false)}
-            className="bg-emerge-gold hover:bg-yellow-500 text-black font-medium"
+            className="bg-[#d4af37] hover:bg-[#b89b2d] text-white font-medium"
           >
             Submit Another Entry
           </Button>
@@ -139,75 +136,99 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="your@email.com" {...field} className="bg-gray-800 border-gray-700 text-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="your@email.com" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="phoneNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Phone Number</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder="+1234567890" {...field} className="bg-gray-800 border-gray-700 text-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Phone Number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="+1234567890" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Age</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your age" {...field} className="bg-gray-800 border-gray-700 text-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Age</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your age" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Select Your Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                        <SelectItem value="Top Model">Top Model</SelectItem>
-                        <SelectItem value="Top Performer">Top Performer</SelectItem>
-                        <SelectItem value="Top Dancer">Top Dancer</SelectItem>
-                        <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Category</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      <SelectItem value="Top Model">Top Model</SelectItem>
+                      <SelectItem value="Top Performer">Top Performer</SelectItem>
+                      <SelectItem value="Top Dancer">Top Dancer</SelectItem>
+                      <SelectItem value="Designer">Designer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="instagramHandle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Instagram Handle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@yourusername" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="telegramHandle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-white">Telegram Handle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@yourtelegram" {...field} className="bg-gray-800 border-gray-700 text-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -217,7 +238,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                   <FormLabel className="text-white">Talent Description</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Tell us about yourself and your experience (max 500 characters)" 
+                      placeholder="Tell us about yourself (max 300 characters)" 
                       {...field} 
                       className="bg-gray-800 border-gray-700 text-white min-h-[100px]"
                     />
@@ -227,41 +248,11 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="instagramHandle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Instagram Handle</FormLabel>
-                    <FormControl>
-                      <Input placeholder="@yourusername" {...field} className="bg-gray-800 border-gray-700 text-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="tiktokHandle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">TikTok Handle</FormLabel>
-                    <FormControl>
-                      <Input placeholder="@yourtiktok" {...field} className="bg-gray-800 border-gray-700 text-white" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <Button 
               type="submit" 
-              className="w-full bg-emerge-gold hover:bg-yellow-500 text-black font-medium"
+              className="w-full bg-[#d4af37] hover:bg-[#b89b2d] text-white font-medium"
             >
-              Submit Entry
+              Submit Registration
             </Button>
           </form>
         </Form>
