@@ -84,18 +84,20 @@ export const getEducationContentByCategory = async (): Promise<Record<string, Ed
 };
 
 /**
- * Groups education content by talent type
- * Uses simple string iteration to avoid type recursion issues
+ * Groups education content by talent type without using complex types
+ * Uses simple string-based iteration to avoid type recursion issues
  */
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
 ): Promise<Record<string, EducationContent[]>> => {
   try {
+    // Use a simple string record to avoid recursive type instantiation
     const result: Record<string, EducationContent[]> = {};
     
-    // Using strings directly to avoid TypeScript recursion
-    for (const talentType of TALENT_TYPES) {
+    // Iterate through talent types as simple strings
+    for (let i = 0; i < TALENT_TYPES.length; i++) {
+      const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
       result[talentType] = content;
     }
@@ -104,9 +106,12 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    // Create a fallback response with the static content
+    // Create a fallback response with static content
     const result: Record<string, EducationContent[]> = {};
-    for (const talentType of TALENT_TYPES) {
+    
+    // Use index-based iteration to avoid type issues
+    for (let i = 0; i < TALENT_TYPES.length; i++) {
+      const talentType = TALENT_TYPES[i];
       result[talentType] = getFallbackContent(undefined, limit, featuredOnly, talentType);
     }
     
