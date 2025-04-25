@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,6 +51,7 @@ const mediaFormSchema = z.object({
   dressSize: z.string().optional(),
   shoeSize: z.string().optional(),
   portfolioUrl: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+  tiktok: z.string().optional(),
 });
 
 type MediaFormData = z.infer<typeof mediaFormSchema>;
@@ -92,6 +92,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         talent_description: data.talentDescription,
         measurements: showModelMeasurements ? data.measurements : null,
         portfolio_url: data.category === "Designer" ? data.portfolioUrl : null,
+        tiktok: data.tiktok || null,
       };
       
       console.log("Submitting entry:", submissionData);
@@ -253,7 +254,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
           {/* Social Media Section */}
           <div className="space-y-6">
             <h3 className="text-lg font-medium">Social Media</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="instagram"
@@ -276,6 +277,20 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                     <FormLabel>Telegram Handle (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="@yourtelegram" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="tiktok"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>TikTok Handle (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@yourtiktok" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
