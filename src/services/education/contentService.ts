@@ -1,3 +1,4 @@
+
 // TODO: TEMPORARY WORKAROUND - Replace `any` types with flat validated interfaces once build is stable
 
 import { supabase } from "@/integrations/supabase/client";
@@ -89,10 +90,12 @@ export const getEducationContentByCategory = async (): Promise<Record<string, an
 export const getEducationContentByTalentType = async (
   limit: number = 5,
   featuredOnly: boolean = false
-): Promise<Record<string, EducationContent[]>> => {
+): Promise<{[key: string]: EducationContent[]}> => {
   try {
-    const result: Record<string, EducationContent[]> = {};
+    // Use object literal type to avoid recursive type instantiation
+    const result: {[key: string]: EducationContent[]} = {};
     
+    // Use a for loop instead of map to avoid potential issues with type inference
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];
       const content = await getEducationContent(undefined, limit, featuredOnly, talentType);
@@ -103,7 +106,8 @@ export const getEducationContentByTalentType = async (
   } catch (error) {
     console.error("Error in getEducationContentByTalentType:", error);
     
-    const result: Record<string, EducationContent[]> = {};
+    // Also use object literal type in the error case
+    const result: {[key: string]: EducationContent[]} = {};
     
     for (let i = 0; i < TALENT_TYPES.length; i++) {
       const talentType = TALENT_TYPES[i];

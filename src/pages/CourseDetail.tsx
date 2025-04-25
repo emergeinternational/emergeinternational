@@ -80,6 +80,7 @@ const CourseDetail = () => {
     if (!course) return null;
 
     if (course.content_type === 'video' && course.source_url) {
+      console.log("Rendering video content with source:", course.source_url);
       return <VideoPlayer source={course.source_url} title={course.title} />;
     }
 
