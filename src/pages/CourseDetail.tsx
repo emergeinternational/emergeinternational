@@ -1,11 +1,19 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, Users, ExternalLink, Book, Link2Off } from "lucide-react";
 import MainLayout from "../layouts/MainLayout";
 import { getEducationContent, EducationContent } from "../services/educationService";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+
+const isValidUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +69,49 @@ const CourseDetail = () => {
   };
   
   const nextStartDate = getNextStartDate();
+
+  const renderCourseLink = () => {
+    if (!course?.source_url) {
+      return (
+        <Button 
+          className="w-full bg-emerge-gold hover:bg-emerge-gold/90"
+          disabled
+        >
+          No External Link Available
+        </Button>
+      );
+    }
+
+    const isValidLink = isValidUrl(course.source_url);
+
+    return (
+      <div className="space-y-2">
+        {isValidLink ? (
+          <>
+            <a 
+              href={course.source_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
+            >
+              <ExternalLink className="mr-2 h-4 w-4" /> Start Learning Now
+            </a>
+            <p className="text-center text-xs text-gray-500 flex items-center justify-center">
+              <Link2Off className="mr-2 h-3 w-3 text-emerge-gold" />
+              You'll be redirected to {new URL(course.source_url).hostname}
+            </p>
+          </>
+        ) : (
+          <div className="bg-red-50 border border-red-200 p-3 rounded text-center">
+            <p className="text-red-600 mb-2">Invalid Course Link</p>
+            <p className="text-xs text-gray-500">
+              We're unable to verify the course link. Please contact support.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <MainLayout>
@@ -167,25 +218,7 @@ const CourseDetail = () => {
                     </div>
                     
                     <div className="mt-6">
-                      {course.source_url ? (
-                        <div>
-                          <a 
-                            href={course.source_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="w-full bg-emerge-gold hover:bg-emerge-gold/90 text-white px-4 py-2 rounded inline-flex items-center justify-center"
-                          >
-                            Start Learning Now
-                          </a>
-                          <p className="text-center text-xs text-gray-500 mt-2">
-                            You'll be redirected to the course provider
-                          </p>
-                        </div>
-                      ) : (
-                        <Button className="w-full bg-emerge-gold hover:bg-emerge-gold/90">
-                          Enroll Now
-                        </Button>
-                      )}
+                      {renderCourseLink()}
                     </div>
                   </div>
                   
