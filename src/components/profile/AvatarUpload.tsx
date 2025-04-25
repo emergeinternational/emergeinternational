@@ -36,15 +36,35 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
         return;
       }
 
+      console.log(`Starting upload process for file: ${file.name}, size: ${file.size} bytes`);
+      
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User is not authenticated");
+        throw new Error("You must be logged in to upload an avatar");
+      }
+      console.log("User is authenticated");
+
       // Compress image if needed
       console.log(`Compressing image: ${file.name}, size: ${file.size} bytes`);
       const compressedFile = await compressImage(file);
       console.log(`Compressed to: ${compressedFile.size} bytes`);
       
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const fileName = `${userId}/${userId}-${Date.now()}.${fileExt}`;
       
       console.log(`Uploading to avatars/${fileName}`);
+      
+      // List available buckets to check if avatars exists
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      if (bucketsError) {
+        console.error("Error listing buckets:", bucketsError);
+      } else {
+        console.log("Available buckets:", buckets?.map(b => b.name));
+        const avatarBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        console.log("Avatars bucket exists:", avatarBucketExists);
+      }
       
       // Upload compressed image
       const { data, error: uploadError } = await supabase.storage
@@ -56,15 +76,25 @@ const AvatarUpload = ({ url, onUpload, userId }: AvatarUploadProps) => {
       
       if (uploadError) {
         console.error("Upload error details:", uploadError);
+        console.error("Error code:", uploadError.code);
+        console.error("Error message:", uploadError.message);
+        console.error("Error name:", uploadError.name);
         throw new Error(`Failed to upload image: ${uploadError.message}`);
       }
+      
+      if (!data || !data.path) {
+        console.error("Upload succeeded but no path returned");
+        throw new Error("Failed to get uploaded file path");
+      }
+      
+      console.log("Upload successful, data:", data);
       
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(data.path);
       
-      console.log("Upload successful, URL:", publicUrlData.publicUrl);
+      console.log("Public URL:", publicUrlData.publicUrl);
       onUpload(publicUrlData.publicUrl);
       
       toast({

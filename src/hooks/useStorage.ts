@@ -17,17 +17,22 @@ export const useStorage = () => {
     setError(null);
     
     try {
+      console.log(`Checking if bucket ${bucketName} exists...`);
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
         console.error("Error checking buckets:", listError);
+        console.error("Error code:", listError.code);
+        console.error("Error message:", listError.message);
+        console.error("Error status:", listError.status);
         throw new Error(`Failed to check storage buckets: ${listError.message}`);
       }
       
       const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      console.log(`Bucket ${bucketName} exists: ${bucketExists}`);
       
       if (!bucketExists) {
-        console.log(`Creating bucket: ${bucketName}`);
+        console.log(`Creating bucket: ${bucketName} with options:`, options);
         
         // Only an authenticated admin or service role should try to create buckets
         // This will likely fail for regular users due to RLS policies
@@ -39,9 +44,13 @@ export const useStorage = () => {
         
         if (createError) {
           console.error("Error creating bucket:", createError);
+          console.error("Error code:", createError.code);
+          console.error("Error message:", createError.message);
+          console.error("Error status:", createError.status);
           throw new Error(`Failed to create storage bucket: ${createError.message}`);
         }
         
+        console.log(`Successfully created bucket: ${bucketName}`);
         return true;
       } else {
         console.log(`Bucket ${bucketName} already exists`);
@@ -69,10 +78,19 @@ export const useStorage = () => {
     setError(null);
     
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User is not authenticated");
+        throw new Error("You must be logged in to upload files");
+      }
+      console.log("User authenticated for upload");
+
       // Generate file path if not provided
       const filePath = path || `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
       
-      console.log(`Uploading file to ${bucketName}/${filePath}`);
+      console.log(`Attempting to upload file to ${bucketName}/${filePath}`);
+      console.log(`File size: ${file.size} bytes`);
       
       // Upload file
       const { data, error } = await supabase.storage
@@ -84,15 +102,25 @@ export const useStorage = () => {
       
       if (error) {
         console.error("Storage upload error:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Error status:", error.status);
         throw error;
       }
+      
+      if (!data || !data.path) {
+        console.error("Upload succeeded but no path returned");
+        throw new Error("Failed to get uploaded file path");
+      }
+
+      console.log("Upload successful, data:", data);
       
       // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(data.path);
       
-      console.log("Upload successful, URL:", publicUrlData.publicUrl);
+      console.log("Public URL:", publicUrlData.publicUrl);
       return publicUrlData.publicUrl;
     } catch (err) {
       console.error(`Error uploading to ${bucketName}:`, err);
