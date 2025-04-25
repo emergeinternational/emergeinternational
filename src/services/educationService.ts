@@ -22,6 +22,8 @@ export interface EducationContent {
   published_at: string;
   created_at: string;
   updated_at: string;
+  is_archived?: boolean;
+  archive_date?: string;
 }
 
 // Add new interfaces for course progress and engagement
@@ -74,7 +76,7 @@ const fallbackCategories: EducationCategory[] = [
   }
 ];
 
-// Static fallback content
+// Static fallback content with added content types
 const fallbackContent: EducationContent[] = [
   { 
     id: "1", 
@@ -93,7 +95,7 @@ const fallbackContent: EducationContent[] = [
     category_id: "beginner",
     title: "Digital Fashion Marketing", 
     summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
-    content_type: "course",
+    content_type: "weekly",
     image_url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop",
     is_featured: false,
     published_at: new Date().toISOString(),
@@ -105,7 +107,8 @@ const fallbackContent: EducationContent[] = [
     category_id: "advanced",
     title: "Advanced Pattern Making", 
     summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
-    content_type: "course",
+    content_type: "video",
+    source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     image_url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&auto=format&fit=crop",
     is_featured: false,
     published_at: new Date().toISOString(),
@@ -118,6 +121,7 @@ const fallbackContent: EducationContent[] = [
     title: "Sustainable Fashion", 
     summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
     content_type: "course",
+    source_url: "https://www.coursera.org/learn/sustainable-fashion",
     image_url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&auto=format&fit=crop",
     is_featured: true,
     published_at: new Date().toISOString(),
@@ -322,5 +326,50 @@ export const trackCourseProgress = async (courseId: string, category: string): P
     }
   } catch (error) {
     console.error('Error tracking course progress:', error);
+  }
+};
+
+// New function to mark a course as completed
+export const markCourseCompleted = async (courseId: string): Promise<void> => {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.user) {
+      console.log('User not authenticated, cannot mark course complete');
+      return;
+    }
+    
+    const userId = sessionData.session.user.id;
+
+    await supabase
+      .from('user_course_progress')
+      .update({
+        status: 'completed',
+        date_completed: new Date().toISOString(),
+      })
+      .eq('course_id', courseId)
+      .eq('user_id', userId);
+  } catch (error) {
+    console.error('Error marking course as completed:', error);
+  }
+};
+
+// Function to get course content for weekly courses
+export const getCourseWeeklyContent = async (courseId: string) => {
+  try {
+    // In a real application, this would fetch from the database
+    // For now, we'll return mock data
+    return [
+      {
+        title: "Week 1: Introduction to Design Principles",
+        content: "This week covers the fundamentals of design thinking and principles that form the foundation of fashion design."
+      },
+      {
+        title: "Week 2: Creating Mood Boards",
+        content: "Learn how to create effective mood boards that communicate your vision and inspiration."
+      }
+    ];
+  } catch (error) {
+    console.error('Error getting weekly course content:', error);
+    return [];
   }
 };

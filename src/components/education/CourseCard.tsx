@@ -11,9 +11,19 @@ interface CourseCardProps {
   image: string;
   duration?: string;
   levelName: string;
+  contentType?: string;
 }
 
-const CourseCard = ({ id, name, level, description, image, duration, levelName }: CourseCardProps) => {
+const CourseCard = ({ 
+  id, 
+  name, 
+  level, 
+  description, 
+  image, 
+  duration, 
+  levelName,
+  contentType = 'course' 
+}: CourseCardProps) => {
   const courseId = id.toString();
   
   const handleClick = async () => {
