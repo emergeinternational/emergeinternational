@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import RoleBasedRoute from "./components/auth/RoleBasedRoute";
+import TalentRegistration from "./pages/TalentRegistration";
 
 // Import all page components
 import Landing from "./pages/Landing";
@@ -106,6 +106,9 @@ const App = () => (
                   <SettingsPage />
                 </RoleBasedRoute>
               } />
+              
+              {/* Add the new talent registration route */}
+              <Route path="/talent-registration" element={<TalentRegistration />} />
               
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
