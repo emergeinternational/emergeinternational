@@ -82,7 +82,7 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         email: data.email,
         phone: data.phoneNumber,
         age: parseInt(data.age, 10),
-        gender: data.gender, // Make sure gender is included
+        gender: data.gender, // Ensure gender is included
         category_type: data.category,
         notes: data.description,
         social_media: {

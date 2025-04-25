@@ -51,7 +51,7 @@ interface TalentApplication {
   age: number | null;
   category_type: string | null;
   photo_url: string | null;
-  gender: string | null; // Modified to be nullable to match database structure
+  gender: string | null; // Made nullable to match actual data shape
 }
 
 const TalentManagement = () => {
@@ -137,6 +137,9 @@ const TalentManagement = () => {
     }
   };
 
+  // Debug log to check data
+  console.log("Current applications data:", applications);
+  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
