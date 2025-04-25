@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,12 +58,14 @@ interface MediaSubmissionFormProps {
 
 const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<MediaFormData>({
     resolver: zodResolver(mediaFormSchema),
     defaultValues: {
       category: undefined,
+      gender: undefined,
     },
   });
 
@@ -71,11 +74,15 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
 
   const onSubmit = async (data: MediaFormData) => {
     try {
+      setIsSubmitting(true);
+      console.log("Form submission data:", data);
+
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
         age: parseInt(data.age, 10),
+        gender: data.gender,
         category_type: data.category,
         notes: data.description,
         social_media: {
@@ -83,14 +90,25 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
           tiktok: data.tiktokHandle || null,
           telegram: data.telegramHandle || null
         },
+        measurements: selectedCategory === "Model" ? {
+          height: data.height,
+          weight: data.weight,
+          ...(data.measurements || {}),
+          dress_size: data.dressSize,
+          shoe_size: data.shoeSize
+        } : null,
         status: "pending" as TalentStatus
       };
       
-      const { error } = await supabase
+      console.log("Preparing to send to Supabase:", submissionData);
+      
+      const { data: insertedData, error } = await supabase
         .from('talent_applications')
-        .insert(submissionData);
+        .insert(submissionData)
+        .select();
       
       if (error) {
+        console.error("Supabase insertion error:", error);
         toast({
           title: "Submission Error",
           description: `Failed to save your submission: ${error.message}`,
@@ -98,6 +116,8 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         });
         return;
       }
+      
+      console.log("Successfully submitted to Supabase:", insertedData);
       
       toast({
         title: "Success!",
@@ -114,6 +134,8 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
         description: error instanceof Error ? error.message : "Failed to process your submission",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -221,33 +243,33 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
                   </FormItem>
                 )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Model">Model</SelectItem>
-                      <SelectItem value="Dancer">Dancer</SelectItem>
-                      <SelectItem value="Singer">Singer</SelectItem>
-                      <SelectItem value="Actor">Actor</SelectItem>
-                      <SelectItem value="Designer">Designer</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold text-black">Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Model">Model</SelectItem>
+                        <SelectItem value="Dancer">Dancer</SelectItem>
+                        <SelectItem value="Singer">Singer</SelectItem>
+                        <SelectItem value="Actor">Actor</SelectItem>
+                        <SelectItem value="Designer">Designer</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
@@ -320,8 +342,9 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
             <Button 
               type="submit" 
               className="w-full bg-[#d4af37] hover:bg-[#b89b2d] text-white font-medium"
+              disabled={isSubmitting}
             >
-              Submit Registration
+              {isSubmitting ? "Submitting..." : "Submit Registration"}
             </Button>
           </form>
         </Form>

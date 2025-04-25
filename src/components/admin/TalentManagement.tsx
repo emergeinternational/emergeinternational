@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,7 @@ interface TalentApplication {
   social_media: {
     instagram?: string;
     tiktok?: string;
+    telegram?: string;
   } | null;
   status: TalentStatus;
   notes: string | null;
@@ -49,24 +51,52 @@ interface TalentApplication {
   age: number | null;
   category_type: string | null;
   photo_url: string | null;
+  gender: string | null;
 }
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
   const { data: applications, isLoading, refetch } = useQuery({
     queryKey: ['talent-applications'],
     queryFn: async () => {
+      console.log("Fetching talent applications...");
       const { data, error } = await supabase
         .from('talent_applications')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching applications:", error);
+        throw error;
+      }
+      
+      console.log("Fetched applications:", data);
       return data as TalentApplication[];
     }
   });
+
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await refetch();
+      toast({
+        title: "Data refreshed",
+        description: "The talent applications list has been updated"
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Refresh failed",
+        description: "There was an error updating the applications list",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const updateApplicationStatus = async (id: string, status: TalentStatus) => {
     try {
@@ -84,6 +114,7 @@ const TalentManagement = () => {
 
       refetch();
     } catch (error) {
+      console.error("Error updating status:", error);
       toast({
         title: "Error updating status",
         description: "There was an error updating the application status",
@@ -112,11 +143,11 @@ const TalentManagement = () => {
         <Button 
           size="sm" 
           variant="outline" 
-          onClick={() => refetch()}
-          disabled={isLoading}
+          onClick={handleRefresh}
+          disabled={isLoading || isRefreshing}
         >
-          <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
+          <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 
@@ -133,7 +164,7 @@ const TalentManagement = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8">
                 Loading applications...
@@ -167,6 +198,7 @@ const TalentManagement = () => {
                   <div className="space-y-1">
                     <div className="text-sm">
                       {app.age && <span className="mr-2">{app.age} years old</span>}
+                      {app.gender && <span className="mr-2">({app.gender})</span>}
                       {app.country && (
                         <span className="flex items-center text-gray-600">
                           <MapPin className="h-3 w-3 mr-1" />
@@ -206,6 +238,11 @@ const TalentManagement = () => {
                       {app.social_media.tiktok && (
                         <span className="text-sm text-gray-600">
                           TikTok: {app.social_media.tiktok}
+                        </span>
+                      )}
+                      {app.social_media.telegram && (
+                        <span className="text-sm text-gray-600">
+                          Telegram: {app.social_media.telegram}
                         </span>
                       )}
                     </div>
@@ -249,6 +286,7 @@ const TalentManagement = () => {
                                 <h3 className="text-lg font-semibold">{selectedApplication.full_name}</h3>
                                 <p className="text-sm text-gray-500">
                                   {selectedApplication.category_type || 'Category not specified'}
+                                  {selectedApplication.gender && ` (${selectedApplication.gender})`}
                                 </p>
                               </div>
                             </div>
@@ -258,6 +296,7 @@ const TalentManagement = () => {
                                 <h3 className="font-semibold">Personal Information</h3>
                                 <div className="space-y-2 mt-2">
                                   <p>Age: {selectedApplication.age || 'Not specified'}</p>
+                                  <p>Gender: {selectedApplication.gender || 'Not specified'}</p>
                                   <p>Country: {selectedApplication.country || 'Not specified'}</p>
                                   <p>Email: {selectedApplication.email}</p>
                                   {selectedApplication.phone && (
@@ -280,6 +319,11 @@ const TalentManagement = () => {
                                       {selectedApplication.social_media.tiktok && (
                                         <p className="text-sm">
                                           TikTok: {selectedApplication.social_media.tiktok}
+                                        </p>
+                                      )}
+                                      {selectedApplication.social_media.telegram && (
+                                        <p className="text-sm">
+                                          Telegram: {selectedApplication.social_media.telegram}
                                         </p>
                                       )}
                                     </div>
@@ -305,6 +349,13 @@ const TalentManagement = () => {
                                 </div>
                               </div>
                             </div>
+
+                            {selectedApplication.notes && (
+                              <div>
+                                <h3 className="font-semibold mb-2">Notes</h3>
+                                <p className="text-gray-700">{selectedApplication.notes}</p>
+                              </div>
+                            )}
 
                             {selectedApplication.skills && (
                               <div>
