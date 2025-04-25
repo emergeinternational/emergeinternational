@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -9,11 +10,26 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { useStorage } from "@/hooks/useStorage"; // Import our new hook
 
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { ensureBucket } = useStorage(); // Use our new hook
+  
+  // Initialize storage when component mounts
+  useEffect(() => {
+    if (user) {
+      // Create the storage bucket as soon as we have an authenticated user
+      ensureBucket('avatars', { 
+        public: true,
+        fileSizeLimit: 1 * 1024 * 1024 // 1MB
+      }).catch(err => {
+        console.error("Failed to create avatars bucket:", err);
+      });
+    }
+  }, [user]);
   
   useEffect(() => {
     if (!isLoading && !user) {
