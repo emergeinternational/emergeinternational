@@ -1,10 +1,9 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, ShoppingBag, User, Home, Settings } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Settings } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "./ui/button";
 
 interface NavigationProps {
   variant?: "dark" | "light";

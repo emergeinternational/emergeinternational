@@ -2,8 +2,14 @@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UseFormReturn } from "react-hook-form";
 
-export const PerformerSection = ({ form, show }) => {
+interface PerformerSectionProps {
+  form: UseFormReturn<any>;
+  show: boolean;
+}
+
+export const PerformerSection = ({ form, show }: PerformerSectionProps) => {
   if (!show) return null;
 
   return (

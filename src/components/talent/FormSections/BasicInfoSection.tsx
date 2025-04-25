@@ -1,8 +1,13 @@
 
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { UseFormReturn } from "react-hook-form";
 
-export const BasicInfoSection = ({ form }: { form: any }) => {
+interface BasicInfoSectionProps {
+  form: UseFormReturn<any>;
+}
+
+export const BasicInfoSection = ({ form }: BasicInfoSectionProps) => {
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium text-white">Basic Information</h3>

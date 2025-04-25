@@ -1,8 +1,14 @@
 
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { UseFormReturn } from "react-hook-form";
 
-export const ModelMeasurementsSection = ({ form, show }) => {
+interface ModelMeasurementsSectionProps {
+  form: UseFormReturn<any>;
+  show: boolean;
+}
+
+export const ModelMeasurementsSection = ({ form, show }: ModelMeasurementsSectionProps) => {
   if (!show) return null;
 
   return (
