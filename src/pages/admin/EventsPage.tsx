@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, Edit, Trash2, CheckCircle, XCircle, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,12 +43,10 @@ const EventsPage = () => {
   const { hasRole } = useAuth();
   const canEdit = hasRole(['admin', 'editor']);
 
-  // Query for events
   const { data: events, isLoading, error, refetch } = useQuery({
     queryKey: ['admin', 'events'],
     queryFn: async () => {
       try {
-        // For development/testing, we'll use mock data if Supabase query fails
         const mockEvents = [
           {
             id: '1',
@@ -78,15 +75,12 @@ const EventsPage = () => {
 
         if (error) {
           console.error("Supabase error:", error);
-          // Use mock data as fallback
           return mockEvents;
         }
         
-        // If no data from Supabase, use mock data as fallback
         return data && data.length > 0 ? data : mockEvents;
       } catch (err) {
         console.error("Error fetching events:", err);
-        // Prevent the query from going into error state
         return [];
       }
     },
@@ -94,7 +88,6 @@ const EventsPage = () => {
     staleTime: 60000,
   });
 
-  // Query for event registrations
   const { 
     data: registrations, 
     isLoading: registrationsLoading, 
@@ -195,7 +188,6 @@ const EventsPage = () => {
     }
   };
 
-  // Render loading state or error message if applicable
   if (isLoading) {
     return (
       <AdminLayout>
