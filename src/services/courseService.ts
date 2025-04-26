@@ -2,6 +2,53 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, UserCourseEnrollment, EducationLevel, Certificate, Language, CompletionStatus } from '@/types/education';
 
+// Define the missing CourseSource type
+type CourseSource = 'internal' | 'external' | 'embedded';
+
+// Define the database response types to match the actual schema
+type EducationContentResponse = {
+  id: string;
+  title: string;
+  summary?: string;
+  description?: string;
+  category_id?: string;
+  level?: string;
+  source_type?: string;
+  source_url?: string;
+  image_url?: string;
+  video_url?: string;
+  content?: any;
+  duration_minutes?: number;
+  is_archived: boolean;
+  is_featured: boolean;
+  language?: string;
+  created_at: string;
+  updated_at: string;
+  published_at: string;
+  archive_date?: string;
+  content_type: string;
+};
+
+type UserProgressResponse = {
+  id: string;
+  user_id: string;
+  course_id: string;
+  status?: string;
+  progress_percent?: number;
+  last_position?: string;
+  date_started?: string;
+  date_completed?: string;
+  certificate_id?: string;
+  course_category?: string;
+  created_at: string;
+  updated_at: string;
+  education_content?: {
+    title?: string;
+    category_id?: string;
+    level?: string;
+  };
+};
+
 // Get all course categories
 export const getCourseCategories = async (): Promise<CourseCategory[]> => {
   const { data, error } = await supabase
@@ -54,7 +101,7 @@ export const getCourses = async (
   if (error) throw error;
   
   // Map the education_content data to Course format
-  return (data || []).map(content => ({
+  return (data || []).map((content: EducationContentResponse) => ({
     id: content.id,
     title: content.title,
     slug: content.title?.toLowerCase().replace(/\s+/g, '-') || '',
@@ -106,7 +153,7 @@ export const getUserEnrollments = async (): Promise<UserCourseEnrollment[]> => {
   if (error) throw error;
   
   // Map the user_course_progress data to UserCourseEnrollment format
-  return (data || []).map(progress => ({
+  return (data || []).map((progress: UserProgressResponse) => ({
     id: progress.id,
     userId: progress.user_id,
     courseId: progress.course_id,
@@ -182,15 +229,18 @@ export const getUserCertificates = async (): Promise<Certificate[]> => {
   if (coursesError) throw coursesError;
   
   // Create certificates based on completed courses
-  const certificates: Certificate[] = (completedCourses || []).map(course => {
+  const certificates: Certificate[] = (completedCourses || []).map((course: UserProgressResponse) => {
+    // Safely access nested properties with optional chaining
+    const educationContent = course.education_content || {};
+    
     return {
       id: course.id,
       userId: user.id,
       courseId: course.course_id,
-      categoryId: course.education_content?.category_id,
+      categoryId: educationContent.category_id,
       issueDate: course.date_completed || new Date().toISOString(),
       type: 'course',
-      title: `${course.education_content?.title || 'Course'} Certificate`,
+      title: `${educationContent.title || 'Course'} Certificate`,
       downloadUrl: `/api/certificates/${course.id}`
     };
   });
