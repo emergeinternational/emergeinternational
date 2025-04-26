@@ -1,12 +1,11 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award } from "lucide-react";
-import { getCourseById, updateCourseProgress, CourseProgress } from "../services/courseService";
+import { getCourseById, updateCourseProgress } from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +19,8 @@ const CourseDetail = () => {
   const [progress, setProgress] = useState(0);
   const [isExternalCourse, setIsExternalCourse] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [videoWatched, setVideoWatched] = useState(false);
+  const videoRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -42,14 +43,10 @@ const CourseDetail = () => {
         
         setCourse(courseData);
         
-        // Check if course is external based on having a source_url
         setIsExternalCourse(!!courseData.source_url);
         
-        // If user is logged in, fetch their progress
         if (user) {
           try {
-            // Simulate progress for now
-            // In a real implementation, this would fetch from user_course_progress
             setProgress(Math.floor(Math.random() * 100));
           } catch (error) {
             console.error("Error fetching user progress:", error);
@@ -82,32 +79,24 @@ const CourseDetail = () => {
     }
 
     try {
-      if (isExternalCourse && course.source_url) {
-        // For external courses, open in new tab and update progress
-        window.open(course.source_url, "_blank");
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
+      if (isExternalCourse && course.video_embed_url) {
+        window.open(course.video_embed_url, "_blank");
+        await updateCourseProgress(user.id, course.id, "in_progress", course.category);
         
         toast({
           title: "Course Started",
-          description: "We've opened the course in a new tab. Your progress will be tracked.",
+          description: "We've opened the course in a new tab. Complete it and return here to mark as finished.",
         });
         
-        // Set progress to at least 20% when starting
-        if (progress === 0) {
-          setProgress(20);
-        }
+        setProgress(20);
       } else {
-        // For embedded courses, update progress
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
+        await updateCourseProgress(user.id, course.id, "in_progress", course.category);
         
-        // Simulate course completion after "watching" embedded content
-        if (progress === 0) {
-          setProgress(20);
-          toast({
-            title: "Course Started",
-            description: "Your progress has been saved.",
-          });
-        }
+        setProgress(20);
+        toast({
+          title: "Course Started",
+          description: "Your progress has been saved. Watch the video to completion to earn your certificate.",
+        });
       }
     } catch (error) {
       console.error("Error updating course progress:", error);
@@ -119,11 +108,28 @@ const CourseDetail = () => {
     }
   };
 
+  const handleVideoEnd = () => {
+    setVideoWatched(true);
+    toast({
+      title: "Video Completed",
+      description: "You can now mark this course as complete to earn your certificate.",
+    });
+  };
+
   const handleCompleteCourse = async () => {
     if (!user || !course) return;
     
     try {
-      await updateCourseProgress(user.id, course.id, "completed", course.category_id);
+      if (!isExternalCourse && !videoWatched) {
+        toast({
+          title: "Watch the Video",
+          description: "Please watch the complete video before marking the course as complete.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      await updateCourseProgress(user.id, course.id, "completed", course.category);
       setProgress(100);
       toast({
         title: "Congratulations!",
@@ -242,32 +248,39 @@ const CourseDetail = () => {
               </div>
             )}
 
-            {!isExternalCourse && (
+            {!isExternalCourse && course?.video_embed_url && (
               <div className="mb-8">
                 <h2 className="emerge-heading text-2xl mb-4">Course Content</h2>
                 <div className="bg-white p-6 border">
-                  <div className="aspect-video bg-gray-200 flex items-center justify-center mb-4">
-                    {progress > 0 ? (
-                      <div className="text-center">
-                        <BookOpen size={48} className="mx-auto mb-2 text-emerge-gold" />
-                        <p>Continue watching from where you left off</p>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <BookOpen size={48} className="mx-auto mb-2 text-emerge-gold" />
-                        <p>Start this course to access video content</p>
-                      </div>
-                    )}
+                  <div className="aspect-video bg-gray-200">
+                    <iframe
+                      ref={videoRef}
+                      src={course.video_embed_url}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      onEnded={handleVideoEnd}
+                    />
                   </div>
                   
                   {user && progress > 0 && (
-                    <div className="mb-4">
+                    <div className="mt-4">
                       <div className="flex justify-between text-sm mb-1">
                         <span>Your progress</span>
                         <span>{progress}% complete</span>
                       </div>
                       <Progress value={progress} className="h-2" />
                     </div>
+                  )}
+
+                  {user && progress > 0 && progress < 100 && (
+                    <Button
+                      onClick={handleCompleteCourse}
+                      className="mt-4 w-full bg-emerge-gold hover:bg-emerge-gold/90"
+                      disabled={!videoWatched}
+                    >
+                      {videoWatched ? "Mark Course Complete" : "Watch Video to Complete"}
+                    </Button>
                   )}
                 </div>
               </div>
@@ -340,17 +353,17 @@ const CourseDetail = () => {
             <DialogTitle className="text-center text-2xl">Certificate of Completion</DialogTitle>
           </DialogHeader>
           <div className="p-8 border-4 border-double border-emerge-gold/30 text-center">
-            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY</div>
+            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY INTERNATIONAL</div>
             <h2 className="text-3xl font-serif mb-2">Certificate of Achievement</h2>
             <p className="mb-6">This is to certify that</p>
             <p className="text-xl mb-6">{user?.email || "Student"}</p>
             <p className="mb-6">has successfully completed the course</p>
-            <p className="text-xl font-medium mb-8">{course.title}</p>
-            <p className="text-sm text-gray-500">Certificate ID: {String(course.id).substring(0, 8)}-{Date.now().toString(36)}</p>
+            <p className="text-xl font-medium mb-8">{course?.title}</p>
+            <p className="text-sm text-gray-500">Certificate ID: {String(course?.id).substring(0, 8)}-{Date.now().toString(36)}</p>
             <p className="text-sm text-gray-500">Issued on: {new Date().toLocaleDateString()}</p>
           </div>
-          <div className="flex justify-center">
-            <Button>Download Certificate</Button>
+          <div className="flex justify-center mt-4">
+            <Button onClick={() => window.print()}>Download Certificate</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -358,15 +371,12 @@ const CourseDetail = () => {
   );
 };
 
-// Helper function to generate course objectives based on course title and category
 const getCourseObjectives = (title: string, category: string): string[] => {
   const titleLower = title.toLowerCase();
   const objectives = [];
   
-  // General objectives that apply to most courses
   objectives.push("Fundamental principles and their application in fashion");
   
-  // Course title specific objectives
   if (titleLower.includes('design')) {
     objectives.push("Design thinking and creative problem-solving techniques");
     objectives.push("Pattern-making techniques for various garment types");
@@ -391,7 +401,6 @@ const getCourseObjectives = (title: string, category: string): string[] => {
     objectives.push("Industry networking and audition preparation");
   }
   
-  // Add level-specific objectives
   if (category === 'beginner') {
     objectives.push("Essential terminology and industry fundamentals");
   } else if (category === 'intermediate') {

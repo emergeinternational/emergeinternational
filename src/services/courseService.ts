@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -260,12 +259,12 @@ export const getUserCourseProgress = async (userId: string): Promise<CourseProgr
   }
 };
 
-// Create or update course progress
 export const updateCourseProgress = async (
   userId: string,
   courseId: string,
-  status: string,
-  courseCategory?: string
+  status: 'in_progress' | 'completed',
+  courseCategory?: string,
+  progress?: number
 ): Promise<boolean> => {
   try {
     // Check if progress record exists
@@ -276,42 +275,37 @@ export const updateCourseProgress = async (
       .eq('course_id', courseId)
       .maybeSingle();
     
+    const updateData = {
+      status,
+      progress: progress || (status === 'completed' ? 100 : 0),
+      updated_at: new Date().toISOString(),
+      date_completed: status === 'completed' ? new Date().toISOString() : null
+    };
+    
     if (existingData) {
-      // Update existing record
       const { error } = await supabase
         .from('user_course_progress')
-        .update({
-          status,
-          updated_at: new Date().toISOString(),
-          date_completed: status === 'completed' ? new Date().toISOString() : existingData.date_completed
-        })
+        .update(updateData)
         .eq('id', existingData.id);
       
-      if (error) {
-        console.error("Error updating course progress:", error);
-        throw error;
-      }
+      if (error) throw error;
     } else {
-      // Create new record
       const { error } = await supabase
         .from('user_course_progress')
         .insert([{
           user_id: userId,
           course_id: courseId,
-          status,
           course_category: courseCategory,
-          date_started: new Date().toISOString()
+          date_started: new Date().toISOString(),
+          ...updateData
         }]);
       
-      if (error) {
-        console.error("Error creating course progress:", error);
-        throw error;
-      }
+      if (error) throw error;
     }
     
     return true;
   } catch (error) {
-    console.error("Unexpected error in updateCourseProgress:", error);
+    console.error("Error updating course progress:", error);
     return false;
   }
 };
