@@ -135,4 +135,3 @@ export const getCourseProgress = async (
     return null;
   }
 };
-

@@ -54,4 +54,3 @@ export interface Review {
   comment: string;
   created_at?: string;
 }
-
