@@ -1,24 +1,24 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Define the Course interface
-export type Course = {
+// Define interfaces based on actual database schema
+export interface Course {
   id: string;
   title: string;
-  summary: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: 'Model' | 'Designer' | 'Actor' | 'Photographer' | 'Videographer' | 'Musical Artist' | 'Fine Artist' | 'Social Media Influencer' | 'Entertainment Talent';
-  video_embed_url: string;
-  image_url: string;
-  duration: string;
+  summary?: string;
+  content_type: string;
+  image_url?: string;
+  category_id: string;
+  is_featured: boolean;
+  published_at: string;
   created_at: string;
   updated_at: string;
-  is_link_valid?: boolean;
-  published_at?: string;
-  is_placeholder?: boolean;
+  levelName?: string;
+  duration?: string;
+  content?: string;
   source_url?: string;
-  last_validation?: string;
-};
+  career_interests?: string[];
+}
 
 export interface CourseProgress {
   id: string;
@@ -34,10 +34,10 @@ export interface CourseProgress {
 
 // Get courses with optional filtering
 export const getCourses = async (
-  level?: string,
+  categoryId?: string,
   limit: number = 10,
   featuredOnly: boolean = false,
-  category?: string
+  careerInterest?: string
 ): Promise<Course[]> => {
   try {
     let query = supabase
@@ -46,8 +46,12 @@ export const getCourses = async (
       .order('published_at', { ascending: false })
       .limit(limit);
     
-    if (level && level !== 'all') {
-      query = query.eq('category_id', level);
+    if (categoryId && categoryId !== 'all') {
+      query = query.eq('category_id', categoryId);
+    }
+    
+    if (featuredOnly) {
+      query = query.eq('is_featured', true);
     }
     
     const { data, error } = await query;
@@ -57,459 +61,107 @@ export const getCourses = async (
       throw error;
     }
     
-    // Map database results to Course interface and ensure unique images
-    const usedImages = new Set<string>();
-    let courses = data.map(item => {
-      // Get a unique image for each course
-      const image = getUniqueImageForCourse(item.title, item.category_id, usedImages, item.image_url);
-      usedImages.add(image);
-      
-      // Map to new Course structure
-      return {
-        id: item.id,
-        title: item.title || "New Course",
-        summary: item.summary || '',
-        level: mapLevelFromCategoryId(item.category_id),
-        category: mapCategoryFromTitle(item.title),
-        video_embed_url: getVideoEmbedUrl(item.source_url),
-        image_url: image,
-        duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        is_link_valid: isValidUrl(item.source_url),
-        published_at: item.published_at,
-        source_url: item.source_url || '',
-        is_placeholder: false,
-        last_validation: new Date().toISOString()
-      };
-    });
+    // Map database results to Course interface
+    const courses = data.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary || '',
+      content_type: item.content_type,
+      image_url: getRelevantCourseImage(item.title, item.category_id, item.image_url),
+      category_id: item.category_id,
+      is_featured: item.is_featured,
+      published_at: item.published_at,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+      source_url: item.source_url,
+      // Add mock career interests for now - would be stored in DB in production
+      career_interests: getCourseCareerInterests(item.title, item.category_id)
+    }));
     
-    // Convert invalid courses to placeholders instead of removing them
-    courses = courses.map(course => {
-      if (!course.video_embed_url) {
-        return {
-          ...course,
-          is_placeholder: true,
-          title: "New Course Coming Soon",
-          summary: "We're preparing new educational content in this category. Check back soon for updates.",
-          is_link_valid: false,
-          video_embed_url: '', // Empty but not undefined
-          duration: 'Coming soon'
-        };
-      }
-      return course;
-    });
-    
-    // If filtering by category is active, apply it
-    if (category && category !== 'all') {
-      courses = courses.filter(course => 
-        course.category.toLowerCase() === category.toLowerCase()
+    // Apply career interest filter if provided
+    if (careerInterest && careerInterest !== 'all') {
+      return courses.filter(course => 
+        course.career_interests?.includes(careerInterest)
       );
-      
-      // If no courses match the category, provide at least one placeholder
-      if (courses.length === 0) {
-        const placeholderCourse = createPlaceholderCourse(category);
-        courses.push(placeholderCourse);
-      }
-    }
-    
-    // Ensure we always have at least one course or placeholder
-    if (courses.length === 0) {
-      courses.push(createPlaceholderCourse());
     }
     
     return courses;
   } catch (error) {
     console.error("Unexpected error in getCourses:", error);
-    // Return placeholder courses on error to ensure the UI always has content
-    return [createPlaceholderCourse()];
+    return [];
   }
 };
 
-// Map category_id to the new level structure
-const mapLevelFromCategoryId = (categoryId?: string): 'Beginner' | 'Intermediate' | 'Advanced' => {
-  if (!categoryId) return 'Beginner';
-  
-  switch(categoryId.toLowerCase()) {
-    case 'beginner':
-      return 'Beginner';
-    case 'intermediate':
-      return 'Intermediate';
-    case 'advanced':
-      return 'Advanced';
-    default:
-      return 'Beginner';
-  }
-};
-
-// Map title to a category
-const mapCategoryFromTitle = (title: string): Course['category'] => {
-  const titleLower = (title || '').toLowerCase();
-  
-  if (titleLower.includes('model') || titleLower.includes('runway')) {
-    return 'Model';
-  } else if (titleLower.includes('design') || titleLower.includes('fashion')) {
-    return 'Designer';
-  } else if (titleLower.includes('act') || titleLower.includes('drama')) {
-    return 'Actor';
-  } else if (titleLower.includes('photo')) {
-    return 'Photographer';
-  } else if (titleLower.includes('video') || titleLower.includes('film')) {
-    return 'Videographer';
-  } else if (titleLower.includes('music') || titleLower.includes('audio')) {
-    return 'Musical Artist';
-  } else if (titleLower.includes('art') || titleLower.includes('paint')) {
-    return 'Fine Artist';
-  } else if (titleLower.includes('social') || titleLower.includes('media')) {
-    return 'Social Media Influencer';
-  } else if (titleLower.includes('entertain') || titleLower.includes('talent')) {
-    return 'Entertainment Talent';
-  }
-  
-  // Default to Designer if no matches
-  return 'Designer';
-};
-
-// Helper function to extract video embed URL from source URL
-const getVideoEmbedUrl = (sourceUrl?: string): string => {
-  if (!sourceUrl) return '';
-  
-  // YouTube
-  const youtubeMatch = 
-    sourceUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/) ||
-    sourceUrl.match(/youtube\.com\/playlist\?list=([^"&?\/\s]+)/);
-    
-  if (youtubeMatch) {
-    if (youtubeMatch[0].includes('playlist')) {
-      return `https://www.youtube.com/embed/videoseries?list=${youtubeMatch[1]}`;
-    }
-    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-  }
-  
-  // Vimeo
-  const vimeoMatch = sourceUrl.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/);
-  if (vimeoMatch) {
-    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
-  }
-  
-  // Fall back to the original URL if no match (placeholder will handle in UI)
-  return '';
-};
-
-// Create a placeholder course when needed
-const createPlaceholderCourse = (category?: string): Course => {
-  const id = `placeholder-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  const mappedCategory = category ? 
-    (category.charAt(0).toUpperCase() + category.slice(1)) as Course['category'] : 
-    'Designer';
-  
-  return {
-    id,
-    title: "New Course Coming Soon",
-    summary: "We're preparing new educational content for you. Check back soon for updates.",
-    level: 'Beginner',
-    category: mappedCategory,
-    video_embed_url: '',
-    image_url: "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop",
-    duration: "Coming soon",
-    is_placeholder: true,
-    is_link_valid: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    published_at: new Date().toISOString(),
-    source_url: '',
-    last_validation: new Date().toISOString()
-  };
-};
-
-// Helper function to validate URLs
-const isValidUrl = (url?: string): boolean => {
-  if (!url) return false;
-  
-  try {
-    new URL(url.startsWith('http') ? url : `https://${url}`);
-    return url !== 'example.com' && 
-           !url.includes('placeholder') && 
-           !url.includes('undefined') &&
-           !url.includes('null');
-  } catch (e) {
-    return false;
-  }
-};
-
-// Get unique image for course based on title, category, and already used images
-const getUniqueImageForCourse = (
-  title: string, 
-  categoryId: string, 
-  usedImages: Set<string>, 
-  defaultImage?: string
-): string => {
-  // If the default image is valid and not already used, use it
-  if (defaultImage && 
-      defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop' && 
-      !usedImages.has(defaultImage)) {
+// Get relevant image for course based on title and category
+const getRelevantCourseImage = (title: string, category: string, defaultImage?: string): string => {
+  if (defaultImage && defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop') {
     return defaultImage;
   }
   
-  const titleLower = (title || '').toLowerCase();
+  const titleLower = title.toLowerCase();
   
-  // Use separate image arrays for different categories to ensure diversity
-  const photographyImages = [
-    'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1452830978618-d6feae7d0ffa?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop'
-  ];
-  
-  const videographyImages = [
-    'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1492683962492-deef0ec456c0?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1569420067112-b57b4f024399?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1575318634028-6a0cfcb60c6b?w=800&auto=format&fit=crop'
-  ];
-  
-  const musicImages = [
-    'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop'
-  ];
-  
-  const artImages = [
-    'https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1531913764028-8e7e53415bb0?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop'
-  ];
-  
-  const designImages = [
-    'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1494578379344-d6c710782a3d?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1621600411688-4be93c2c1208?w=800&auto=format&fit=crop'
-  ];
-  
-  const modelingImages = [
-    'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1492321936769-b49830bc1d1e?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1533561797500-4fad4750814e?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop'
-  ];
-  
-  const actingImages = [
-    'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1460881680858-30d872d5b530?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1560457079-9a6532ccb118?w=800&auto=format&fit=crop'
-  ];
-  
-  const socialMediaImages = [
-    'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516321165247-4aa89df6ea2b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop'
-  ];
-  
-  const entertainmentImages = [
-    'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1459749180345-6d8462d61f8e?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516967124798-10656f7dca28?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1549834146-0566ba0424e6?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1571624436279-b272aff752b5?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&auto=format&fit=crop'
-  ];
-  
-  const beginnerImages = [
-    'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop'
-  ];
-  
-  const intermediateImages = [
-    'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&auto=format&fit=crop'
-  ];
-  
-  const advancedImages = [
-    'https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1487611459768-bd414656ea10?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1590650153855-d9e808231d41?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop'
-  ];
-  
-  // Select which image array to use based on title and category interest
-  let possibleImages: string[] = [];
-  
-  if (titleLower.includes('photo') || titleLower.includes('camera') || titleLower.includes('photography')) {
-    possibleImages = [...photographyImages];
-  } 
-  else if (titleLower.includes('video') || titleLower.includes('film') || titleLower.includes('cinematography')) {
-    possibleImages = [...videographyImages];
-  }
-  else if (titleLower.includes('music') || titleLower.includes('audio') || titleLower.includes('sound')) {
-    possibleImages = [...musicImages];
-  }
-  else if (titleLower.includes('paint') || titleLower.includes('art') || titleLower.includes('drawing')) {
-    possibleImages = [...artImages];
-  }
-  else if (titleLower.includes('design') || titleLower.includes('fashion') || titleLower.includes('pattern')) {
-    possibleImages = [...designImages];
-  }
-  else if (titleLower.includes('model') || titleLower.includes('portfolio') || titleLower.includes('runway')) {
-    possibleImages = [...modelingImages];
-  } 
-  else if (titleLower.includes('act') || titleLower.includes('perform') || titleLower.includes('stage')) {
-    possibleImages = [...actingImages];
-  }
-  else if (titleLower.includes('social') || titleLower.includes('media') || titleLower.includes('marketing')) {
-    possibleImages = [...socialMediaImages];
-  }
-  else if (titleLower.includes('entertainment') || titleLower.includes('talent')) {
-    possibleImages = [...entertainmentImages];
+  // Match course with relevant image based on keywords
+  if (titleLower.includes('design') || titleLower.includes('fashion')) {
+    return 'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop';
+  } else if (titleLower.includes('model') || titleLower.includes('modeling')) {
+    return 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop';
+  } else if (titleLower.includes('photo') || titleLower.includes('photography')) {
+    return 'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop';
+  } else if (titleLower.includes('social') || titleLower.includes('marketing')) {
+    return 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop';
+  } else if (titleLower.includes('act') || titleLower.includes('perform')) {
+    return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop';
   }
   
-  // If no category-specific images matched or all are used, fall back to level-specific images
-  if (possibleImages.length === 0 || possibleImages.every(img => usedImages.has(img))) {
-    if (categoryId === 'beginner') {
-      possibleImages = [...beginnerImages];
-    } else if (categoryId === 'intermediate') {
-      possibleImages = [...intermediateImages];
-    } else if (categoryId === 'advanced') {
-      possibleImages = [...advancedImages];
-    }
+  // Category-based images if no title match
+  if (category === 'beginner') {
+    return 'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop';
+  } else if (category === 'intermediate') {
+    return 'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop';
+  } else if (category === 'advanced') {
+    return 'https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop';
   }
   
-  // Find the first image that hasn't been used
-  for (const img of possibleImages) {
-    if (!usedImages.has(img)) {
-      return img;
-    }
-  }
-  
-  // Return the fallback if all else fails
-  return '/images/placeholder-course.jpg';
+  // Default image
+  return 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop';
 };
 
-// Define the missing image arrays
-const videographyImages = [
-  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1492683962492-deef0ec456c0?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1569420067112-b57b4f024399?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1575318634028-6a0cfcb60c6b?w=800&auto=format&fit=crop'
-];
-
-const musicImages = [
-  'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop'
-];
-
-const artImages = [
-  'https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1531913764028-8e7e53415bb0?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop'
-];
-
-const designImages = [
-  'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1494578379344-d6c710782a3d?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1621600411688-4be93c2c1208?w=800&auto=format&fit=crop'
-];
-
-const modelingImages = [
-  'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1492321936769-b49830bc1d1e?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1533561797500-4fad4750814e?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop'
-];
-
-const actingImages = [
-  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1460881680858-30d872d5b530?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1560457079-9a6532ccb118?w=800&auto=format&fit=crop'
-];
-
-const socialMediaImages = [
-  'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1516321165247-4aa89df6ea2b?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop'
-];
-
-const entertainmentImages = [
-  'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1459749180345-6d8462d61f8e?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1516967124798-10656f7dca28?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1549834146-0566ba0424e6?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1571624436279-b272aff752b5?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&auto=format&fit=crop'
-];
-
-const beginnerImages = [
-  'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop'
-];
-
-const intermediateImages = [
-  'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&auto=format&fit=crop'
-];
-
-const advancedImages = [
-  'https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1487611459768-bd414656ea10?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1590650153855-d9e808231d41?w=800&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop'
-];
+// Get mock career interests for courses
+const getCourseCareerInterests = (title: string, category: string): string[] => {
+  const titleLower = title.toLowerCase();
+  const interests = [];
+  
+  if (titleLower.includes('design') || titleLower.includes('fashion') || titleLower.includes('pattern')) {
+    interests.push('designer');
+  }
+  
+  if (titleLower.includes('model') || titleLower.includes('portfolio') || titleLower.includes('runway')) {
+    interests.push('model');
+  }
+  
+  if (titleLower.includes('act') || titleLower.includes('perform') || titleLower.includes('stage')) {
+    interests.push('actor');
+  }
+  
+  if (titleLower.includes('social') || titleLower.includes('media') || titleLower.includes('marketing')) {
+    interests.push('social media influencer');
+  }
+  
+  if (titleLower.includes('entertainment') || titleLower.includes('talent')) {
+    interests.push('entertainment talent');
+  }
+  
+  // Ensure each course has at least one interest
+  if (interests.length === 0) {
+    interests.push('designer', 'model'); // Default to these two
+  }
+  
+  return interests;
+};
 
 // Get featured courses
 export const getFeaturedCourses = async (limit: number = 3): Promise<Course[]> => {
-  // Simplified to use the new course structure
   return getCourses(undefined, limit, true);
 };
 
@@ -535,24 +187,7 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
         console.error("Error fetching course:", error);
         // Continue to fallback options
       } else if (data) {
-        // Map to new Course structure
-        return {
-          id: data.id,
-          title: data.title || "Course Title",
-          summary: data.summary || "Course description not available",
-          level: mapLevelFromCategoryId(data.category_id),
-          category: mapCategoryFromTitle(data.title),
-          video_embed_url: getVideoEmbedUrl(data.source_url),
-          image_url: getUniqueImageForCourse(data.title, data.category_id, new Set(), data.image_url),
-          duration: '10-12 weeks',
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          is_link_valid: isValidUrl(data.source_url),
-          published_at: data.published_at,
-          source_url: data.source_url || '',
-          is_placeholder: false,
-          last_validation: new Date().toISOString()
-        };
+        return mapCourseData(data);
       }
     }
     
@@ -561,20 +196,22 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
     const course = allCourses.find(c => {
       // Match by ID directly or by its numeric representation
       const numericId = parseInt(courseId);
-      return c.id === courseId || (!isNaN(numericId) && parseInt(c.id.toString()) === numericId);
+      return c.id === courseId || (!isNaN(numericId) && parseInt(c.id) === numericId);
     });
     
     if (course) {
-      return course;
+      return {
+        ...course,
+        image_url: getRelevantCourseImage(course.title, course.category_id, course.image_url),
+        career_interests: getCourseCareerInterests(course.title, course.category_id)
+      };
     }
     
     console.error("Course not found with ID:", courseId);
-    // Return a placeholder course instead of null
-    return createPlaceholderCourse();
+    return null;
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
-    // Return a placeholder course on error
-    return createPlaceholderCourse();
+    return null;
   }
 };
 
@@ -584,166 +221,219 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-// Function to get static courses for fallback
-export const getStaticCourses = (): Course[] => {
-  return [
-    {
-      id: "1",
-      title: "Fashion Design Fundamentals",
-      summary: "Learn the basics of fashion design including sketching, pattern making, and garment construction.",
-      level: "Beginner",
-      category: "Designer",
-      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
-      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
-      duration: "10-12 weeks",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      published_at: new Date().toISOString(),
-      source_url: "https://www.youtube.com/playlist?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
-      is_link_valid: true,
-      last_validation: new Date().toISOString()
-    },
-    {
-      id: "2",
-      title: "Advanced Fashion Photography",
-      summary: "Master the art of fashion photography with professional lighting and composition techniques.",
-      level: "Advanced",
-      category: "Photographer",
-      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
-      image_url: "https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&auto=format&fit=crop",
-      duration: "8 weeks",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      published_at: new Date().toISOString(),
-      source_url: "https://www.youtube.com/playlist?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
-      is_link_valid: true,
-      last_validation: new Date().toISOString()
-    },
-    {
-      id: "3",
-      title: "Runway Modeling Techniques",
-      summary: "Learn professional runway walking, posing, and presentation techniques from industry experts.",
-      level: "Intermediate",
-      category: "Model",
-      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
-      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
-      duration: "6 weeks",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      published_at: new Date().toISOString(),
-      source_url: "https://www.youtube.com/playlist?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
-      is_link_valid: true,
-      last_validation: new Date().toISOString()
-    }
-  ];
+// Map database result to Course interface
+const mapCourseData = (data: any): Course => {
+  return {
+    id: data.id,
+    title: data.title,
+    summary: data.summary || '',
+    content_type: data.content_type,
+    image_url: getRelevantCourseImage(data.title, data.category_id, data.image_url),
+    category_id: data.category_id,
+    is_featured: data.is_featured,
+    published_at: data.published_at,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+    source_url: data.source_url,
+    career_interests: getCourseCareerInterests(data.title, data.category_id)
+  };
 };
 
-// Function to schedule course refresh
-export const scheduleCourseRefresh = async (): Promise<void> => {
+// Get course progress for a user
+export const getUserCourseProgress = async (userId: string): Promise<CourseProgress[]> => {
   try {
-    const { data, error } = await supabase.functions.invoke('education-automation', {
-      body: { action: 'schedule-refresh' }
-    });
+    const { data, error } = await supabase
+      .from('user_course_progress')
+      .select('*')
+      .eq('user_id', userId);
     
     if (error) {
-      console.error("Error scheduling course refresh:", error);
-      return;
+      console.error("Error fetching course progress:", error);
+      throw error;
     }
     
-    console.log("Course refresh scheduled:", data);
-  } catch (err) {
-    console.error("Unexpected error scheduling course refresh:", err);
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in getUserCourseProgress:", error);
+    return [];
   }
 };
 
-// Update course progress
+// Create or update course progress
 export const updateCourseProgress = async (
   userId: string,
-  courseId: string, 
-  status: "not_started" | "in_progress" | "completed",
+  courseId: string,
+  status: string,
   courseCategory?: string
-): Promise<CourseProgress | null> => {
+): Promise<boolean> => {
   try {
-    // Check if a progress record already exists
-    const { data: existingProgress, error: fetchError } = await supabase
+    // Check if progress record exists
+    const { data: existingData } = await supabase
       .from('user_course_progress')
       .select('*')
       .eq('user_id', userId)
       .eq('course_id', courseId)
       .maybeSingle();
     
-    const now = new Date().toISOString();
-    
-    if (fetchError && fetchError.code !== 'PGRST116') {  // PGRST116 is "no rows returned"
-      console.error("Error fetching course progress:", fetchError);
-      return null;
-    }
-    
-    // If progress exists, update it
-    if (existingProgress) {
-      const updateData: Partial<CourseProgress> = {
-        status,
-        updated_at: now
-      };
-      
-      // Only set completion date if status is completed and it wasn't completed before
-      if (status === 'completed' && existingProgress.status !== 'completed') {
-        updateData.date_completed = now;
-      }
-      
-      const { data, error } = await supabase
+    if (existingData) {
+      // Update existing record
+      const { error } = await supabase
         .from('user_course_progress')
-        .update(updateData)
-        .eq('id', existingProgress.id)
-        .select()
-        .single();
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+          date_completed: status === 'completed' ? new Date().toISOString() : existingData.date_completed
+        })
+        .eq('id', existingData.id);
       
       if (error) {
         console.error("Error updating course progress:", error);
-        return null;
+        throw error;
       }
-      
-      return data;
-    } 
-    // Otherwise create a new progress record
-    else {
-      const newProgress: Omit<CourseProgress, 'id'> = {
-        user_id: userId,
-        course_id: courseId,
-        status,
-        date_started: now,
-        date_completed: status === 'completed' ? now : undefined,
-        course_category: courseCategory,
-        created_at: now,
-        updated_at: now
-      };
-      
-      const { data, error } = await supabase
+    } else {
+      // Create new record
+      const { error } = await supabase
         .from('user_course_progress')
-        .insert([newProgress])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Error creating course progress:", error);
-        // For demonstration purposes, return a mock progress
-        return {
-          id: `mock-${Date.now()}`,
+        .insert([{
           user_id: userId,
           course_id: courseId,
           status,
-          date_started: now,
-          date_completed: status === 'completed' ? now : undefined,
           course_category: courseCategory,
-          created_at: now,
-          updated_at: now
-        };
-      }
+          date_started: new Date().toISOString()
+        }]);
       
-      return data;
+      if (error) {
+        console.error("Error creating course progress:", error);
+        throw error;
+      }
     }
+    
+    return true;
   } catch (error) {
     console.error("Unexpected error in updateCourseProgress:", error);
-    return null;
+    return false;
   }
+};
+
+// Get recommended courses based on user interests
+export const getRecommendedCourses = async (userId: string, limit: number = 3): Promise<Course[]> => {
+  try {
+    // For now, just return featured courses as recommendations
+    // In future this could be based on user preferences or course history
+    return getFeaturedCourses(limit);
+  } catch (error) {
+    console.error("Unexpected error in getRecommendedCourses:", error);
+    return [];
+  }
+};
+
+// Get static courses as fallback
+export const getStaticCourses = (): Course[] => {
+  return [
+    { 
+      id: "1", 
+      category_id: "beginner",
+      title: "Fashion Design 101", 
+      summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["designer"]
+    },
+    { 
+      id: "2", 
+      category_id: "beginner",
+      title: "Digital Fashion Marketing", 
+      summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["designer", "social media influencer"]
+    },
+    { 
+      id: "3", 
+      category_id: "advanced",
+      title: "Advanced Pattern Making", 
+      summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["designer"]
+    },
+    { 
+      id: "4", 
+      category_id: "intermediate",
+      title: "Sustainable Fashion", 
+      summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["designer", "model"]
+    },
+    { 
+      id: "5", 
+      category_id: "intermediate",
+      title: "Fashion Portfolio", 
+      summary: "Create a professional portfolio showcasing your designs. Learn photography, styling, and digital presentation techniques.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["designer", "model", "actor"]
+    },
+    { 
+      id: "6", 
+      category_id: "workshop",
+      title: "Acting for Models Workshop", 
+      summary: "Improve your camera presence and runway confidence with acting techniques in this intensive hands-on workshop.",
+      content_type: "workshop",
+      image_url: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["model", "actor"]
+    },
+    {
+      id: "7",
+      category_id: "beginner",
+      title: "Social Media for Fashion Influencers",
+      summary: "Learn to build your fashion brand on Instagram, TikTok and other platforms with effective content strategies.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["social media influencer", "model"]
+    },
+    {
+      id: "8",
+      category_id: "intermediate",
+      title: "Entertainment Industry Navigation",
+      summary: "Discover how to build your career in the entertainment industry, from networking to portfolio development.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["entertainment talent", "actor"]
+    }
+  ];
 };

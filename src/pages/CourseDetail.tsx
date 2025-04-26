@@ -20,11 +20,6 @@ const CourseDetail = () => {
   const [progress, setProgress] = useState(0);
   const [isExternalCourse, setIsExternalCourse] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
-  const [videoWatched, setVideoWatched] = useState(false);
-  const [adminApproved, setAdminApproved] = useState(false);
-  const [workshopsAttended, setWorkshopsAttended] = useState(0);
-  const [totalCoursesCompleted, setTotalCoursesCompleted] = useState(0);
-  const [certificateRequested, setCertificateRequested] = useState(false);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -45,44 +40,17 @@ const CourseDetail = () => {
           return;
         }
         
-        // Check if the course has a valid link
-        if (courseData.source_url && 
-            (courseData.source_url === "example.com" || 
-             !isValidURL(courseData.source_url))) {
-          toast({
-            title: "Invalid course",
-            description: "This course has an invalid link and has been removed.",
-            variant: "destructive",
-          });
-          navigate("/education");
-          return;
-        }
-        
         setCourse(courseData);
         
-        // Check if course is external based on having a valid source_url
-        setIsExternalCourse(!!courseData.source_url && isValidURL(courseData.source_url));
+        // Check if course is external based on having a source_url
+        setIsExternalCourse(!!courseData.source_url);
         
         // If user is logged in, fetch their progress
         if (user) {
           try {
-            // Always set initial progress to 0 for new users
-            setProgress(0);
-            
-            // In a real app, we would fetch actual progress data from the database
-            // For demo purposes, we're simulating the progress
-            // This would actually be loaded from user_course_progress table
-            
-            // For demo purposes, let's simulate having completed 3 workshops
-            setWorkshopsAttended(3);
-            
-            // For demo purposes, let's simulate having completed 4 courses
-            setTotalCoursesCompleted(4);
-            
-            // Certificate can only be requested when minimum requirements are met
-            // (5+ courses completed and 3+ workshops attended)
-            const canRequestCertificate = totalCoursesCompleted >= 5 && workshopsAttended >= 3;
-            setCertificateRequested(canRequestCertificate);
+            // Simulate progress for now
+            // In a real implementation, this would fetch from user_course_progress
+            setProgress(Math.floor(Math.random() * 100));
           } catch (error) {
             console.error("Error fetching user progress:", error);
           }
@@ -100,20 +68,7 @@ const CourseDetail = () => {
     };
 
     fetchCourse();
-  }, [id, user, toast, navigate, totalCoursesCompleted, workshopsAttended]);
-
-  // Helper function to validate URLs
-  const isValidURL = (url: string) => {
-    try {
-      new URL(url.startsWith('http') ? url : `https://${url}`);
-      return url !== "example.com" && 
-             !url.includes("placeholder") && 
-             !url.includes("undefined") &&
-             !url.includes("null");
-    } catch (e) {
-      return false;
-    }
-  };
+  }, [id, user, toast, navigate]);
 
   const handleStartCourse = async () => {
     if (!user) {
@@ -128,27 +83,31 @@ const CourseDetail = () => {
 
     try {
       if (isExternalCourse && course.source_url) {
-        // For external courses, open in new tab but DON'T update progress automatically
-        window.open(course.source_url.startsWith('http') ? course.source_url : `https://${course.source_url}`, "_blank");
+        // For external courses, open in new tab and update progress
+        window.open(course.source_url, "_blank");
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
         toast({
           title: "Course Started",
-          description: "We've opened the course in a new tab. You'll need to mark it complete when finished.",
+          description: "We've opened the course in a new tab. Your progress will be tracked.",
         });
         
-        // Set progress to 20% when starting
-        setProgress(20);
+        // Set progress to at least 20% when starting
+        if (progress === 0) {
+          setProgress(20);
+        }
       } else {
         // For embedded courses, update progress
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
-        // Start with 0% progress for embedded content
-        setProgress(0);
-        toast({
-          title: "Course Started",
-          description: "Your progress has been saved. Complete the video to earn your certificate.",
-        });
+        // Simulate course completion after "watching" embedded content
+        if (progress === 0) {
+          setProgress(20);
+          toast({
+            title: "Course Started",
+            description: "Your progress has been saved.",
+          });
+        }
       }
     } catch (error) {
       console.error("Error updating course progress:", error);
@@ -160,30 +119,17 @@ const CourseDetail = () => {
     }
   };
 
-  const handleVideoComplete = async () => {
+  const handleCompleteCourse = async () => {
     if (!user || !course) return;
     
     try {
-      setVideoWatched(true);
-      setProgress(100);
       await updateCourseProgress(user.id, course.id, "completed", course.category_id);
-      
-      // Increment total courses completed (this would normally be fetched from database)
-      setTotalCoursesCompleted(prev => prev + 1);
-      
+      setProgress(100);
       toast({
-        title: "Course Completed",
-        description: "You've completed this course. Your progress has been saved.",
+        title: "Congratulations!",
+        description: "You have completed this course. Your certificate is ready.",
       });
-      
-      // Check if user meets certificate requirements (5+ courses and 3+ workshops)
-      if (totalCoursesCompleted >= 4 && workshopsAttended >= 3) {
-        setCertificateRequested(true);
-        toast({
-          title: "Certificate Available",
-          description: "You've met the requirements to request a certificate! An admin will review your progress.",
-        });
-      }
+      setShowCertificate(true);
     } catch (error) {
       console.error("Error completing course:", error);
       toast({
@@ -192,50 +138,6 @@ const CourseDetail = () => {
         variant: "destructive",
       });
     }
-  };
-
-  // Function to handle marking external courses as complete
-  const handleMarkExternalCourseComplete = async () => {
-    if (!user || !course) return;
-    
-    try {
-      setProgress(100);
-      await updateCourseProgress(user.id, course.id, "completed", course.category_id);
-      
-      // Increment total courses completed (this would normally be fetched from database)
-      setTotalCoursesCompleted(prev => prev + 1);
-      
-      toast({
-        title: "Course Completed",
-        description: "You've manually marked this external course as complete.",
-      });
-      
-      // Check if user meets certificate requirements (5+ courses and 3+ workshops)
-      if (totalCoursesCompleted >= 4 && workshopsAttended >= 3) {
-        setCertificateRequested(true);
-        toast({
-          title: "Certificate Available",
-          description: "You've met the requirements to request a certificate! An admin will review your progress.",
-        });
-      }
-    } catch (error) {
-      console.error("Error completing course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to mark course as completed. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Function to simulate admin approval of certificate
-  const handleAdminApproval = () => {
-    setAdminApproved(true);
-    setShowCertificate(true);
-    toast({
-      title: "Certificate Approved",
-      description: "An admin has approved your certificate. You can now view and download it.",
-    });
   };
 
   if (loading) {
@@ -319,7 +221,7 @@ const CourseDetail = () => {
               </ul>
             </div>
             
-            {user && progress === 100 && adminApproved && (
+            {user && progress === 100 && (
               <div className="mb-8">
                 <div className="bg-green-50 border border-green-200 p-6 rounded">
                   <div className="flex items-center mb-4">
@@ -328,7 +230,7 @@ const CourseDetail = () => {
                   </div>
                   <p className="mb-4">
                     Congratulations on completing this course! Your certificate has been issued
-                    by our admin team and is available for download and sharing.
+                    and is available for download and sharing.
                   </p>
                   <Button 
                     className="bg-emerge-gold hover:bg-emerge-gold/90"
@@ -339,55 +241,16 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-            
-            {user && certificateRequested && !adminApproved && (
-              <div className="mb-8">
-                <div className="bg-yellow-50 border border-yellow-200 p-6 rounded">
-                  <div className="flex items-center mb-4">
-                    <Award className="text-yellow-600 mr-2" size={24} />
-                    <h3 className="text-xl font-medium">Certificate Pending Admin Approval</h3>
-                  </div>
-                  <p className="mb-4">
-                    You've met the requirements for certification! Your progress is being reviewed by our admin team.
-                    Certificates will be issued once approved.
-                  </p>
-                  <div className="text-sm text-gray-600">
-                    <p>✓ {totalCoursesCompleted} courses completed (minimum 5 required)</p>
-                    <p>✓ {workshopsAttended} workshops attended (minimum 3 required)</p>
-                  </div>
-                  
-                  {/* For demo purposes only, to simulate admin approval */}
-                  <Button 
-                    className="w-full mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800"
-                    onClick={handleAdminApproval}
-                  >
-                    (DEMO: Simulate Admin Approval)
-                  </Button>
-                </div>
-              </div>
-            )}
 
             {!isExternalCourse && (
               <div className="mb-8">
                 <h2 className="emerge-heading text-2xl mb-4">Course Content</h2>
                 <div className="bg-white p-6 border">
                   <div className="aspect-video bg-gray-200 flex items-center justify-center mb-4">
-                    {progress > 0 && !videoWatched ? (
+                    {progress > 0 ? (
                       <div className="text-center">
                         <BookOpen size={48} className="mx-auto mb-2 text-emerge-gold" />
                         <p>Continue watching from where you left off</p>
-                        {/* Demo video completion button */}
-                        <Button 
-                          className="mt-4 bg-emerge-gold hover:bg-emerge-gold/90"
-                          onClick={handleVideoComplete}
-                        >
-                          (DEMO: Mark Video as Watched)
-                        </Button>
-                      </div>
-                    ) : videoWatched ? (
-                      <div className="text-center">
-                        <CheckCircle size={48} className="mx-auto mb-2 text-green-500" />
-                        <p>Video completed!</p>
                       </div>
                     ) : (
                       <div className="text-center">
@@ -409,72 +272,6 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
-            
-            {/* Add "Mark as Complete" button for external courses when user has started but not completed */}
-            {isExternalCourse && user && progress > 0 && progress < 100 && (
-              <div className="mb-8">
-                <div className="bg-white p-6 border">
-                  <h3 className="text-lg font-medium mb-4">Complete External Course</h3>
-                  <p className="mb-4">
-                    Have you completed the external course content? Click the button below to mark this course as completed
-                    and contribute towards your certificate eligibility.
-                  </p>
-                  <Button 
-                    className="bg-emerge-gold hover:bg-emerge-gold/90"
-                    onClick={handleMarkExternalCourseComplete}
-                  >
-                    Mark Course Complete
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            {/* Course requirements section */}
-            <div className="mb-8">
-              <h2 className="emerge-heading text-2xl mb-4">Certificate Requirements</h2>
-              <div className="bg-emerge-cream p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <span className="text-emerge-gold font-bold mr-2">•</span>
-                    <span>Complete a minimum of 5-10 courses in your chosen career path</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerge-gold font-bold mr-2">•</span>
-                    <span>Attend at least 3 live Emerge Academy workshop events</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerge-gold font-bold mr-2">•</span>
-                    <span>Submit your portfolio for review by our admin team</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerge-gold font-bold mr-2">•</span>
-                    <span>Certificates are issued manually after admin verification</span>
-                  </li>
-                </ul>
-                
-                {user && (
-                  <div className="mt-4 bg-white p-4 border">
-                    <h4 className="font-medium mb-2">Your Progress Toward Certification</h4>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="flex justify-between text-sm">
-                          <span>Courses completed:</span>
-                          <span>{totalCoursesCompleted}/5</span>
-                        </div>
-                        <Progress value={(totalCoursesCompleted / 5) * 100} className="h-2 mt-1" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm">
-                          <span>Workshops attended:</span>
-                          <span>{workshopsAttended}/3</span>
-                        </div>
-                        <Progress value={(workshopsAttended / 3) * 100} className="h-2 mt-1" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="md:col-span-1">
@@ -497,7 +294,7 @@ const CourseDetail = () => {
                 </div>
               )}
 
-              {user && progress === 100 && adminApproved ? (
+              {user && progress === 100 ? (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded">
                   <div className="flex items-center">
                     <CheckCircle className="text-green-600 mr-2" />
@@ -513,18 +310,15 @@ const CourseDetail = () => {
               ) : (
                 <Button 
                   className="w-full bg-emerge-gold hover:bg-emerge-gold/90"
-                  onClick={progress > 0 && !isExternalCourse && videoWatched ? handleVideoComplete : handleStartCourse}
-                  disabled={progress === 100 && !adminApproved}
+                  onClick={progress > 0 ? handleCompleteCourse : handleStartCourse}
                 >
                   {isExternalCourse ? (
                     <>
                       <span>Visit Course</span>
                       <ExternalLink size={16} className="ml-1" />
                     </>
-                  ) : progress > 0 && videoWatched ? (
-                    "Complete Course"
                   ) : progress > 0 ? (
-                    "Continue Course"
+                    "Complete Course"
                   ) : (
                     "Start Course"
                   )}
@@ -533,7 +327,7 @@ const CourseDetail = () => {
               
               <div className="mt-4 text-sm text-gray-500">
                 <p>Self-paced learning - start and complete at any time</p>
-                <p className="mt-2">Earn a certificate upon meeting all requirements</p>
+                <p className="mt-2">Earn a certificate upon completion</p>
               </div>
             </div>
           </div>
@@ -546,7 +340,7 @@ const CourseDetail = () => {
             <DialogTitle className="text-center text-2xl">Certificate of Completion</DialogTitle>
           </DialogHeader>
           <div className="p-8 border-4 border-double border-emerge-gold/30 text-center">
-            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY INTERNATIONAL</div>
+            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY</div>
             <h2 className="text-3xl font-serif mb-2">Certificate of Achievement</h2>
             <p className="mb-6">This is to certify that</p>
             <p className="text-xl mb-6">{user?.email || "Student"}</p>
@@ -595,30 +389,6 @@ const getCourseObjectives = (title: string, category: string): string[] => {
     objectives.push("Performance techniques for camera and stage");
     objectives.push("Character development and emotional expression");
     objectives.push("Industry networking and audition preparation");
-  }
-
-  if (titleLower.includes('photo') || titleLower.includes('photography')) {
-    objectives.push("Camera settings and equipment selection for fashion shoots");
-    objectives.push("Lighting techniques for studio and location photography");
-    objectives.push("Post-processing and image editing for professional results");
-  }
-  
-  if (titleLower.includes('video') || titleLower.includes('videography')) {
-    objectives.push("Video production planning and storyboarding");
-    objectives.push("Camera movement and composition for dynamic fashion videos");
-    objectives.push("Editing techniques and software mastery");
-  }
-  
-  if (titleLower.includes('music') || titleLower.includes('audio')) {
-    objectives.push("Music composition and production for fashion events");
-    objectives.push("Audio engineering fundamentals for recording and mixing");
-    objectives.push("Building a portfolio of industry-specific music projects");
-  }
-  
-  if (titleLower.includes('art') || titleLower.includes('painting')) {
-    objectives.push("Artistic techniques and media selection for fashion illustration");
-    objectives.push("Color theory and application in visual arts");
-    objectives.push("Creating cohesive collections of art for fashion applications");
   }
   
   // Add level-specific objectives
