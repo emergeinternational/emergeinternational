@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -35,12 +34,16 @@ export interface CourseProgress {
 export interface CertificateEligibility {
   id: string;
   user_id: string;
-  is_eligible: boolean;
-  admin_approved: boolean;
   online_courses_completed: number;
   workshops_completed: number;
+  is_eligible: boolean;
+  admin_approved: boolean;
   created_at: string;
   updated_at: string;
+  profiles?: {
+    full_name: string | null;
+    email: string | null;
+  };
 }
 
 // Get courses with optional filtering
@@ -339,8 +342,7 @@ export const checkCertificateEligibility = async (userId: string): Promise<boole
     
     if (coursesError) throw coursesError;
     
-    // Get workshop completions (simulated as we don't have actual workshop progress data)
-    // In real implementation, this would query a workshops_progress table
+    // Get workshop completions 
     const { data: workshopCompletions, error: workshopsError } = await supabase
       .from('user_course_progress')
       .select('*')
@@ -360,7 +362,7 @@ export const checkCertificateEligibility = async (userId: string): Promise<boole
     // Update or create eligibility record
     const { data: existingEligibility } = await supabase
       .from('certificate_eligibility')
-      .select('*')
+      .select()
       .eq('user_id', userId)
       .maybeSingle();
     
@@ -382,9 +384,7 @@ export const checkCertificateEligibility = async (userId: string): Promise<boole
           is_eligible: isEligible,
           admin_approved: false,
           online_courses_completed: onlineCoursesCompleted,
-          workshops_completed: workshopsCompleted,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          workshops_completed: workshopsCompleted
         }]);
     }
     
@@ -400,25 +400,27 @@ export const getCertificateEligibility = async (userId: string): Promise<Certifi
   try {
     const { data, error } = await supabase
       .from('certificate_eligibility')
-      .select('*')
+      .select(`
+        *,
+        profiles:user_id (
+          full_name,
+          email
+        )
+      `)
       .eq('user_id', userId)
       .maybeSingle();
     
-    if (error) {
-      console.error("Error fetching certificate eligibility:", error);
-      throw error;
-    }
-    
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Unexpected error in getCertificateEligibility:", error);
+    console.error("Error fetching certificate eligibility:", error);
     return null;
   }
 };
 
 // Update certificate approval status (admin only)
 export const updateCertificateApproval = async (
-  eligibilityId: string, 
+  eligibilityId: string,
   approved: boolean
 ): Promise<boolean> => {
   try {
@@ -439,14 +441,13 @@ export const updateCertificateApproval = async (
 };
 
 // Get list of users eligible for certificates (for admin)
-export const getEligibleUsers = async (): Promise<any[]> => {
+export const getEligibleUsers = async (): Promise<CertificateEligibility[]> => {
   try {
     const { data, error } = await supabase
       .from('certificate_eligibility')
       .select(`
         *,
         profiles:user_id (
-          id,
           full_name,
           email
         )
