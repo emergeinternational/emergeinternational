@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Workshop {
-  id: string;
+  id: string;  // Changed from number to string to match the data
   name: string;
   date: string;
   location: string;

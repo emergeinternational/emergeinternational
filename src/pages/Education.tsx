@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, Filter } from "lucide-react";
@@ -111,7 +110,7 @@ const Education = () => {
       year: 'numeric'
     }),
     location: workshop.location,
-    spots: workshop.spots
+    spots: workshop.spots || 0
   }));
 
   return (
@@ -319,7 +318,10 @@ const Education = () => {
             </div>
           )}
           
-          <UpcomingWorkshops workshops={formattedWorkshops} />
+          <UpcomingWorkshops 
+            workshops={formattedWorkshops} 
+            showAllWorkshops={false} 
+          />
           
           <section className="mt-16">
             <h2 className="emerge-heading text-2xl mb-6">Latest Fashion Resources</h2>
