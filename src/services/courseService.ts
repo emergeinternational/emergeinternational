@@ -28,7 +28,7 @@ export interface Course {
   career_interests?: string[];
 }
 
-// Add progress property to CourseProgress interface
+// Explicitly define CourseProgress interface with progress property
 export interface CourseProgress {
   id: string;
   course_id: string;
@@ -88,7 +88,7 @@ export const getUserCourseProgress = async (userId?: string): Promise<CourseProg
     // Map the data to include progress property if it doesn't exist
     return data.map((item: any): CourseProgress => ({
       ...item,
-      progress: item.progress !== undefined ? item.progress : 0 // Ensure progress property exists
+      progress: typeof item.progress === 'number' ? item.progress : 0 // Ensure progress property exists
     }));
   } catch (error) {
     console.error("Unexpected error in getUserCourseProgress:", error);
@@ -133,7 +133,7 @@ export const updateCourseProgress = async (
 
       return {
         ...data,
-        progress: data.progress !== undefined ? data.progress : progressValue // Ensure progress exists
+        progress: typeof data.progress === 'number' ? data.progress : progressValue // Ensure progress exists
       } as CourseProgress;
     } else {
       // Create new progress
@@ -157,7 +157,7 @@ export const updateCourseProgress = async (
 
       return {
         ...data,
-        progress: data.progress !== undefined ? data.progress : progressValue // Ensure progress exists
+        progress: typeof data.progress === 'number' ? data.progress : progressValue // Ensure progress exists
       } as CourseProgress;
     }
   } catch (error) {
@@ -189,7 +189,7 @@ export const getCourseProgress = async (
 
     return {
       ...data,
-      progress: data.progress !== undefined ? data.progress : 0 // Ensure progress exists
+      progress: typeof data.progress === 'number' ? data.progress : 0 // Ensure progress exists
     } as CourseProgress;
   } catch (error) {
     console.error("Unexpected error in getCourseProgress:", error);
@@ -406,7 +406,7 @@ export const getCoursesWithProgress = async (
         ...course,
         userProgress: progress ? {
           ...progress,
-          progress: progress.progress !== undefined ? progress.progress : 0 // Ensure progress property exists
+          progress: typeof progress.progress === 'number' ? progress.progress : 0 // Ensure progress property exists
         } : null
       };
     });
@@ -436,7 +436,7 @@ export const getCoursesForCategory = async (
         ...course,
         userProgress: progress ? {
           ...progress,
-          progress: progress.progress !== undefined ? progress.progress : 0 // Ensure progress property exists
+          progress: typeof progress.progress === 'number' ? progress.progress : 0 // Ensure progress property exists
         } : null
       };
     });
@@ -507,7 +507,7 @@ export const getCourses = async (
 };
 
 export const getStaticCourses = (): Course[] => {
-  // Return some static courses as fallback
+  // Return some static courses as fallback that conform to the specified career paths
   return [
     {
       id: "1",
@@ -517,10 +517,10 @@ export const getStaticCourses = (): Course[] => {
       category_id: "beginner",
       level: "beginner",
       duration: "8 weeks",
-      image_url: "https://images.unsplash.com/photo-1583744946564-b52d01e2d443?w=800&auto=format&fit=crop",
+      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-design",
       content_type: "course",
-      career_interests: ["designer", "model"]
+      career_interests: ["designer"]
     },
     {
       id: "2",
@@ -530,7 +530,7 @@ export const getStaticCourses = (): Course[] => {
       category_id: "advanced",
       level: "advanced",
       duration: "12 weeks",
-      image_url: "https://images.unsplash.com/photo-1621786030333-c709515feaa4?w=800&auto=format&fit=crop",
+      image_url: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/pattern-making",
       content_type: "course",
       career_interests: ["designer"]
@@ -543,10 +543,75 @@ export const getStaticCourses = (): Course[] => {
       category_id: "beginner",
       level: "beginner",
       duration: "6 weeks",
-      image_url: "https://images.unsplash.com/photo-1515549832467-8783363e19b6?w=800&auto=format&fit=crop",
+      image_url: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-photography",
       content_type: "course",
-      career_interests: ["photographer", "model"]
+      career_interests: ["photographer"]
+    },
+    {
+      id: "4",
+      title: "Runway Walk Techniques",
+      summary: "Perfect your runway walk for fashion shows",
+      category: "beginner",
+      category_id: "beginner",
+      level: "beginner",
+      duration: "4 weeks",
+      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/runway-walk",
+      content_type: "course",
+      career_interests: ["model"]
+    },
+    {
+      id: "5",
+      title: "Video Production for Fashion",
+      summary: "Create professional fashion videos",
+      category: "intermediate",
+      category_id: "intermediate",
+      level: "intermediate",
+      duration: "8 weeks",
+      image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/video-production",
+      content_type: "course",
+      career_interests: ["videographer"]
+    },
+    {
+      id: "6",
+      title: "Songwriting for Fashion Shows",
+      summary: "Create compelling music for runway shows",
+      category: "intermediate",
+      category_id: "intermediate",
+      level: "intermediate",
+      duration: "6 weeks",
+      image_url: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/fashion-music",
+      content_type: "course",
+      career_interests: ["musical_artist"]
+    },
+    {
+      id: "7",
+      title: "Fashion Illustration Techniques",
+      summary: "Master drawing and painting fashion illustrations",
+      category: "beginner",
+      category_id: "beginner",
+      level: "beginner",
+      duration: "10 weeks",
+      image_url: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/fashion-illustration",
+      content_type: "course",
+      career_interests: ["fine_artist"]
+    },
+    {
+      id: "8",
+      title: "Fashion Show Planning",
+      summary: "Learn to plan and execute successful fashion events",
+      category: "advanced",
+      category_id: "advanced",
+      level: "advanced",
+      duration: "8 weeks",
+      image_url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/fashion-show-planning",
+      content_type: "course",
+      career_interests: ["event_planner"]
     }
   ];
 };
