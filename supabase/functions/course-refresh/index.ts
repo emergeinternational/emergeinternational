@@ -68,7 +68,8 @@ serve(async (req) => {
       checked: 0,
       valid: 0,
       invalid: 0,
-      updated: 0
+      updated: 0,
+      preserved: 0
     };
 
     // Validate each course URL
@@ -106,14 +107,32 @@ serve(async (req) => {
         // Update validation status
         if (isValid) {
           results.valid++;
+          
+          // Mark as valid in database if needed
+          if (course.validation_status !== 'valid') {
+            const { error: updateValidError } = await supabase
+              .from('education_content')
+              .update({ 
+                validation_status: 'valid',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', course.id);
+              
+            if (updateValidError) {
+              console.error(`Error updating course ${course.id} validation: ${updateValidError.message}`);
+            } else {
+              results.updated++;
+            }
+          }
         } else {
           results.invalid++;
           
-          // Mark the course URL as invalid
+          // Instead of removing, mark as placeholder and preserve
           const { error: updateError } = await supabase
             .from('education_content')
             .update({ 
-              source_url: null,  // Clear the invalid URL
+              validation_status: 'invalid',
+              is_placeholder: true,
               updated_at: new Date().toISOString()
             })
             .eq('id', course.id);
@@ -122,6 +141,7 @@ serve(async (req) => {
             console.error(`Error updating course ${course.id}: ${updateError.message}`);
           } else {
             results.updated++;
+            results.preserved++;
           }
         }
       }

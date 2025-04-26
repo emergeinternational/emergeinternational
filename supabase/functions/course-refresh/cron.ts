@@ -17,7 +17,7 @@ cron.schedule(
     net.http_post(
         url:='https://dqfnetchkvnzrtacgvfw.supabase.co/functions/v1/course-refresh',
         headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}',
-        body:='{"action": "refresh"}'::jsonb
+        body:='{"action": "refresh", "preserve_invalid": true}'::jsonb
     ) as request_id;
   $$
 );

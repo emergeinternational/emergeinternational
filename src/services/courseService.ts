@@ -20,6 +20,7 @@ export interface Course {
   is_hosted?: boolean; // Indicates if the course is hosted directly on our platform
   last_validated?: string; // Date when the URL was last validated
   validation_status?: 'valid' | 'invalid' | 'pending'; // Status of URL validation
+  is_placeholder?: boolean; // Indicates if this is a placeholder for a future course
 }
 
 export interface CourseProgress {
@@ -148,14 +149,29 @@ export const getCourses = async (
     
     for (const item of data) {
       let isUrlValid = false;
+      
       if (item.source_url) {
         isUrlValid = await validateUrl(item.source_url);
+        // Update validation status in database if needed (this is non-blocking)
+        if (isUrlValid !== (item.validation_status === 'valid')) {
+          supabase
+            .from('education_content')
+            .update({ 
+              validation_status: isUrlValid ? 'valid' : 'invalid',
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', item.id)
+            .then(() => {
+              console.log(`Updated course ${item.id} validation status to ${isUrlValid ? 'valid' : 'invalid'}`);
+            })
+            .catch(err => {
+              console.error(`Failed to update course validation status: ${err}`);
+            });
+        }
       }
       
-      if (item.source_url && !isUrlValid) {
-        console.log(`Skipping course with invalid URL: ${item.title}`);
-        continue;
-      }
+      // Determine if this should be a placeholder
+      const isPlaceholder = !isUrlValid && item.source_url;
       
       const isHosted = determineHostingPriority(item);
       
@@ -178,7 +194,8 @@ export const getCourses = async (
         is_hosted: isHosted,
         career_interests: getCourseCareerInterests(item.title, item.category_id),
         last_validated: new Date().toISOString(),
-        validation_status: isUrlValid ? 'valid' : (item.source_url ? 'invalid' : 'valid')
+        validation_status: isUrlValid ? 'valid' : (item.source_url ? 'invalid' : 'valid'),
+        is_placeholder: isPlaceholder || item.is_placeholder
       });
     }
     
@@ -200,11 +217,7 @@ export const getCourses = async (
     
     for (const course of staticCourses) {
       const isUrlValid = await validateUrl(course.source_url);
-      
-      if (course.source_url && !isUrlValid) {
-        console.log(`Skipping static course with invalid URL: ${course.title}`);
-        continue;
-      }
+      const isPlaceholder = !isUrlValid && course.source_url;
       
       const isHosted = determineHostingPriority(course);
       const image = getUniqueImageForCourse(course.title, course.category_id, usedImages, course.image_url);
@@ -216,7 +229,8 @@ export const getCourses = async (
         source_url: isUrlValid ? course.source_url : undefined,
         is_hosted: isHosted,
         last_validated: new Date().toISOString(),
-        validation_status: isUrlValid ? 'valid' : (course.source_url ? 'invalid' : 'valid')
+        validation_status: isUrlValid ? 'valid' : (course.source_url ? 'invalid' : 'valid'),
+        is_placeholder: isPlaceholder
       });
     }
     
@@ -552,606 +566,4 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
         source_url: isUrlValid ? course.source_url : undefined,
         is_hosted: isHosted,
         career_interests: getCourseCareerInterests(course.title, course.category_id),
-        last_validated: new Date().toISOString(),
-        validation_status: isUrlValid ? 'valid' : (course.source_url ? 'invalid' : 'valid')
-      };
-    }
-    
-    console.error("Course not found with ID:", courseId);
-    return null;
-  } catch (error) {
-    console.error("Unexpected error in getCourseById:", error);
-    return null;
-  }
-};
-
-// Check if string is a valid UUID
-const isValidUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-};
-
-// Map database result to Course interface with enhanced validation
-const mapCourseData = (data: any): Course => {
-  return {
-    id: data.id,
-    title: data.title,
-    summary: data.summary || '',
-    content_type: data.content_type,
-    image_url: getUniqueImageForCourse(data.title, data.category_id, new Set(), data.image_url),
-    category_id: data.category_id,
-    is_featured: data.is_featured,
-    published_at: data.published_at,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    content: data.content,
-    career_interests: getCourseCareerInterests(data.title, data.category_id)
-  };
-};
-
-// Get course progress for a user
-export const getUserCourseProgress = async (userId: string): Promise<CourseProgress[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error("Error fetching course progress:", error);
-      throw error;
-    }
-    
-    return data || [];
-  } catch (error) {
-    console.error("Unexpected error in getUserCourseProgress:", error);
-    return [];
-  }
-};
-
-// Create or update course progress
-export const updateCourseProgress = async (
-  userId: string,
-  courseId: string,
-  status: string,
-  courseCategory?: string
-): Promise<boolean> => {
-  try {
-    const { data: existingData } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('course_id', courseId)
-      .maybeSingle();
-    
-    if (existingData) {
-      const { error } = await supabase
-        .from('user_course_progress')
-        .update({
-          status,
-          updated_at: new Date().toISOString(),
-          date_completed: status === 'completed' ? new Date().toISOString() : existingData.date_completed
-        })
-        .eq('id', existingData.id);
-      
-      if (error) {
-        console.error("Error updating course progress:", error);
-        throw error;
-      }
-    } else {
-      const { error } = await supabase
-        .from('user_course_progress')
-        .insert([{
-          user_id: userId,
-          course_id: courseId,
-          status,
-          course_category: courseCategory,
-          date_started: new Date().toISOString()
-        }]);
-      
-      if (error) {
-        console.error("Error creating course progress:", error);
-        throw error;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Unexpected error in updateCourseProgress:", error);
-    return false;
-  }
-};
-
-// Get recommended courses based on user interests
-export const getRecommendedCourses = async (userId: string, limit: number = 3): Promise<Course[]> => {
-  try {
-    return getFeaturedCourses(limit);
-  } catch (error) {
-    console.error("Unexpected error in getRecommendedCourses:", error);
-    return [];
-  }
-};
-
-// Get static courses as fallback - ensure we have adequate distribution across all
-// career paths and all levels (beginner, intermediate, advanced)
-export const getStaticCourses = (): Course[] => {
-  const designerCourses = [
-    { 
-      id: "1", 
-      category_id: "beginner",
-      title: "Fashion Design 101", 
-      summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer"],
-      source_url: "https://www.coursera.org/learn/fashion-design"
-    },
-    { 
-      id: "4", 
-      category_id: "intermediate",
-      title: "Sustainable Fashion", 
-      summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model"],
-      source_url: "https://www.futurelearn.com/courses/sustainable-fashion"
-    },
-    { 
-      id: "3", 
-      category_id: "advanced",
-      title: "Advanced Pattern Making", 
-      summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer"],
-      source_url: "https://www.masterclass.com/classes/fashion-design"
-    }
-  ];
-  
-  const modelCourses = [
-    {
-      id: "17",
-      category_id: "beginner",
-      title: "Introduction to Modeling",
-      summary: "Learn the basics of modeling including posing, walking techniques, and portfolio development for beginners.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1503342394128-c104d54dba01?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["model"],
-      source_url: "https://www.udemy.com/course/modeling-fundamentals/"
-    },
-    { 
-      id: "5", 
-      category_id: "intermediate",
-      title: "Fashion Portfolio Development", 
-      summary: "Create a professional portfolio showcasing your designs and modeling work. Learn photography, styling, and digital presentation techniques.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model", "actor"],
-      source_url: "https://www.skillshare.com/classes/fashion-portfolio"
-    },
-    {
-      id: "18",
-      category_id: "advanced",
-      title: "Advanced Runway Techniques",
-      summary: "Master professional runway walking, posing, and presentation skills for high-fashion shows and editorial work.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["model"],
-      source_url: "https://www.masterclass.com/classes/modeling-techniques"
-    }
-  ];
-  
-  const actorCourses = [
-    {
-      id: "19",
-      category_id: "beginner",
-      title: "Acting Fundamentals",
-      summary: "Learn the basics of acting including character development, script analysis, and stage presence.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["actor"],
-      source_url: "https://www.udemy.com/course/acting-basics/"
-    },
-    {
-      id: "20",
-      category_id: "intermediate",
-      title: "Screen Acting Techniques",
-      summary: "Develop your on-camera acting skills with professional techniques for film, television, and commercials.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1500703303ec-ddfa56af7ba8?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["actor"],
-      source_url: "https://www.masterclass.com/classes/screen-acting"
-    },
-    { 
-      id: "6", 
-      category_id: "advanced",
-      title: "Acting for Models Workshop", 
-      summary: "Improve your camera presence and runway confidence with acting techniques in this intensive hands-on workshop.",
-      content_type: "workshop",
-      image_url: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["model", "actor"],
-      source_url: "https://www.youtube.com/watch?v=modeling-acting-workshop"
-    }
-  ];
-  
-  const socialMediaCourses = [
-    {
-      id: "7",
-      category_id: "beginner",
-      title: "Social Media for Fashion Influencers",
-      summary: "Learn to build your fashion brand on Instagram, TikTok and other platforms with effective content strategies.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["social media influencer", "model"],
-      source_url: "https://www.udemy.com/course/fashion-influencer"
-    },
-    {
-      id: "21",
-      category_id: "intermediate",
-      title: "Content Strategy for Fashion Brands",
-      summary: "Develop comprehensive social media content strategies to grow your fashion brand and engage with your audience.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1516251193007-45ef944ab0c6?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["social media influencer"],
-      source_url: "https://www.linkedin.com/learning/social-media-marketing"
-    },
-    {
-      id: "22",
-      category_id: "advanced",
-      title: "Monetization Strategies for Influencers",
-      summary: "Learn advanced techniques for monetizing your social media presence through sponsorships, partnerships, and product development.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1579869847514-7c1a19d2d2ad?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["social media influencer"],
-      source_url: "https://www.skillshare.com/classes/influencer-monetization"
-    }
-  ];
-  
-  const entertainmentCourses = [
-    { 
-      id: "23", 
-      category_id: "beginner",
-      title: "Introduction to Entertainment Industry", 
-      summary: "Learn the basics of the entertainment industry including career paths, networking strategies, and portfolio development.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1459749180345-6d8462d61f8e?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["entertainment talent"],
-      source_url: "https://www.udemy.com/course/entertainment-industry-basics/"
-    },
-    {
-      id: "8",
-      category_id: "intermediate",
-      title: "Entertainment Industry Navigation",
-      summary: "Discover how to build your career in the entertainment industry, from networking to portfolio development.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["entertainment talent", "actor"],
-      source_url: "https://www.creativelive.com/entertainment-career"
-    },
-    {
-      id: "24",
-      category_id: "advanced",
-      title: "Talent Management Masterclass",
-      summary: "Learn advanced strategies for talent management, contract negotiation, and career development in the entertainment industry.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1571624436279-b272aff752b5?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["entertainment talent"],
-      source_url: "https://www.masterclass.com/classes/talent-management"
-    }
-  ];
-  
-  const photographyCourses = [
-    {
-      id: "9",
-      category_id: "beginner",
-      title: "Photography Fundamentals",
-      summary: "Master the basics of photography, from camera settings to composition techniques.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["photographer"],
-      source_url: "https://www.nikonschool.com/en/photography-courses/beginner"
-    },
-    {
-      id: "25",
-      category_id: "intermediate",
-      title: "Studio Lighting for Photographers",
-      summary: "Learn professional studio lighting techniques for fashion and portrait photography.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1520390138845-fd2d229dd553?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["photographer"],
-      source_url: "https://www.proedu.com/products/studio-lighting"
-    },
-    {
-      id: "13",
-      category_id: "advanced",
-      title: "Fashion Photography Masterclass",
-      summary: "Learn professional fashion photography techniques from industry experts.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1452830978618-d6feae7d0ffa?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["photographer", "designer"],
-      source_url: "https://www.kelbyone.com/fashion-photography"
-    }
-  ];
-  
-  const videographyCourses = [
-    {
-      id: "26",
-      category_id: "beginner",
-      title: "Introduction to Videography",
-      summary: "Learn the basics of video production including equipment, shooting techniques, and basic editing.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1569420067112-b57b4f024399?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["videographer"],
-      source_url: "https://www.udemy.com/course/video-production-basics/"
-    },
-    {
-      id: "10",
-      category_id: "intermediate",
-      title: "Professional Videography",
-      summary: "Learn advanced video production techniques, from pre to post-production.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["videographer"],
-      source_url: "https://www.skillshare.com/classes/videography-advanced"
-    },
-    {
-      id: "14",
-      category_id: "advanced",
-      title: "Documentary Filmmaking",
-      summary: "Create compelling visual stories through documentary film production.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["videographer"],
-      source_url: "https://www.masterclass.com/classes/filmmaking"
-    }
-  ];
-  
-  const musicCourses = [
-    {
-      id: "11",
-      category_id: "beginner",
-      title: "Music Production Essentials",
-      summary: "Start your journey in music production with fundamental concepts and techniques.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["musical artist"],
-      source_url: "https://www.berkleeonline.com/courses/music-production"
-    },
-    {
-      id: "27",
-      category_id: "intermediate",
-      title: "Music for Fashion Shows",
-      summary: "Learn how to produce and mix music specifically for fashion shows and runway events.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["musical artist", "designer"],
-      source_url: "https://www.soundonsound.com/tutorials/music-for-fashion"
-    },
-    {
-      id: "15",
-      category_id: "advanced",
-      title: "Songwriting and Composition",
-      summary: "Develop your skills in writing memorable melodies and compelling lyrics.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["musical artist"],
-      source_url: "https://www.coursera.org/learn/songwriting-techniques"
-    }
-  ];
-  
-  const artCourses = [
-    {
-      id: "16",
-      category_id: "beginner",
-      title: "Watercolor Techniques",
-      summary: "Master the fundamentals of watercolor painting from basic washes to advanced effects.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["fine artist"],
-      source_url: "https://www.skillshare.com/classes/watercolor-basics"
-    },
-    {
-      id: "12",
-      category_id: "intermediate",
-      title: "Digital Art and Painting",
-      summary: "Explore digital art tools and techniques for creating professional artwork.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["fine artist"],
-      source_url: "https://www.domestika.org/en/courses/illustration-digital"
-    },
-    {
-      id: "28",
-      category_id: "advanced",
-      title: "Fashion Illustration Masterclass",
-      summary: "Learn advanced techniques for creating stunning fashion illustrations for design presentations and editorial work.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1531913764164-f85c52d7e6a9?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["fine artist", "designer"],
-      source_url: "https://www.schoolofmotionart.com/fashion-illustration"
-    }
-  ];
-  
-  const marketingCourses = [
-    { 
-      id: "2", 
-      category_id: "beginner",
-      title: "Digital Fashion Marketing", 
-      summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "social media influencer"],
-      source_url: "https://www.edx.org/learn/fashion-digital-marketing"
-    }
-  ];
-  
-  return [
-    ...designerCourses,
-    ...modelCourses,
-    ...actorCourses,
-    ...socialMediaCourses,
-    ...entertainmentCourses,
-    ...photographyCourses,
-    ...videographyCourses,
-    ...musicCourses,
-    ...artCourses,
-    ...marketingCourses
-  ];
-};
-
-// Create a function to schedule the course refresh automation
-export const scheduleCoursesRefresh = async (): Promise<boolean> => {
-  try {
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    
-    const { data: recentEnrollments, error } = await supabase
-      .from('user_course_progress')
-      .select('id')
-      .gt('created_at', twoWeeksAgo.toISOString())
-      .limit(1);
-    
-    if (error) {
-      console.error("Error checking recent enrollments:", error);
-      return false;
-    }
-    
-    if (!recentEnrollments || recentEnrollments.length === 0) {
-      console.log("No recent enrollments. Refreshing course content...");
-      
-      const { error: logError } = await supabase
-        .from('course_engagement')
-        .insert([{
-          course_id: '00000000-0000-0000-0000-000000000000',
-          total_clicks: 1,
-          last_click_date: new Date().toISOString()
-        }]);
-      
-      if (logError) {
-        console.error("Error logging refresh attempt:", logError);
-        return false;
-      }
-      
-      return true;
-    }
-    
-    console.log("Recent enrollments found. Skipping course refresh.");
-    return true;
-  } catch (error) {
-    console.error("Error in scheduleCoursesRefresh:", error);
-    return false;
-  }
-};
+        last_validated:
