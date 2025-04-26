@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, Filter } from "lucide-react";
@@ -107,10 +108,7 @@ const Education = () => {
   }));
 
   const getLevelName = (course: Course) => {
-    if (typeof course.level === 'string') {
-      return course.level.toUpperCase();
-    }
-    return '';
+    return course.level.toUpperCase();
   };
 
   return (

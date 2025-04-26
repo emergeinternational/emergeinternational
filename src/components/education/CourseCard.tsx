@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { ChevronRight, Clock, Play, Video } from "lucide-react";
 import { useState } from "react";
+import { Course } from "@/services/courseService";
 
 interface CourseCardProps {
   id: string | number;

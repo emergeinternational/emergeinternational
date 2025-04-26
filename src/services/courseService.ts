@@ -1,26 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Define interfaces based on actual database schema
-export interface Course {
+// Define the new Course interface
+export type Course = {
   id: string;
   title: string;
   summary: string;
-  content_type: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  category: 'Model' | 'Designer' | 'Actor' | 'Photographer' | 'Videographer' | 'Musical Artist' | 'Fine Artist' | 'Social Media Influencer' | 'Entertainment Talent';
+  video_embed_url: string;
   image_url: string;
-  category_id: string;
-  is_featured: boolean;
-  published_at: string;
+  duration?: string;
   created_at: string;
   updated_at: string;
-  levelName?: string;
-  duration: string;
-  content?: string;
-  source_url: string;
-  career_interests: string[];
-  is_placeholder?: boolean;
   is_link_valid?: boolean;
-  last_validation: string;
-}
+  published_at?: string;
+  is_placeholder?: boolean;
+  source_url?: string;
+  last_validation?: string;
+};
 
 export interface CourseProgress {
   id: string;
@@ -36,10 +33,10 @@ export interface CourseProgress {
 
 // Get courses with optional filtering
 export const getCourses = async (
-  categoryId?: string,
+  level?: string,
   limit: number = 10,
   featuredOnly: boolean = false,
-  careerInterest?: string
+  category?: string
 ): Promise<Course[]> => {
   try {
     let query = supabase
@@ -48,12 +45,8 @@ export const getCourses = async (
       .order('published_at', { ascending: false })
       .limit(limit);
     
-    if (categoryId && categoryId !== 'all') {
-      query = query.eq('category_id', categoryId);
-    }
-    
-    if (featuredOnly) {
-      query = query.eq('is_featured', true);
+    if (level && level !== 'all') {
+      query = query.eq('category_id', level);
     }
     
     const { data, error } = await query;
@@ -70,59 +63,50 @@ export const getCourses = async (
       const image = getUniqueImageForCourse(item.title, item.category_id, usedImages, item.image_url);
       usedImages.add(image);
       
-      // Check if source_url is valid
-      const isLinkValid = isValidUrl(item.source_url) && 
-                         !item.source_url?.includes('example.com') &&
-                         !item.source_url?.includes('placeholder');
-      
+      // Map to new Course structure
       return {
         id: item.id,
-        title: item.title,
+        title: item.title || "New Course",
         summary: item.summary || '',
-        content_type: item.content_type,
+        level: mapLevelFromCategoryId(item.category_id),
+        category: mapCategoryFromTitle(item.title),
+        video_embed_url: getVideoEmbedUrl(item.source_url),
         image_url: image,
-        category_id: item.category_id,
-        is_featured: item.is_featured,
-        published_at: item.published_at,
+        duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
         created_at: item.created_at,
         updated_at: item.updated_at,
-        duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-        source_url: isLinkValid ? item.source_url : '',
-        career_interests: getCourseCareerInterests(item.title, item.category_id),
-        is_link_valid: isLinkValid,
-        is_placeholder: !isLinkValid,
+        is_link_valid: isValidUrl(item.source_url),
+        published_at: item.published_at,
+        source_url: item.source_url || '',
+        is_placeholder: false,
         last_validation: new Date().toISOString()
       };
     });
     
     // Convert invalid courses to placeholders instead of removing them
     courses = courses.map(course => {
-      if (!course.source_url || 
-          (course.source_url && 
-           (!isValidUrl(course.source_url) || 
-            course.source_url.includes('example.com') || 
-            course.source_url.includes('placeholder')))) {
+      if (!course.video_embed_url) {
         return {
           ...course,
           is_placeholder: true,
           title: "New Course Coming Soon",
           summary: "We're preparing new educational content in this category. Check back soon for updates.",
           is_link_valid: false,
-          source_url: '' // Ensure source_url is never undefined
+          video_embed_url: '' // Empty but not undefined
         };
       }
       return course;
     });
     
-    // If filtering by career interest is active, apply it
-    if (careerInterest && careerInterest !== 'all') {
+    // If filtering by category is active, apply it
+    if (category && category !== 'all') {
       courses = courses.filter(course => 
-        course.career_interests?.includes(careerInterest)
+        course.category.toLowerCase() === category.toLowerCase()
       );
       
-      // If no courses match the career interest, provide at least one placeholder
+      // If no courses match the category, provide at least one placeholder
       if (courses.length === 0) {
-        const placeholderCourse = createPlaceholderCourse(careerInterest);
+        const placeholderCourse = createPlaceholderCourse(category);
         courses.push(placeholderCourse);
       }
     }
@@ -140,27 +124,98 @@ export const getCourses = async (
   }
 };
 
+// Map category_id to the new level structure
+const mapLevelFromCategoryId = (categoryId?: string): 'Beginner' | 'Intermediate' | 'Advanced' => {
+  if (!categoryId) return 'Beginner';
+  
+  switch(categoryId.toLowerCase()) {
+    case 'beginner':
+      return 'Beginner';
+    case 'intermediate':
+      return 'Intermediate';
+    case 'advanced':
+      return 'Advanced';
+    default:
+      return 'Beginner';
+  }
+};
+
+// Map title to a category
+const mapCategoryFromTitle = (title: string): Course['category'] => {
+  const titleLower = (title || '').toLowerCase();
+  
+  if (titleLower.includes('model') || titleLower.includes('runway')) {
+    return 'Model';
+  } else if (titleLower.includes('design') || titleLower.includes('fashion')) {
+    return 'Designer';
+  } else if (titleLower.includes('act') || titleLower.includes('drama')) {
+    return 'Actor';
+  } else if (titleLower.includes('photo')) {
+    return 'Photographer';
+  } else if (titleLower.includes('video') || titleLower.includes('film')) {
+    return 'Videographer';
+  } else if (titleLower.includes('music') || titleLower.includes('audio')) {
+    return 'Musical Artist';
+  } else if (titleLower.includes('art') || titleLower.includes('paint')) {
+    return 'Fine Artist';
+  } else if (titleLower.includes('social') || titleLower.includes('media')) {
+    return 'Social Media Influencer';
+  } else if (titleLower.includes('entertain') || titleLower.includes('talent')) {
+    return 'Entertainment Talent';
+  }
+  
+  // Default to Designer if no matches
+  return 'Designer';
+};
+
+// Helper function to extract video embed URL from source URL
+const getVideoEmbedUrl = (sourceUrl?: string): string => {
+  if (!sourceUrl) return '';
+  
+  // YouTube
+  const youtubeMatch = 
+    sourceUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/) ||
+    sourceUrl.match(/youtube\.com\/playlist\?list=([^"&?\/\s]+)/);
+    
+  if (youtubeMatch) {
+    if (youtubeMatch[0].includes('playlist')) {
+      return `https://www.youtube.com/embed/videoseries?list=${youtubeMatch[1]}`;
+    }
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+  }
+  
+  // Vimeo
+  const vimeoMatch = sourceUrl.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|)(\d+)(?:$|\/|\?)/);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+  
+  // Fall back to the original URL if no match (placeholder will handle in UI)
+  return '';
+};
+
 // Create a placeholder course when needed
-const createPlaceholderCourse = (careerInterest?: string): Course => {
+const createPlaceholderCourse = (category?: string): Course => {
   const id = `placeholder-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  const categoryId = careerInterest ? careerInterest : 'beginner';
+  const mappedCategory = category ? 
+    (category.charAt(0).toUpperCase() + category.slice(1)) as Course['category'] : 
+    'Designer';
   
   return {
     id,
     title: "New Course Coming Soon",
     summary: "We're preparing new educational content for you. Check back soon for updates.",
-    content_type: "course",
+    level: 'Beginner',
+    category: mappedCategory,
+    video_embed_url: '',
     image_url: "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop",
-    category_id: categoryId,
-    is_featured: false,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
     duration: "Coming soon",
     is_placeholder: true,
     is_link_valid: false,
-    source_url: '', // Empty string instead of undefined
-    career_interests: careerInterest ? [careerInterest] : ["designer", "model"],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    published_at: new Date().toISOString(),
+    source_url: '',
     last_validation: new Date().toISOString()
   };
 };
@@ -183,7 +238,7 @@ const isValidUrl = (url?: string): boolean => {
 // Get unique image for course based on title, category, and already used images
 const getUniqueImageForCourse = (
   title: string, 
-  category: string, 
+  categoryId: string, 
   usedImages: Set<string>, 
   defaultImage?: string
 ): string => {
@@ -194,7 +249,7 @@ const getUniqueImageForCourse = (
     return defaultImage;
   }
   
-  const titleLower = title.toLowerCase();
+  const titleLower = (title || '').toLowerCase();
   
   // Use separate image arrays for different categories to ensure diversity
   const photographyImages = [
@@ -301,7 +356,7 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop'
   ];
   
-  // Select which image array to use based on title and career interest
+  // Select which image array to use based on title and category interest
   let possibleImages: string[] = [];
   
   if (titleLower.includes('photo') || titleLower.includes('camera') || titleLower.includes('photography')) {
@@ -334,11 +389,11 @@ const getUniqueImageForCourse = (
   
   // If no category-specific images matched or all are used, fall back to level-specific images
   if (possibleImages.length === 0 || possibleImages.every(img => usedImages.has(img))) {
-    if (category === 'beginner') {
+    if (categoryId === 'beginner') {
       possibleImages = [...beginnerImages];
-    } else if (category === 'intermediate') {
+    } else if (categoryId === 'intermediate') {
       possibleImages = [...intermediateImages];
-    } else if (category === 'advanced') {
+    } else if (categoryId === 'advanced') {
       possibleImages = [...advancedImages];
     }
   }
@@ -351,93 +406,12 @@ const getUniqueImageForCourse = (
   }
   
   // Return the fallback if all else fails
-  return 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop';
-};
-
-// Get mock career interests for courses with expanded options
-const getCourseCareerInterests = (title: string, category: string): string[] => {
-  const titleLower = title.toLowerCase();
-  const interests = new Set<string>();
-  
-  // Add primary interest based on keywords in title
-  if (titleLower.includes('design') || titleLower.includes('fashion') || titleLower.includes('pattern')) {
-    interests.add('designer');
-  }
-  
-  if (titleLower.includes('model') || titleLower.includes('portfolio') || titleLower.includes('runway')) {
-    interests.add('model');
-  }
-  
-  if (titleLower.includes('act') || titleLower.includes('perform') || titleLower.includes('stage')) {
-    interests.add('actor');
-  }
-  
-  if (titleLower.includes('social') || titleLower.includes('media') || titleLower.includes('marketing')) {
-    interests.add('social media influencer');
-  }
-  
-  if (titleLower.includes('entertainment') || titleLower.includes('talent')) {
-    interests.add('entertainment talent');
-  }
-  
-  if (titleLower.includes('photo') || titleLower.includes('camera') || titleLower.includes('photography')) {
-    interests.add('photographer');
-  }
-  
-  if (titleLower.includes('video') || titleLower.includes('film') || titleLower.includes('cinematography')) {
-    interests.add('videographer');
-  }
-  
-  if (titleLower.includes('music') || titleLower.includes('audio') || titleLower.includes('sound')) {
-    interests.add('musical artist');
-  }
-  
-  if (titleLower.includes('paint') || titleLower.includes('art') || titleLower.includes('drawing')) {
-    interests.add('fine artist');
-  }
-  
-  // Ensure each course has at least one interest - distribute across categories based on level
-  if (interests.size === 0) {
-    if (category === 'beginner') {
-      // Beginner courses distributed among all career types
-      const beginnerCareers = [
-        'designer', 'model', 'photographer', 'videographer', 
-        'actor', 'musical artist', 'fine artist', 
-        'social media influencer', 'entertainment talent'
-      ];
-      // Use hash of title to consistently assign the same career to the same course
-      const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      interests.add(beginnerCareers[hash % beginnerCareers.length]);
-    } else if (category === 'intermediate') {
-      // Intermediate courses distributed among all career types
-      const intermediateCareers = [
-        'photographer', 'videographer', 'designer', 'model',
-        'actor', 'musical artist', 'fine artist',
-        'social media influencer', 'entertainment talent'
-      ];
-      const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      interests.add(intermediateCareers[hash % intermediateCareers.length]);
-    } else if (category === 'advanced') {
-      // Advanced courses distributed among all career types
-      const advancedCareers = [
-        'musical artist', 'fine artist', 'designer', 'model',
-        'actor', 'photographer', 'videographer',
-        'social media influencer', 'entertainment talent'
-      ];
-      const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      interests.add(advancedCareers[hash % advancedCareers.length]);
-    } else {
-      // Default case - generic distribution
-      interests.add('designer');
-      interests.add('model');
-    }
-  }
-  
-  return Array.from(interests);
+  return '/images/placeholder-course.jpg';
 };
 
 // Get featured courses
 export const getFeaturedCourses = async (limit: number = 3): Promise<Course[]> => {
+  // Simplified to use the new course structure
   return getCourses(undefined, limit, true);
 };
 
@@ -463,32 +437,24 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
         console.error("Error fetching course:", error);
         // Continue to fallback options
       } else if (data) {
-        // Check if URL is valid
-        const isLinkValid = isValidUrl(data.source_url);
-        
-        // If URL is invalid, return the course as a placeholder
-        if (!isLinkValid) {
-          return {
-            id: data.id,
-            title: "New Course Coming Soon",
-            summary: "We're preparing new educational content in this category. Check back soon for updates.",
-            content_type: data.content_type,
-            image_url: getUniqueImageForCourse("placeholder", data.category_id, new Set()),
-            category_id: data.category_id,
-            is_featured: data.is_featured,
-            published_at: data.published_at,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
-            duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-            source_url: '',
-            is_placeholder: true,
-            is_link_valid: false,
-            career_interests: getCourseCareerInterests(data.title, data.category_id),
-            last_validation: new Date().toISOString()
-          };
-        }
-        
-        return mapCourseData(data);
+        // Map to new Course structure
+        return {
+          id: data.id,
+          title: data.title || "Course Title",
+          summary: data.summary || "Course description not available",
+          level: mapLevelFromCategoryId(data.category_id),
+          category: mapCategoryFromTitle(data.title),
+          video_embed_url: getVideoEmbedUrl(data.source_url),
+          image_url: getUniqueImageForCourse(data.title, data.category_id, new Set(), data.image_url),
+          duration: '10-12 weeks',
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          is_link_valid: isValidUrl(data.source_url),
+          published_at: data.published_at,
+          source_url: data.source_url || '',
+          is_placeholder: false,
+          last_validation: new Date().toISOString()
+        };
       }
     }
     
@@ -501,32 +467,7 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
     });
     
     if (course) {
-      // Check if URL is valid
-      const isLinkValid = isValidUrl(course.source_url);
-      
-      // If URL is invalid, return a placeholder version of the course
-      if (!isLinkValid) {
-        return {
-          ...course,
-          title: "New Course Coming Soon",
-          summary: "We're preparing new educational content in this category. Check back soon for updates.",
-          image_url: getUniqueImageForCourse("placeholder", course.category_id, new Set()),
-          source_url: '',
-          is_placeholder: true,
-          is_link_valid: false
-        };
-      }
-      
-      // Get a unique image for this course
-      const uniqueImage = getUniqueImageForCourse(course.title, course.category_id, new Set(), course.image_url);
-      
-      return {
-        ...course,
-        image_url: uniqueImage,
-        is_link_valid: true,
-        is_placeholder: false,
-        career_interests: getCourseCareerInterests(course.title, course.category_id)
-      };
+      return course;
     }
     
     console.error("Course not found with ID:", courseId);
@@ -545,28 +486,6 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-// Map database course to frontend course model - updated to ensure all required fields are present
-const mapCourseData = (data: any): Course => {
-  return {
-    id: data.id || `placeholder-${Date.now()}`,
-    title: data.title || "New Course Coming Soon",
-    summary: data.summary || '',
-    content_type: data.content_type || "course",
-    image_url: data.image_url || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop',
-    category_id: data.category_id || "beginner",
-    is_featured: data.is_featured || false,
-    published_at: data.published_at || new Date().toISOString(),
-    created_at: data.created_at || new Date().toISOString(),
-    updated_at: data.updated_at || new Date().toISOString(),
-    duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    source_url: data.source_url || '',
-    is_link_valid: isValidUrl(data.source_url),
-    is_placeholder: false,
-    career_interests: getCourseCareerInterests(data.title || '', data.category_id || 'beginner'),
-    last_validation: new Date().toISOString()
-  };
-};
-
 // Function to get static courses for fallback
 export const getStaticCourses = (): Course[] => {
   return [
@@ -574,17 +493,15 @@ export const getStaticCourses = (): Course[] => {
       id: "1",
       title: "Fashion Design Fundamentals",
       summary: "Learn the basics of fashion design including sketching, pattern making, and garment construction.",
-      content_type: "course",
+      level: "Beginner",
+      category: "Designer",
+      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
       image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
-      category_id: "beginner",
-      is_featured: true,
-      published_at: new Date().toISOString(),
+      duration: "10-12 weeks",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      duration: "10-12 weeks",
+      published_at: new Date().toISOString(),
       source_url: "https://www.youtube.com/playlist?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
-      career_interests: ["designer", "model"],
-      is_placeholder: false,
       is_link_valid: true,
       last_validation: new Date().toISOString()
     },
@@ -592,17 +509,15 @@ export const getStaticCourses = (): Course[] => {
       id: "2",
       title: "Advanced Fashion Photography",
       summary: "Master the art of fashion photography with professional lighting and composition techniques.",
-      content_type: "course",
+      level: "Advanced",
+      category: "Photographer",
+      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
       image_url: "https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&auto=format&fit=crop",
-      category_id: "advanced",
-      is_featured: false,
-      published_at: new Date().toISOString(),
+      duration: "8 weeks",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      duration: "8 weeks",
+      published_at: new Date().toISOString(),
       source_url: "https://www.youtube.com/playlist?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
-      career_interests: ["photographer"],
-      is_placeholder: false,
       is_link_valid: true,
       last_validation: new Date().toISOString()
     },
@@ -610,17 +525,15 @@ export const getStaticCourses = (): Course[] => {
       id: "3",
       title: "Runway Modeling Techniques",
       summary: "Learn professional runway walking, posing, and presentation techniques from industry experts.",
-      content_type: "course",
+      level: "Intermediate",
+      category: "Model",
+      video_embed_url: "https://www.youtube.com/embed/videoseries?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
       image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
-      category_id: "intermediate",
-      is_featured: true,
-      published_at: new Date().toISOString(),
+      duration: "6 weeks",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      duration: "6 weeks",
+      published_at: new Date().toISOString(),
       source_url: "https://www.youtube.com/playlist?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
-      career_interests: ["model"],
-      is_placeholder: false,
       is_link_valid: true,
       last_validation: new Date().toISOString()
     }
@@ -645,7 +558,7 @@ export const scheduleCourseRefresh = async (): Promise<void> => {
   }
 };
 
-// Add the missing updateCourseProgress function
+// Update course progress
 export const updateCourseProgress = async (
   userId: string,
   courseId: string, 
