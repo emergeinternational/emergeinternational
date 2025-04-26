@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Workshop, getWorkshops } from "@/services/workshopService";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface EventTicket {
@@ -16,33 +16,52 @@ interface EventTicket {
   description: string;
 }
 
-interface EventWithTickets extends Workshop {
-  icon: JSX.Element;
-  tickets: EventTicket[];
+interface Event {
+  id: string;
+  name: string;
+  date: string;
+  location: string;
+  description?: string;
+  capacity?: number;
+  price?: number;
+  icon?: JSX.Element;
+  tickets?: EventTicket[];
 }
 
 const Events = () => {
   const [selectedTickets, setSelectedTickets] = useState<{ [key: string]: string }>({});
   const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>({});
-  const [events, setEvents] = useState<EventWithTickets[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<EventWithTickets | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const workshopsData = await getWorkshops();
+        setLoading(true);
         
-        // Transform workshops into events with tickets
-        const eventsWithTickets: EventWithTickets[] = workshopsData.map(workshop => ({
-          ...workshop,
-          icon: getEventIcon(workshop.name),
-          tickets: generateTicketsForEvent(workshop)
+        // Directly fetch from events table
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('date', { ascending: true })
+          .gte('date', new Date().toISOString()); // Only get future events
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Transform events with ticket information
+        const eventsWithTickets: Event[] = (data || []).map(event => ({
+          ...event,
+          icon: getEventIcon(event.name),
+          tickets: generateTicketsForEvent(event)
         }));
         
         setEvents(eventsWithTickets);
+        console.log("Fetched events:", eventsWithTickets);
       } catch (error) {
         console.error("Error fetching events:", error);
         toast({
@@ -68,19 +87,24 @@ const Events = () => {
     }
   };
 
-  const generateTicketsForEvent = (event: Workshop): EventTicket[] => {
-    // Default tickets if no specific price is provided
+  const generateTicketsForEvent = (event: Event): EventTicket[] => {
     const defaultTickets: EventTicket[] = [
-      { type: "Standard", price: "ETB 1,000", description: "Regular admission" },
+      { 
+        type: "Standard", 
+        price: event.price ? `ETB ${event.price}` : "ETB 1,000", 
+        description: "Regular admission" 
+      },
     ];
 
-    // If event has specific pricing in description, try to parse it
-    if (event.description && event.description.toLowerCase().includes('price')) {
-      try {
-        // This is a simple implementation - in a real app you might want more sophisticated parsing
-        return defaultTickets;
-      } catch (error) {
-        return defaultTickets;
+    // If event has a specific price set
+    if (event.price) {
+      // For premium events with higher prices, add VIP option
+      if (event.price >= 1000) {
+        defaultTickets.push({
+          type: "VIP",
+          price: `ETB ${Math.round(event.price * 1.5)}`,
+          description: "Premium experience with special seating"
+        });
       }
     }
     
@@ -108,7 +132,7 @@ const Events = () => {
 
     try {
       const event = events.find(e => e.id === eventId);
-      const selectedTicket = event?.tickets.find(t => t.type === selectedTickets[eventId]);
+      const selectedTicket = event?.tickets?.find(t => t.type === selectedTickets[eventId]);
       
       if (!event || !selectedTicket) {
         throw new Error("Invalid event or ticket selection");
@@ -136,7 +160,7 @@ const Events = () => {
     }
   };
 
-  const openEventDetails = (event: EventWithTickets) => {
+  const openEventDetails = (event: Event) => {
     setSelectedEvent(event);
   };
 
@@ -206,7 +230,7 @@ const Events = () => {
 
                   <div className="pt-4 flex justify-between items-center">
                     <span className="text-sm text-gray-500">
-                      {event.spots ? `${event.spots} spots available` : "Limited spots available"}
+                      {event.capacity ? `${event.capacity} spots available` : "Limited spots available"}
                     </span>
                     <Button 
                       size="sm" 
