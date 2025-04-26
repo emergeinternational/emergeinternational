@@ -1,45 +1,36 @@
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { EducationLevel } from "@/types/education";
-
-const levels: { value: EducationLevel; label: string }[] = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-];
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { EducationLevel } from "@/types/education";
 
 interface LevelFilterProps {
   selectedLevel?: EducationLevel;
   onSelectLevel: (level?: EducationLevel) => void;
 }
 
-export function LevelFilter({ selectedLevel, onSelectLevel }: LevelFilterProps) {
+export function LevelFilter({ 
+  selectedLevel, 
+  onSelectLevel 
+}: LevelFilterProps) {
+  const levels: { value: EducationLevel; label: string }[] = [
+    { value: 'beginner', label: 'Beginner' },
+    { value: 'intermediate', label: 'Intermediate' },
+    { value: 'advanced', label: 'Advanced' }
+  ];
+
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
-      <Button
-        variant="ghost"
-        className={cn(
-          "text-sm font-medium transition-colors",
-          !selectedLevel && "bg-emerge-gold text-white"
-        )}
-        onClick={() => onSelectLevel(undefined)}
-      >
-        All Levels
-      </Button>
-      {levels.map((level) => (
-        <Button
-          key={level.value}
-          variant="ghost"
-          className={cn(
-            "text-sm font-medium transition-colors",
-            selectedLevel === level.value && "bg-emerge-gold text-white"
-          )}
-          onClick={() => onSelectLevel(level.value)}
-        >
-          {level.label}
-        </Button>
-      ))}
+    <div className="mb-6">
+      <h3 className="text-lg font-medium mb-3">Experience Level</h3>
+      <ToggleGroup type="single" value={selectedLevel} onValueChange={(value: EducationLevel | undefined) => onSelectLevel(value)}>
+        {levels.map((level) => (
+          <ToggleGroupItem 
+            key={level.value} 
+            value={level.value}
+            className="border border-gray-700 hover:bg-emerge-gold/20 data-[state=on]:bg-emerge-gold data-[state=on]:text-white"
+          >
+            {level.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
   );
 }

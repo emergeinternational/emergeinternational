@@ -6,7 +6,9 @@ import MainLayout from "@/layouts/MainLayout";
 import { Input } from "@/components/ui/input";
 import { CategoryFilter } from "@/components/education/CategoryFilter";
 import { LevelFilter } from "@/components/education/LevelFilter";
+import { InterestsFilter } from "@/components/education/InterestsFilter";
 import { CourseCard } from "@/components/education/CourseCard";
+import { EmptyCourseState } from "@/components/education/EmptyCourseState";
 import { getCourseCategories, getCourses, enrollInCourse } from "@/services/courseService";
 import type { EducationLevel } from "@/types/education";
 import { useToast } from "@/components/ui/use-toast";
@@ -14,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 export default function Education() {
   const [selectedCategory, setSelectedCategory] = useState<string>();
   const [selectedLevel, setSelectedLevel] = useState<EducationLevel>();
+  const [selectedInterest, setSelectedInterest] = useState<string>();
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
@@ -43,6 +46,13 @@ export default function Education() {
     }
   };
 
+  const clearAllFilters = () => {
+    setSelectedCategory(undefined);
+    setSelectedLevel(undefined);
+    setSelectedInterest(undefined);
+    setSearchQuery("");
+  };
+
   return (
     <MainLayout>
       <section className="bg-emerge-darkBg text-white py-16">
@@ -70,17 +80,27 @@ export default function Education() {
             />
           </div>
 
-          {categories.data && (
-            <CategoryFilter
-              categories={categories.data}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
-          )}
-
-          <LevelFilter
-            selectedLevel={selectedLevel}
-            onSelectLevel={setSelectedLevel}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              {categories.data && (
+                <CategoryFilter
+                  categories={categories.data}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={setSelectedCategory}
+                />
+              )}
+            </div>
+            <div>
+              <LevelFilter
+                selectedLevel={selectedLevel}
+                onSelectLevel={setSelectedLevel}
+              />
+            </div>
+          </div>
+          
+          <InterestsFilter 
+            selectedInterest={selectedInterest}
+            onSelectInterest={setSelectedInterest}
           />
 
           {courses.isLoading ? (
@@ -98,10 +118,7 @@ export default function Education() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-emerge-cream p-6">
-              <p className="text-lg">No courses found matching your criteria.</p>
-              <p className="text-gray-600 mt-2">Try adjusting your filters or search query.</p>
-            </div>
+            <EmptyCourseState onClearFilters={clearAllFilters} />
           )}
         </div>
       </div>
