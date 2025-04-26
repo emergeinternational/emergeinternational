@@ -10,7 +10,7 @@ import {
   EducationCategory
 } from "../services/educationService";
 import { getWorkshops, Workshop } from "../services/workshopService";
-import { getCourses, Course, getStaticCourses } from "../services/courseService";
+import { getCourses, Course, getStaticCourses, scheduleCourseRefresh } from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -44,15 +44,25 @@ const Education = () => {
     { id: "fine artist", name: "FINE ARTIST" }
   ];
 
+  useEffect(() => {
+    const checkCourseRefresh = async () => {
+      try {
+        await scheduleCourseRefresh();
+      } catch (error) {
+        console.error("Error checking course refresh:", error);
+      }
+    };
+    
+    checkCourseRefresh();
+  }, []);
+
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
       
-      // Fetch categories, education content, and workshops
       const categoriesData = await getEducationCategories();
       setCategories(categoriesData);
       
-      // Try to get content from courseService first (with career interest filter if applicable)
       const contentData = await getCourses(
         activeLevel === "all" ? undefined : activeLevel,
         20,
@@ -60,26 +70,7 @@ const Education = () => {
         activeCareerInterest === "all" ? undefined : activeCareerInterest
       );
       
-      // Use the data if available, otherwise fall back to static courses
-      if (contentData && contentData.length > 0) {
-        setEducationContent(contentData);
-      } else {
-        let staticCourses = getStaticCourses();
-        
-        // Apply level filter if needed
-        if (activeLevel !== "all") {
-          staticCourses = staticCourses.filter(course => course.category_id === activeLevel);
-        }
-        
-        // Apply career interest filter if needed
-        if (activeCareerInterest !== "all") {
-          staticCourses = staticCourses.filter(course => 
-            course.career_interests?.includes(activeCareerInterest)
-          );
-        }
-        
-        setEducationContent(staticCourses);
-      }
+      setEducationContent(contentData);
       
       const workshopsData = await getWorkshops();
       setUpcomingWorkshops(workshopsData.slice(0, 3));
@@ -92,7 +83,6 @@ const Education = () => {
         variant: "destructive",
       });
       
-      // Fallback to static content
       setEducationContent(getStaticCourses());
       
     } finally {
@@ -104,9 +94,8 @@ const Education = () => {
     fetchCourses();
   }, [activeLevel, activeCareerInterest, toast]);
 
-  // Format workshop data for the component - ensure id is used as string
   const formattedWorkshops = upcomingWorkshops.map(workshop => ({
-    id: workshop.id, // This is already a string from workshopService.ts
+    id: workshop.id,
     name: workshop.name,
     date: new Date(workshop.date).toLocaleDateString('en-US', {
       month: 'long', 
@@ -359,6 +348,7 @@ const Education = () => {
                   image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
                   duration={course.duration || (course.content_type === "course" ? "10-12 weeks" : "1-2 days")}
                   levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id.toUpperCase()}
+                  isPlaceholder={course.is_placeholder}
                 />
               ))}
             </div>
