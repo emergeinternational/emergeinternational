@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
@@ -12,6 +12,22 @@ const Login = () => {
   const [rememberInfo, setRememberInfo] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Load saved preferences if they exist
+  useEffect(() => {
+    try {
+      const savedPreferences = localStorage.getItem('userPreferences');
+      if (savedPreferences) {
+        const preferences = JSON.parse(savedPreferences);
+        if (preferences.country) setCountry(preferences.country);
+        if (preferences.city) setCity(preferences.city);
+        if (preferences.language) setSelectedLanguage(preferences.language);
+        setRememberInfo(true);
+      }
+    } catch (error) {
+      console.error("Error loading saved preferences:", error);
+    }
+  }, []);
 
   const languages = [
     "English", // English is now explicitly first
@@ -33,20 +49,23 @@ const Login = () => {
         city: city.trim() || null,
         language: selectedLanguage
       }));
+    } else {
+      // If remember info is unchecked, clear any existing preferences
+      localStorage.removeItem('userPreferences');
     }
     
     navigate("/home");
   };
 
   const handleEmailContinue = () => {
-    if (!country.trim()) {
-      toast({
-        title: "Country is required",
-        description: "Please enter your country before continuing.",
-        variant: "destructive",
-      });
-      return;
+    if (rememberInfo) {
+      localStorage.setItem('userPreferences', JSON.stringify({
+        country: country.trim() || null,
+        city: city.trim() || null,
+        language: selectedLanguage
+      }));
     }
+    
     navigate("/email-login");
   };
 
@@ -85,7 +104,17 @@ const Login = () => {
               placeholder="Country"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="emerge-input"
+              className="emerge-input w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="City"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="emerge-input w-full"
             />
           </div>
 
@@ -113,16 +142,6 @@ const Login = () => {
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="City"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="emerge-input"
-            />
           </div>
         </div>
 
