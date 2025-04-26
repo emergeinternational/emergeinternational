@@ -67,6 +67,9 @@ const About = () => {
 
         <section className="mt-16 max-w-4xl mx-auto">
           <h2 className="text-3xl font-serif mb-8 text-center">Supporting All Creative Talents</h2>
+          <p className="text-gray-700 text-center max-w-3xl mx-auto mb-8">
+            We are dedicated to empowering a diverse community of creative professionals — including models, designers, photographers, videographers, artists, entertainers, and more — from across the globe. Our platform offers specialized training, mentorship, professional development, and international exposure. With a strong foundation rooted in Africa's dynamic creative energy, we foster opportunities that connect emerging and established talents with the global stage.
+          </p>
           <div className="grid md:grid-cols-3 gap-6">
             {talentSections.map((section, index) => (
               <div key={index} className="bg-emerge-cream/30 p-6 rounded-lg">
