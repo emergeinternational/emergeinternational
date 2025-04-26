@@ -131,9 +131,10 @@ export const updateCourseProgress = async (
         return null;
       }
 
+      // Ensure the returned data has the progress property
       return {
         ...data,
-        progress: typeof data.progress === 'number' ? data.progress : progressValue // Ensure progress exists
+        progress: typeof data.progress === 'number' ? data.progress : progressValue
       } as CourseProgress;
     } else {
       // Create new progress
@@ -155,9 +156,10 @@ export const updateCourseProgress = async (
         return null;
       }
 
+      // Ensure the returned data has the progress property
       return {
         ...data,
-        progress: typeof data.progress === 'number' ? data.progress : progressValue // Ensure progress exists
+        progress: typeof data.progress === 'number' ? data.progress : progressValue
       } as CourseProgress;
     }
   } catch (error) {
@@ -187,9 +189,10 @@ export const getCourseProgress = async (
 
     if (!data) return null;
 
+    // Ensure the returned data has the progress property
     return {
       ...data,
-      progress: typeof data.progress === 'number' ? data.progress : 0 // Ensure progress exists
+      progress: typeof data.progress === 'number' ? data.progress : 0
     } as CourseProgress;
   } catch (error) {
     console.error("Unexpected error in getCourseProgress:", error);
@@ -404,10 +407,7 @@ export const getCoursesWithProgress = async (
       const progress = userProgress.find(p => p.course_id === course.id);
       return {
         ...course,
-        userProgress: progress ? {
-          ...progress,
-          progress: typeof progress.progress === 'number' ? progress.progress : 0 // Ensure progress property exists
-        } : null
+        userProgress: progress || null
       };
     });
   } catch (error) {
@@ -434,10 +434,7 @@ export const getCoursesForCategory = async (
       const progress = userProgress.find(p => p.course_id === course.id);
       return {
         ...course,
-        userProgress: progress ? {
-          ...progress,
-          progress: typeof progress.progress === 'number' ? progress.progress : 0 // Ensure progress property exists
-        } : null
+        userProgress: progress || null
       };
     });
   } catch (error) {
