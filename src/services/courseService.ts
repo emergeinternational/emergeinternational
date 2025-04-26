@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -546,4 +547,97 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
 
 // Check if string is a valid UUID
 const isValidUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+// Map database course to frontend course model
+const mapCourseData = (data: any): Course => {
+  return {
+    id: data.id,
+    title: data.title,
+    summary: data.summary || '',
+    content_type: data.content_type,
+    image_url: data.image_url,
+    category_id: data.category_id,
+    is_featured: data.is_featured,
+    published_at: data.published_at,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+    source_url: data.source_url,
+    is_link_valid: isValidUrl(data.source_url),
+    is_placeholder: false,
+    career_interests: getCourseCareerInterests(data.title, data.category_id),
+    last_validation: new Date().toISOString()
+  };
+};
+
+// Function to get static courses for fallback
+export const getStaticCourses = (): Course[] => {
+  return [
+    {
+      id: "1",
+      title: "Fashion Design Fundamentals",
+      summary: "Learn the basics of fashion design including sketching, pattern making, and garment construction.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
+      category_id: "beginner",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      duration: "10-12 weeks",
+      source_url: "https://www.youtube.com/playlist?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
+      career_interests: ["designer", "model"]
+    },
+    {
+      id: "2",
+      title: "Advanced Fashion Photography",
+      summary: "Master the art of fashion photography with professional lighting and composition techniques.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=800&auto=format&fit=crop",
+      category_id: "advanced",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      duration: "8 weeks",
+      source_url: "https://www.youtube.com/playlist?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
+      career_interests: ["photographer"]
+    },
+    {
+      id: "3",
+      title: "Runway Modeling Techniques",
+      summary: "Learn professional runway walking, posing, and presentation techniques from industry experts.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
+      category_id: "intermediate",
+      is_featured: true,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      duration: "6 weeks",
+      source_url: "https://www.youtube.com/playlist?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
+      career_interests: ["model"]
+    }
+  ];
+};
+
+// Function to schedule course refresh
+export const scheduleCourseRefresh = async (): Promise<void> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('education-automation', {
+      body: { action: 'schedule-refresh' }
+    });
+    
+    if (error) {
+      console.error("Error scheduling course refresh:", error);
+      return;
+    }
+    
+    console.log("Course refresh scheduled:", data);
+  } catch (err) {
+    console.error("Unexpected error scheduling course refresh:", err);
+  }
+};
