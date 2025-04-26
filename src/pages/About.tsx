@@ -1,3 +1,4 @@
+
 import MainLayout from "../layouts/MainLayout";
 import { Heart, Globe, Rocket, Camera, Users, Video } from "lucide-react";
 
@@ -6,17 +7,17 @@ const About = () => {
     {
       icon: Heart,
       title: "Empowering Global Creative Talent",
-      description: "We are committed to discovering, nurturing, and promoting talented fashion professionals worldwide, with a special focus on the vibrant and influential African fashion scene. From designers and models to photographers and videographers, our mission is to provide a platform that celebrates creativity and craftsmanship from diverse cultural perspectives."
+      description: "We are committed to discovering, nurturing, and promoting talented creative professionals worldwide, with a special focus on the vibrant and influential African creative scene. From designers and artists to performers and content creators, our mission is to provide a platform that celebrates creativity and innovation from diverse cultural perspectives."
     },
     {
       icon: Globe,
       title: "Global Market Access",
-      description: "We connect creative professionals with international markets, with particular emphasis on showcasing Africa's rich fashion heritage and contemporary innovations. Through our platform, fashion professionals gain exposure, build their portfolios, and access opportunities in the global fashion ecosystem."
+      description: "We connect creative professionals with international markets, with particular emphasis on showcasing Africa's rich cultural heritage and contemporary innovations. Through our platform, creative professionals gain exposure, build their portfolios, and access opportunities in the global creative ecosystem."
     },
     {
       icon: Rocket,
       title: "Education and Resources",
-      description: "Education is at the core of our mission. We offer workshops, courses, and resources that equip fashion professionals with the skills, knowledge, and tools they need to succeed in the competitive global fashion industry, while celebrating and promoting Africa's significant influence on worldwide fashion trends."
+      description: "Education is at the core of our mission. We offer workshops, courses, and resources that equip creative professionals with the skills, knowledge, and tools they need to succeed in the competitive global industries, while celebrating and promoting Africa's significant influence on worldwide creative trends."
     }
   ];
 
@@ -24,17 +25,17 @@ const About = () => {
     {
       icon: Users,
       title: "Models",
-      description: "We support emerging models globally, with special initiatives focused on Africa's dynamic modeling industry. Our platform provides comprehensive training, professional development, and connections with international casting directors and agencies."
+      description: "We support both emerging and established models globally, with special initiatives focused on Africa's dynamic modeling industry. Our platform provides comprehensive training, professional development, and connections with international casting directors and agencies."
     },
     {
       icon: Camera,
       title: "Photographers",
-      description: "Fashion photographers receive expert mentorship and technical training while gaining opportunities to showcase diverse cultural perspectives through their work. We facilitate collaborations between international talents and help build impressive portfolios that resonate with global publications."
+      description: "Creative photographers receive expert mentorship and technical training while gaining opportunities to showcase diverse cultural perspectives through their work. We facilitate collaborations between international talents and help build impressive portfolios that resonate with global publications."
     },
     {
       icon: Video,
       title: "Videographers",
-      description: "Our support for videographers spans worldwide, offering specialized training in fashion film production, access to industry-standard equipment, and opportunities to create content that celebrates both local traditions and contemporary global trends."
+      description: "Our support for videographers spans worldwide, offering specialized training in content production, access to industry-standard equipment, and opportunities to create content that celebrates both local traditions and contemporary global trends."
     }
   ];
 
@@ -60,12 +61,12 @@ const About = () => {
         <section className="mt-12 text-center max-w-2xl mx-auto">
           <h2 className="text-3xl font-serif mb-6">Our Vision</h2>
           <p className="text-gray-700 leading-relaxed">
-            We envision a truly inclusive global fashion industry that celebrates diversity and cultural exchange. While we maintain a strong focus on amplifying Africa's extraordinary influence and talent in the worldwide fashion scene, our platform embraces and connects creative professionals from all corners of the globe, fostering cross-cultural collaboration and innovation.
+            We envision a truly inclusive global creative industry that celebrates diversity, innovation, and cultural exchange. While maintaining a strong commitment to amplifying Africa's extraordinary influence and talent across fashion, arts, and entertainment, our platform welcomes and connects professionals from every corner of the world. We foster collaboration across cultures, industries, and creative expressions, driving global excellence and innovation.
           </p>
         </section>
 
         <section className="mt-16 max-w-4xl mx-auto">
-          <h2 className="text-3xl font-serif mb-8 text-center">Supporting All Fashion Industry Talents</h2>
+          <h2 className="text-3xl font-serif mb-8 text-center">Supporting All Creative Talents</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {talentSections.map((section, index) => (
               <div key={index} className="bg-emerge-cream/30 p-6 rounded-lg">
@@ -73,12 +74,7 @@ const About = () => {
                   <section.icon size={36} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl font-serif mb-3">{section.title}</h3>
-                <p className="text-gray-700 text-sm">
-                  {section.title === "Models" 
-                    ? "We support both emerging and established models globally, with special initiatives focused on Africa's dynamic modeling industry. Our platform provides comprehensive training, professional development, and connections with international casting directors and agencies."
-                    : section.description
-                  }
-                </p>
+                <p className="text-gray-700 text-sm">{section.description}</p>
               </div>
             ))}
           </div>
@@ -89,11 +85,11 @@ const About = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-xl mb-4">Sustainability</h3>
-              <p>We champion sustainable and ethical fashion practices worldwide, supporting creatives who embrace environmentally conscious and socially responsible approaches in their work, while drawing inspiration from Africa's rich heritage of sustainable craftsmanship.</p>
+              <p>We champion sustainable, ethical practices across fashion, arts, and entertainment. We support creators who embrace environmentally conscious methods and socially responsible storytelling, drawing inspiration from Africa's longstanding traditions of sustainable craftsmanship and innovation.</p>
             </div>
             <div>
               <h3 className="text-xl mb-4">Cultural Exchange</h3>
-              <p>We facilitate meaningful cultural exchange in the fashion industry, with particular emphasis on showcasing Africa's profound influence on global fashion. We celebrate diverse creative traditions while encouraging innovation and contemporary interpretations that enrich the international fashion landscape.</p>
+              <p>We promote meaningful cultural exchange across creative industries, highlighting Africa's profound and growing impact on the global landscape. We celebrate diverse traditions while encouraging contemporary innovation, creating a vibrant, interconnected community of artists, designers, models, and storytellers around the world.</p>
             </div>
           </div>
         </section>
