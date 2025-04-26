@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, Filter } from "lucide-react";
+import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, AlertTriangle } from "lucide-react";
 import CourseCard from "../components/education/CourseCard";
 import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,11 +44,9 @@ const Education = () => {
     try {
       setIsLoading(true);
       
-      // Fetch categories, education content, and workshops
       const categoriesData = await getEducationCategories();
       setCategories(categoriesData);
       
-      // Try to get content from courseService first (with career interest filter if applicable)
       const contentData = await getCourses(
         activeLevel === "all" ? undefined : activeLevel,
         20,
@@ -57,18 +54,15 @@ const Education = () => {
         activeCareerInterest === "all" ? undefined : activeCareerInterest
       );
       
-      // Use the data if available, otherwise fall back to static courses
       if (contentData && contentData.length > 0) {
         setEducationContent(contentData);
       } else {
         let staticCourses = getStaticCourses();
         
-        // Apply level filter if needed
         if (activeLevel !== "all") {
           staticCourses = staticCourses.filter(course => course.category_id === activeLevel);
         }
         
-        // Apply career interest filter if needed
         if (activeCareerInterest !== "all") {
           staticCourses = staticCourses.filter(course => 
             course.career_interests?.includes(activeCareerInterest)
@@ -89,7 +83,6 @@ const Education = () => {
         variant: "destructive",
       });
       
-      // Fallback to static content
       setEducationContent(getStaticCourses());
       
     } finally {
@@ -101,9 +94,24 @@ const Education = () => {
     fetchCourses();
   }, [activeLevel, activeCareerInterest, toast]);
 
-  // Format workshop data for the component - ensure id is used as string
+  const isValidUrl = (url?: string): boolean => {
+    if (!url) return false;
+    
+    try {
+      new URL(url);
+      const lowercaseUrl = url.toLowerCase();
+      return (
+        !lowercaseUrl.includes('example.com') && 
+        !lowercaseUrl.includes('placeholder') && 
+        !lowercaseUrl.includes('localhost')
+      );
+    } catch (e) {
+      return false;
+    }
+  };
+
   const formattedWorkshops = upcomingWorkshops.map(workshop => ({
-    id: workshop.id, // This is already a string from workshopService.ts
+    id: workshop.id,
     name: workshop.name,
     date: new Date(workshop.date).toLocaleDateString('en-US', {
       month: 'long', 
@@ -111,7 +119,8 @@ const Education = () => {
       year: 'numeric'
     }),
     location: workshop.location,
-    spots: workshop.spots || 0
+    spots: workshop.spots || 0,
+    isUrlValid: isValidUrl(workshop.registrationLink)
   }));
 
   return (
@@ -300,6 +309,8 @@ const Education = () => {
                   image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
                   duration={course.duration || (course.content_type === "course" ? "10-12 weeks" : "1-2 days")}
                   levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id.toUpperCase()}
+                  sourceUrl={course.source_url}
+                  isUrlValid={isValidUrl(course.source_url)}
                 />
               ))}
             </div>

@@ -269,7 +269,11 @@ export const getUserCourseProgress = async (userId: string): Promise<CourseProgr
       throw error;
     }
     
-    return data || [];
+    // Ensure every record has a progress field, defaulting to 0 if missing
+    return (data || []).map(record => ({
+      ...record,
+      progress: record.progress || 0
+    })) as CourseProgress[];
   } catch (error) {
     console.error("Unexpected error in getUserCourseProgress:", error);
     return [];

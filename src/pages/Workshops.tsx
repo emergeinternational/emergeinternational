@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getWorkshops, getArchivedWorkshops, Workshop } from "../services/workshopService";
 import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
 import { useToast } from "@/hooks/use-toast";
+import { AlertTriangle } from "lucide-react";
 
 const Workshops = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -36,6 +37,23 @@ const Workshops = () => {
 
     fetchWorkshops();
   }, [toast]);
+
+  // Check if a URL is valid and not pointing to example.com or other placeholders
+  const isValidUrl = (url?: string): boolean => {
+    if (!url) return false;
+    
+    try {
+      new URL(url);
+      const lowercaseUrl = url.toLowerCase();
+      return (
+        !lowercaseUrl.includes('example.com') && 
+        !lowercaseUrl.includes('placeholder') && 
+        !lowercaseUrl.includes('localhost')
+      );
+    } catch (e) {
+      return false;
+    }
+  };
 
   return (
     <MainLayout>
@@ -79,7 +97,8 @@ const Workshops = () => {
                       year: 'numeric'
                     }),
                     location: w.location,
-                    spots: w.spots
+                    spots: w.spots,
+                    isUrlValid: isValidUrl(w.registrationLink)
                   }))} 
                   showAllWorkshops={true}
                 />
@@ -113,6 +132,12 @@ const Workshops = () => {
                           </p>
                           {workshop.description && (
                             <p className="mt-2 text-gray-700">{workshop.description}</p>
+                          )}
+                          {!isValidUrl(workshop.registrationLink) && workshop.registrationLink && (
+                            <div className="mt-2 mb-1 py-1.5 px-2 bg-emerge-gold/10 inline-flex items-center text-sm rounded">
+                              <AlertTriangle size={14} className="text-emerge-gold mr-1.5 flex-shrink-0" />
+                              <span className="text-gray-700">Workshop materials coming soon</span>
+                            </div>
                           )}
                         </div>
                         <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded">

@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, AlertTriangle } from "lucide-react";
 
 interface CourseCardProps {
   id: string | number;
@@ -10,9 +10,28 @@ interface CourseCardProps {
   image: string;
   duration?: string;
   levelName: string;
+  sourceUrl?: string;
+  isUrlValid?: boolean;
 }
 
-const CourseCard = ({ id, name, level, description, image, duration, levelName }: CourseCardProps) => {
+const CourseCard = ({ 
+  id, 
+  name, 
+  level, 
+  description, 
+  image, 
+  duration, 
+  levelName,
+  sourceUrl,
+  isUrlValid 
+}: CourseCardProps) => {
+  
+  // Check if image URL is valid, if not, use a placeholder
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop";
+  };
+  
   return (
     <Link 
       to={`/education/course/${id}`} 
@@ -23,6 +42,7 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName }
           src={image} 
           alt={name} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={handleImageError}
         />
       </div>
       <div className="p-4 flex flex-col flex-grow">
@@ -38,6 +58,14 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName }
         <p className="text-gray-600 text-sm flex-grow">
           {description}
         </p>
+        
+        {isUrlValid === false && (
+          <div className="mt-2 mb-3 py-2 px-3 bg-emerge-gold/10 text-sm flex items-center rounded">
+            <AlertTriangle size={14} className="text-emerge-gold mr-2 flex-shrink-0" />
+            <span className="text-gray-700">Course Coming Soon</span>
+          </div>
+        )}
+        
         <div className="mt-4">
           <span className="text-emerge-gold group-hover:underline flex items-center">
             Learn More <ChevronRight size={16} className="ml-1" />
