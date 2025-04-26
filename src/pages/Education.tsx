@@ -106,6 +106,13 @@ const Education = () => {
     spots: workshop.spots || 0
   }));
 
+  const getLevelName = (course: Course) => {
+    if (typeof course.level === 'string') {
+      return course.level.toUpperCase();
+    }
+    return '';
+  };
+
   return (
     <MainLayout>
       <section className="bg-emerge-darkBg text-white py-16">
@@ -343,12 +350,13 @@ const Education = () => {
                   key={course.id}
                   id={course.id}
                   name={course.title}
-                  level={course.category_id}
-                  description={course.summary || ""}
-                  image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
-                  duration={course.duration || (course.content_type === "course" ? "10-12 weeks" : "1-2 days")}
-                  levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id.toUpperCase()}
+                  level={course.level}
+                  description={course.summary}
+                  image={course.image_url}
+                  duration={course.duration}
+                  levelName={getLevelName(course)}
                   isPlaceholder={course.is_placeholder}
+                  videoUrl={course.video_embed_url}
                 />
               ))}
             </div>

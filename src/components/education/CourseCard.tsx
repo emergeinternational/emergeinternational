@@ -1,6 +1,7 @@
 
 import { Link } from "react-router-dom";
-import { ChevronRight, Clock } from "lucide-react";
+import { ChevronRight, Clock, Play, Video } from "lucide-react";
+import { useState } from "react";
 
 interface CourseCardProps {
   id: string | number;
@@ -11,21 +12,41 @@ interface CourseCardProps {
   duration?: string;
   levelName: string;
   isPlaceholder?: boolean;
+  videoUrl?: string;
 }
 
-const CourseCard = ({ id, name, level, description, image, duration, levelName, isPlaceholder = false }: CourseCardProps) => {
+const CourseCard = ({ 
+  id, 
+  name, 
+  level, 
+  description, 
+  image, 
+  duration, 
+  levelName, 
+  isPlaceholder = false,
+  videoUrl 
+}: CourseCardProps) => {
+  const [showVideo, setShowVideo] = useState(false);
+  
   // Ensure we always have valid values for rendering
   const courseName = name || "New Course Coming Soon";
   const courseDesc = description || "We're preparing new educational content in this category. Check back soon for updates.";
-  const courseImage = image || "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop";
+  const courseImage = image || "/images/placeholder-course.jpg";
   const courseDuration = duration || "Coming soon";
   const courseLevelName = levelName || level.toUpperCase();
+  const courseVideoUrl = videoUrl || "";
+  
+  const toggleVideo = (e: React.MouseEvent) => {
+    if (isPlaceholder || !courseVideoUrl) return;
+    e.preventDefault();
+    setShowVideo(!showVideo);
+  };
   
   // Placeholder content rendering
   if (isPlaceholder) {
     return (
       <div className="bg-white group shadow-sm flex flex-col">
-        <div className="aspect-video overflow-hidden bg-emerge-cream">
+        <div className="aspect-video overflow-hidden bg-emerge-cream relative">
           <img 
             src={courseImage}
             alt="Placeholder course" 
@@ -33,9 +54,14 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName, 
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
-              target.src = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop";
+              target.src = "/images/placeholder-course.jpg";
             }}
           />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="rounded-full bg-emerge-gold/50 p-3">
+              <Video className="text-white" size={24} />
+            </div>
+          </div>
         </div>
         <div className="p-4 flex flex-col flex-grow">
           <div className="flex justify-between items-center mb-2">
@@ -66,18 +92,39 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName, 
       to={`/education/course/${id}`} 
       className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
     >
-      <div className="aspect-video overflow-hidden">
-        <img 
-          src={courseImage}
-          alt={courseName} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            // Fallback image if the original fails to load
-            const target = e.target as HTMLImageElement;
-            target.onerror = null; // Prevents infinite loop
-            target.src = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop";
-          }}
-        />
+      <div className="aspect-video overflow-hidden relative">
+        {showVideo && courseVideoUrl ? (
+          <iframe 
+            src={courseVideoUrl}
+            title={courseName}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <>
+            <img 
+              src={courseImage}
+              alt={courseName} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.onerror = null;
+                target.src = "/images/placeholder-course.jpg";
+              }}
+            />
+            {courseVideoUrl && (
+              <button 
+                onClick={toggleVideo}
+                className="absolute inset-0 flex items-center justify-center group-hover:bg-black/20 transition-colors"
+              >
+                <div className="bg-emerge-gold rounded-full p-3 transform transition-transform group-hover:scale-110">
+                  <Play className="text-white" size={20} />
+                </div>
+              </button>
+            )}
+          </>
+        )}
       </div>
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex justify-between items-center mb-2">
