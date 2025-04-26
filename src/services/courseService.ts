@@ -15,7 +15,7 @@ export interface Course {
   levelName?: string;
   duration: string;
   content?: string;
-  source_url?: string;
+  source_url: string;
   career_interests?: string[];
   is_placeholder?: boolean;
   is_link_valid?: boolean;
@@ -87,7 +87,7 @@ export const getCourses = async (
         created_at: item.created_at,
         updated_at: item.updated_at,
         duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-        source_url: isLinkValid ? item.source_url : undefined,
+        source_url: isLinkValid ? item.source_url : '',
         career_interests: getCourseCareerInterests(item.title, item.category_id),
         is_link_valid: isLinkValid,
         is_placeholder: !isLinkValid,
@@ -107,7 +107,8 @@ export const getCourses = async (
           is_placeholder: true,
           title: "New Course Coming Soon",
           summary: "We're preparing new educational content in this category. Check back soon for updates.",
-          is_link_valid: false
+          is_link_valid: false,
+          source_url: '' // Ensure source_url is never undefined
         };
       }
       return course;
@@ -158,6 +159,7 @@ const createPlaceholderCourse = (careerInterest?: string): Course => {
     duration: "Coming soon",
     is_placeholder: true,
     is_link_valid: false,
+    source_url: '', // Empty string instead of undefined
     career_interests: careerInterest ? [careerInterest] : ["designer", "model"],
     last_validation: new Date().toISOString()
   };
@@ -225,7 +227,7 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1531913764164-f85c52d7e6a9?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1531913764028-8e7e53415bb0?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1503342394128-c104d54dba01?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1558591710-d09badcd78c1?w=800&auto=format&fit=crop'
   ];
@@ -348,10 +350,8 @@ const getUniqueImageForCourse = (
     }
   }
   
-  // If all possible images are used, create a unique URL with a timestamp and random ID
-  // This ensures we never duplicate images even as a last resort
-  const randomId = Math.floor(Math.random() * 1000000);
-  return `https://images.unsplash.com/photo-${randomId}-${Date.now()}?w=800&auto=format&fit=crop`;
+  // Return the fallback if all else fails
+  return 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop';
 };
 
 // Get mock career interests for courses with expanded options
@@ -480,7 +480,7 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
             created_at: data.created_at,
             updated_at: data.updated_at,
             duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-            source_url: undefined,
+            source_url: '',
             is_placeholder: true,
             is_link_valid: false,
             career_interests: getCourseCareerInterests(data.title, data.category_id),
@@ -511,7 +511,7 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
           title: "New Course Coming Soon",
           summary: "We're preparing new educational content in this category. Check back soon for updates.",
           image_url: getUniqueImageForCourse("placeholder", course.category_id, new Set()),
-          source_url: undefined,
+          source_url: '',
           is_placeholder: true,
           is_link_valid: false
         };
@@ -559,7 +559,7 @@ const mapCourseData = (data: any): Course => {
     created_at: data.created_at,
     updated_at: data.updated_at,
     duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    source_url: data.source_url,
+    source_url: data.source_url || '',
     is_link_valid: isValidUrl(data.source_url),
     is_placeholder: false,
     career_interests: getCourseCareerInterests(data.title, data.category_id),
