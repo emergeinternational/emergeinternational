@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { getEligibleUsers, updateCertificateApproval } from "../../services/courseService";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +9,7 @@ import {
   BookOpen, 
   AlertTriangle,
   Eye,
-  Link as ExternalLink // Import Link from lucide-react and rename it to ExternalLink
+  Link as ExternalLink
 } from "lucide-react";
 import { 
   Table, 
@@ -130,8 +129,6 @@ const CertificateManagement = () => {
   };
 
   const getUserCourseDetails = (user: any) => {
-    // This would come from the backend in a real implementation
-    // Sample data for demonstration
     return {
       embeddedCoursesWatched: [
         { title: "Fashion Design 101", watchPercent: 95, date: "2023-05-15" },

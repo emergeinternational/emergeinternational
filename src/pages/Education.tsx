@@ -10,7 +10,12 @@ import {
   EducationCategory
 } from "../services/educationService";
 import { getWorkshops, Workshop } from "../services/workshopService";
-import { getCourses, Course, getStaticCourses } from "../services/courseService";
+import { 
+  getAllCourses, 
+  getCourses,
+  getStaticCourses,
+  Course 
+} from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -65,7 +70,7 @@ const Education = () => {
         let staticCourses = getStaticCourses();
         
         if (activeLevel !== "all") {
-          staticCourses = staticCourses.filter(course => course.category_id === activeLevel);
+          staticCourses = staticCourses.filter(course => course.category === activeLevel);
         }
         
         if (activeCareerInterest !== "all") {
@@ -256,13 +261,13 @@ const Education = () => {
                   key={course.id}
                   id={course.id}
                   name={course.title}
-                  level={course.category_id}
+                  level={course.category || course.category_id || ''}
                   description={course.summary || ""}
-                  image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
+                  image={course.image_url || course.image || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
                   duration={course.duration || (course.content_type === "course" ? "10-12 weeks" : "1-2 days")}
-                  levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id.toUpperCase()}
-                  sourceUrl={course.source_url}
-                  isUrlValid={isValidUrl(course.source_url)}
+                  levelName={levels.find(l => l.id === (course.category || course.category_id))?.name || (course.category || course.category_id || '').toUpperCase()}
+                  sourceUrl={course.source_url || course.link}
+                  isUrlValid={isValidUrl(course.source_url || course.link)}
                 />
               ))}
             </div>

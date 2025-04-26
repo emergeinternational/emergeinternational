@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
@@ -151,17 +150,17 @@ const CourseDetail = () => {
           <div className="max-w-4xl">
             <div className="flex items-center mb-3">
               <Badge className="bg-emerge-gold text-white border-0">
-                {getLevelName(course.category_id)}
+                {getLevelName(course?.category_id || course?.category || '')}
               </Badge>
-              {course.duration && (
+              {course?.duration && (
                 <div className="flex items-center ml-3 text-sm text-gray-300">
                   <Clock size={14} className="mr-1" />
                   {course.duration}
                 </div>
               )}
             </div>
-            <h1 className="emerge-heading text-4xl mb-4">{course.title}</h1>
-            {course.summary && (
+            <h1 className="emerge-heading text-4xl mb-4">{course?.title}</h1>
+            {course?.summary && (
               <p className="text-lg mb-6 text-gray-200">
                 {course.summary}
               </p>

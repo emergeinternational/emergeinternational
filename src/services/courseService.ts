@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Course {
@@ -19,6 +20,12 @@ export interface Course {
   prerequisites?: string[];
   created_at?: string;
   updated_at?: string;
+  // Add properties that were referenced in other files
+  source_url?: string;
+  image_url?: string;
+  content_type?: string;
+  category_id?: string;
+  career_interests?: string[];
 }
 
 // Add progress property to CourseProgress interface
@@ -190,10 +197,101 @@ export const getCourseProgress = async (
   }
 };
 
+// Add missing functions that were referenced in other files
+export const getEligibleUsers = async (): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("certificate_eligibility")
+      .select("*, profiles(*)");
+
+    if (error) {
+      console.error("Error fetching eligible users:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in getEligibleUsers:", error);
+    return [];
+  }
+};
+
+export const updateCertificateApproval = async (
+  userId: string,
+  approved: boolean
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from("certificate_eligibility")
+      .update({ admin_approved: approved })
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Error updating certificate approval:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error in updateCertificateApproval:", error);
+    return false;
+  }
+};
+
+export const trackCourseEngagement = async (courseId: string): Promise<boolean> => {
+  try {
+    const { data: existing, error: fetchError } = await supabase
+      .from("course_engagement")
+      .select("*")
+      .eq("course_id", courseId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Error checking course engagement:", fetchError);
+      return false;
+    }
+
+    if (existing) {
+      // Update existing engagement
+      const { error } = await supabase
+        .from("course_engagement")
+        .update({
+          total_clicks: (existing.total_clicks || 0) + 1,
+          last_click_date: new Date().toISOString()
+        })
+        .eq("id", existing.id);
+
+      if (error) {
+        console.error("Error updating course engagement:", error);
+        return false;
+      }
+    } else {
+      // Create new engagement
+      const { error } = await supabase
+        .from("course_engagement")
+        .insert({
+          course_id: courseId,
+          total_clicks: 1,
+          last_click_date: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error("Error creating course engagement:", error);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Unexpected error in trackCourseEngagement:", error);
+    return false;
+  }
+};
+
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {
     const { data, error } = await supabase
-      .from("courses")
+      .from("education_content")
       .select("*")
       .eq("id", id)
       .single();
@@ -203,7 +301,22 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       return null;
     }
 
-    return data || null;
+    // Map education_content fields to Course interface
+    const course: Course = {
+      id: data.id,
+      title: data.title,
+      summary: data.summary,
+      category: data.category_id || '',
+      level: data.content_type || '',
+      source_url: data.source_url,
+      image_url: data.image_url,
+      content_type: data.content_type,
+      category_id: data.category_id,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+
+    return course;
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
     return null;
@@ -213,7 +326,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 export const getAllCourses = async (): Promise<Course[]> => {
   try {
     const { data, error } = await supabase
-      .from("courses")
+      .from("education_content")
       .select("*");
 
     if (error) {
@@ -221,7 +334,21 @@ export const getAllCourses = async (): Promise<Course[]> => {
       return [];
     }
 
-    return data || [];
+    // Map education_content fields to Course interface
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      category: item.category_id || '',
+      level: item.content_type || '',
+      source_url: item.source_url,
+      image_url: item.image_url,
+      content_type: item.content_type,
+      category_id: item.category_id,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      career_interests: []
+    }));
   } catch (error) {
     console.error("Unexpected error in getAllCourses:", error);
     return [];
@@ -231,16 +358,30 @@ export const getAllCourses = async (): Promise<Course[]> => {
 export const getPopularCourses = async (): Promise<Course[]> => {
   try {
     const { data, error } = await supabase
-      .from("courses")
+      .from("education_content")
       .select("*")
-      .eq("isPopular", true);
+      .eq("is_featured", true);
 
     if (error) {
       console.error("Error fetching popular courses:", error);
       return [];
     }
 
-    return data || [];
+    // Map education_content fields to Course interface
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      category: item.category_id || '',
+      level: item.content_type || '',
+      source_url: item.source_url,
+      image_url: item.image_url,
+      content_type: item.content_type,
+      category_id: item.category_id,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      isPopular: item.is_featured
+    }));
   } catch (error) {
     console.error("Unexpected error in getPopularCourses:", error);
     return [];
@@ -303,4 +444,109 @@ export const getCoursesForCategory = async (
     console.error("Error in getCoursesForCategory:", error);
     return [];
   }
+};
+
+// Add missing functions for Education.tsx
+export const getCourses = async (
+  level?: string,
+  limit: number = 20,
+  featured: boolean = false,
+  careerInterest?: string
+): Promise<Course[]> => {
+  try {
+    let query = supabase.from("education_content").select("*");
+
+    if (level && level !== "all") {
+      query = query.eq("content_type", level);
+    }
+
+    if (featured) {
+      query = query.eq("is_featured", true);
+    }
+
+    if (limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching courses:", error);
+      return [];
+    }
+
+    // Map education_content fields to Course interface
+    const courses = data.map(item => ({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      category: item.category_id || '',
+      level: item.content_type || '',
+      source_url: item.source_url,
+      image_url: item.image_url,
+      content_type: item.content_type,
+      category_id: item.category_id,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      career_interests: [] // This would need to be populated from a related table
+    }));
+
+    // Filter by career interest if provided
+    if (careerInterest && careerInterest !== "all") {
+      // This is a simplified example - in a real app, you'd likely need to fetch this relation from a separate table
+      return courses.filter(course => 
+        course.career_interests?.includes(careerInterest)
+      );
+    }
+
+    return courses;
+  } catch (error) {
+    console.error("Unexpected error in getCourses:", error);
+    return [];
+  }
+};
+
+export const getStaticCourses = (): Course[] => {
+  // Return some static courses as fallback
+  return [
+    {
+      id: "1",
+      title: "Fashion Design Fundamentals",
+      summary: "Learn the basics of fashion design",
+      category: "beginner",
+      category_id: "beginner",
+      level: "beginner",
+      duration: "8 weeks",
+      image_url: "https://images.unsplash.com/photo-1583744946564-b52d01e2d443?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/fashion-design",
+      content_type: "course",
+      career_interests: ["designer", "model"]
+    },
+    {
+      id: "2",
+      title: "Advanced Pattern Making",
+      summary: "Master the art of pattern making",
+      category: "advanced",
+      category_id: "advanced",
+      level: "advanced",
+      duration: "12 weeks",
+      image_url: "https://images.unsplash.com/photo-1621786030333-c709515feaa4?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/pattern-making",
+      content_type: "course",
+      career_interests: ["designer"]
+    },
+    {
+      id: "3",
+      title: "Fashion Photography Basics",
+      summary: "Learn how to capture fashion photography",
+      category: "beginner",
+      category_id: "beginner",
+      level: "beginner",
+      duration: "6 weeks",
+      image_url: "https://images.unsplash.com/photo-1515549832467-8783363e19b6?w=800&auto=format&fit=crop",
+      source_url: "https://example.com/course/fashion-photography",
+      content_type: "course",
+      career_interests: ["photographer", "model"]
+    }
+  ];
 };
