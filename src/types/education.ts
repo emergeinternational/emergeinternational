@@ -3,6 +3,7 @@ export type EducationLevel = 'beginner' | 'intermediate' | 'advanced';
 export type CourseSource = 'internal' | 'external' | 'embedded';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 export type CompletionStatus = 'not_started' | 'in_progress' | 'completed';
+export type Language = 'en' | 'am' | 'es';
 
 export interface CourseCategory {
   id: string;
@@ -28,7 +29,7 @@ export interface Course {
   durationMinutes?: number;
   status: CourseStatus;
   featured: boolean;
-  language: string;
+  language: Language;
 }
 
 export interface UserCourseEnrollment {
@@ -40,4 +41,16 @@ export interface UserCourseEnrollment {
   lastPosition?: string;
   startedAt: string;
   completedAt?: string;
+  certificateId?: string;
+}
+
+export interface Certificate {
+  id: string;
+  userId: string;
+  courseId?: string;
+  categoryId?: string;
+  issueDate: string;
+  type: 'course' | 'category';
+  title: string;
+  downloadUrl?: string;
 }

@@ -65,9 +65,33 @@ serve(async (req) => {
       }
     }
     
-    // Track course engagement
+    // Track course engagement and refresh content
     if (operation === 'all' || operation === 'track-engagement') {
       try {
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        // Refresh course offerings if no new enrollments in 2 weeks
+        const { data: coursesToRefresh, error: refreshError } = await supabaseAdmin
+          .rpc('get_courses_without_recent_enrollments', { 
+            cutoff_date: twoWeeksAgo.toISOString() 
+          });
+        
+        if (refreshError) throw refreshError;
+        
+        if (coursesToRefresh && coursesToRefresh.length > 0) {
+          for (const courseId of coursesToRefresh) {
+            // Add logic to refresh course content here
+            const { error: updateError } = await supabaseAdmin
+              .from('education_content')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', courseId);
+              
+            if (updateError) console.error(`Error refreshing course ${courseId}:`, updateError);
+          }
+        }
+        
+        // Update engagement statistics
         const { data: engagementData, error: engagementError } = await supabaseAdmin
           .from('course_engagement')
           .select('*');
@@ -92,11 +116,120 @@ serve(async (req) => {
           success: true,
           count: engagementData?.length || 0,
         };
-
+        
         console.log(`Successfully updated engagement for ${engagementData?.length || 0} courses`);
       } catch (error) {
         console.error("Error updating course engagement:", error);
         results.operations.engagement = {
+          success: false,
+          error: error.message,
+        };
+      }
+    }
+    
+    // Generate certificates for completed courses
+    if (operation === 'all' || operation === 'generate-certificates') {
+      try {
+        // Find users who have completed courses but don't have certificates yet
+        const { data: completedCourses, error: certificateError } = await supabaseAdmin
+          .from('user_course_progress')
+          .select('id, user_id, course_id')
+          .eq('status', 'completed')
+          .is('certificate_issued', null);
+          
+        if (certificateError) throw certificateError;
+        
+        if (completedCourses && completedCourses.length > 0) {
+          for (const course of completedCourses) {
+            // Generate certificate
+            const certificateId = crypto.randomUUID();
+            const issueDate = new Date().toISOString();
+            
+            const { error: insertError } = await supabaseAdmin
+              .from('user_certificates')
+              .insert({
+                id: certificateId,
+                user_id: course.user_id,
+                course_id: course.course_id,
+                issue_date: issueDate,
+                certificate_type: 'course'
+              });
+              
+            if (insertError) {
+              console.error(`Error generating certificate for course ${course.id}:`, insertError);
+              continue;
+            }
+            
+            // Update the course progress to mark certificate as issued
+            const { error: updateError } = await supabaseAdmin
+              .from('user_course_progress')
+              .update({ certificate_issued: true, certificate_id: certificateId })
+              .eq('id', course.id);
+              
+            if (updateError) {
+              console.error(`Error updating course progress ${course.id}:`, updateError);
+              continue;
+            }
+          }
+          
+          results.operations.certificates = {
+            success: true,
+            count: completedCourses.length,
+          };
+          
+          console.log(`Successfully generated ${completedCourses.length} course certificates`);
+        } else {
+          results.operations.certificates = {
+            success: true,
+            count: 0,
+            message: "No new certificates to generate"
+          };
+        }
+        
+        // Check for category certificates (all courses in a category completed)
+        const { data: usersForCategoryCerts, error: categoryError } = await supabaseAdmin
+          .rpc('get_users_eligible_for_category_certificates');
+          
+        if (categoryError) throw categoryError;
+        
+        if (usersForCategoryCerts && usersForCategoryCerts.length > 0) {
+          for (const item of usersForCategoryCerts) {
+            // Generate category certificate
+            const certificateId = crypto.randomUUID();
+            const issueDate = new Date().toISOString();
+            
+            const { error: insertError } = await supabaseAdmin
+              .from('user_certificates')
+              .insert({
+                id: certificateId,
+                user_id: item.user_id,
+                category_id: item.category_id,
+                issue_date: issueDate,
+                certificate_type: 'category'
+              });
+              
+            if (insertError) {
+              console.error(`Error generating category certificate for user ${item.user_id}:`, insertError);
+              continue;
+            }
+          }
+          
+          results.operations.categoryCertificates = {
+            success: true,
+            count: usersForCategoryCerts.length,
+          };
+          
+          console.log(`Successfully generated ${usersForCategoryCerts.length} category certificates`);
+        } else {
+          results.operations.categoryCertificates = {
+            success: true,
+            count: 0,
+            message: "No new category certificates to generate"
+          };
+        }
+      } catch (error) {
+        console.error("Error generating certificates:", error);
+        results.operations.certificates = {
           success: false,
           error: error.message,
         };
@@ -152,4 +285,3 @@ serve(async (req) => {
     );
   }
 });
-
