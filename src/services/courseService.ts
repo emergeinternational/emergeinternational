@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -31,7 +30,7 @@ export interface CourseProgress {
   course_category?: string;
   created_at: string;
   updated_at: string;
-  progress?: number;
+  progress: number;
 }
 
 export interface CertificateEligibility {
@@ -338,7 +337,15 @@ export const updateCourseProgress = async (
       .maybeSingle();
     
     if (retrieveOnly) {
-      return existingData || false;
+      // Ensure we return an object with progress property if it exists
+      if (existingData) {
+        return {
+          ...existingData,
+          // If progress doesn't exist in the database, default to 0
+          progress: existingData.progress || 0
+        } as CourseProgress;
+      }
+      return false;
     }
     
     const updateData = {
@@ -350,7 +357,7 @@ export const updateCourseProgress = async (
     
     if (existingData) {
       // Only update if the new progress is higher than existing
-      if (!progress || existingData.progress < progress) {
+      if (!progress || (existingData.progress || 0) < progress) {
         const { error, data } = await supabase
           .from('user_course_progress')
           .update(updateData)
@@ -365,10 +372,16 @@ export const updateCourseProgress = async (
           await checkCertificateEligibility(userId);
         }
         
-        return data;
+        return {
+          ...data,
+          progress: data.progress || 0
+        } as CourseProgress;
       }
       
-      return existingData;
+      return {
+        ...existingData,
+        progress: existingData.progress || 0
+      } as CourseProgress;
     } else {
       const { error, data } = await supabase
         .from('user_course_progress')
@@ -389,7 +402,10 @@ export const updateCourseProgress = async (
         await checkCertificateEligibility(userId);
       }
       
-      return data;
+      return {
+        ...data,
+        progress: data.progress || 0
+      } as CourseProgress;
     }
   } catch (error) {
     console.error("Error updating course progress:", error);

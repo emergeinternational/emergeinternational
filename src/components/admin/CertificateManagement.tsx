@@ -9,7 +9,8 @@ import {
   Award, 
   BookOpen, 
   AlertTriangle,
-  Eye
+  Eye,
+  Link as ExternalLink // Import Link from lucide-react and rename it to ExternalLink
 } from "lucide-react";
 import { 
   Table, 

@@ -75,7 +75,8 @@ const CourseDetail = () => {
               true // just retrieve, don't update
             );
             
-            if (progressData && progressData.progress) {
+            // Fix: Properly handle the case where progressData could be a boolean or object
+            if (progressData && typeof progressData === 'object' && 'progress' in progressData) {
               setProgress(progressData.progress);
             }
             
