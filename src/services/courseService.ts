@@ -39,7 +39,7 @@ export interface CourseProgress {
   date_completed: string;
   created_at: string;
   updated_at: string;
-  progress: number; // Add the missing progress property
+  progress: number; // This is the property we need to ensure exists
 }
 
 export interface Category {
@@ -86,9 +86,9 @@ export const getUserCourseProgress = async (userId?: string): Promise<CourseProg
     }
 
     // Map the data to include progress property if it doesn't exist
-    return data.map((item): CourseProgress => ({
+    return data.map((item: any): CourseProgress => ({
       ...item,
-      progress: item.progress || 0 // Ensure progress property exists
+      progress: item.progress !== undefined ? item.progress : 0 // Ensure progress property exists
     }));
   } catch (error) {
     console.error("Unexpected error in getUserCourseProgress:", error);
@@ -133,8 +133,8 @@ export const updateCourseProgress = async (
 
       return {
         ...data,
-        progress: data.progress || progressValue // Ensure progress exists
-      };
+        progress: data.progress !== undefined ? data.progress : progressValue // Ensure progress exists
+      } as CourseProgress;
     } else {
       // Create new progress
       const { data, error } = await supabase
@@ -157,8 +157,8 @@ export const updateCourseProgress = async (
 
       return {
         ...data,
-        progress: data.progress || progressValue // Ensure progress exists
-      };
+        progress: data.progress !== undefined ? data.progress : progressValue // Ensure progress exists
+      } as CourseProgress;
     }
   } catch (error) {
     console.error("Unexpected error in updateCourseProgress:", error);
@@ -189,8 +189,8 @@ export const getCourseProgress = async (
 
     return {
       ...data,
-      progress: data.progress || 0 // Ensure progress exists
-    };
+      progress: data.progress !== undefined ? data.progress : 0 // Ensure progress exists
+    } as CourseProgress;
   } catch (error) {
     console.error("Unexpected error in getCourseProgress:", error);
     return null;
@@ -406,7 +406,7 @@ export const getCoursesWithProgress = async (
         ...course,
         userProgress: progress ? {
           ...progress,
-          progress: progress.progress || 0 // Ensure progress property exists
+          progress: progress.progress !== undefined ? progress.progress : 0 // Ensure progress property exists
         } : null
       };
     });
@@ -436,7 +436,7 @@ export const getCoursesForCategory = async (
         ...course,
         userProgress: progress ? {
           ...progress,
-          progress: progress.progress || 0 // Ensure progress property exists
+          progress: progress.progress !== undefined ? progress.progress : 0 // Ensure progress property exists
         } : null
       };
     });
@@ -446,7 +446,7 @@ export const getCoursesForCategory = async (
   }
 };
 
-// Add missing functions for Education.tsx
+// Add getCourses function needed for Education.tsx
 export const getCourses = async (
   level?: string,
   limit: number = 20,

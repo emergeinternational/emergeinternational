@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { getCourseById, trackCourseEngagement, CourseProgress } from "../services/courseService";
+import { getCourseById, getCourseProgress, trackCourseEngagement, CourseProgress } from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,12 @@ const CourseDetail = () => {
           // Track engagement when course is viewed
           if (user?.id) {
             await trackCourseEngagement(courseData.id);
+            
+            // Get user progress for this course
+            const progressData = await getCourseProgress(courseData.id, user.id);
+            if (progressData && progressData.progress !== undefined) {
+              setProgress(progressData.progress);
+            }
           }
 
           // Check if URL exists if source_url is provided
@@ -82,6 +88,17 @@ const CourseDetail = () => {
     fetchCourseDetails();
   }, [courseId, toast, user]);
 
+  const getLevelName = (level: string) => {
+    const levels: {[key: string]: string} = {
+      "beginner": "BEGINNER",
+      "intermediate": "INTERMEDIATE",
+      "advanced": "ADVANCED",
+      "workshop": "WORKSHOP"
+    };
+    
+    return levels[level] || level.toUpperCase();
+  };
+
   const handleExternalLinkClick = async () => {
     if (!course || !course.source_url) return;
     
@@ -96,17 +113,6 @@ const CourseDetail = () => {
     } catch (error) {
       console.error("Error tracking course engagement:", error);
     }
-  };
-
-  const getLevelName = (level: string) => {
-    const levels: {[key: string]: string} = {
-      "beginner": "BEGINNER",
-      "intermediate": "INTERMEDIATE",
-      "advanced": "ADVANCED",
-      "workshop": "WORKSHOP"
-    };
-    
-    return levels[level] || level.toUpperCase();
   };
 
   if (isLoading) {
