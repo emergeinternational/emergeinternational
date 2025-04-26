@@ -98,7 +98,7 @@ const Workshops = () => {
                     }),
                     location: w.location,
                     spots: w.spots,
-                    isUrlValid: isValidUrl(w.registrationLink)
+                    isUrlValid: isValidUrl(w.registration_link)
                   }))} 
                   showAllWorkshops={true}
                 />
@@ -133,7 +133,7 @@ const Workshops = () => {
                           {workshop.description && (
                             <p className="mt-2 text-gray-700">{workshop.description}</p>
                           )}
-                          {!isValidUrl(workshop.registrationLink) && workshop.registrationLink && (
+                          {!isValidUrl(workshop.registration_link) && workshop.registration_link && (
                             <div className="mt-2 mb-1 py-1.5 px-2 bg-emerge-gold/10 inline-flex items-center text-sm rounded">
                               <AlertTriangle size={14} className="text-emerge-gold mr-1.5 flex-shrink-0" />
                               <span className="text-gray-700">Workshop materials coming soon</span>

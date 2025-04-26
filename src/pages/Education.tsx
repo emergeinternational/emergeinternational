@@ -125,7 +125,7 @@ const Education = () => {
     }),
     location: workshop.location,
     spots: workshop.spots || 0,
-    isUrlValid: isValidUrl(workshop.registrationLink)
+    isUrlValid: isValidUrl(workshop.registration_link)
   }));
 
   return (

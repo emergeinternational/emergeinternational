@@ -19,7 +19,7 @@ const CourseDetail = () => {
   const [progress, setProgress] = useState<number>(0);
   const [urlExists, setUrlExists] = useState<boolean | null>(null);
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -33,7 +33,7 @@ const CourseDetail = () => {
           setCourse(courseData);
           
           // Track engagement when course is viewed
-          if (isAuthenticated && user?.id) {
+          if (user?.id) {
             await trackCourseEngagement(courseData.id);
           }
 
@@ -81,14 +81,14 @@ const CourseDetail = () => {
     };
 
     fetchCourseDetails();
-  }, [courseId, toast, isAuthenticated, user]);
+  }, [courseId, toast, user]);
 
   const handleExternalLinkClick = async () => {
     if (!course || !course.source_url) return;
     
     // Track clicks to external course URLs
     try {
-      if (isAuthenticated && user?.id) {
+      if (user?.id) {
         await trackCourseEngagement(course.id);
       }
       
@@ -293,7 +293,7 @@ const CourseDetail = () => {
               </div>
             </Card>
             
-            {isAuthenticated && user && progress > 0 && (
+            {user && progress > 0 && (
               <Card className="p-6 mb-6">
                 <h3 className="text-lg font-medium mb-4">Your Progress</h3>
                 <Progress value={progress} className="h-2 mb-2" />

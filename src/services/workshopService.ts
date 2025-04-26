@@ -9,7 +9,7 @@ export interface Workshop {
   description?: string;
   spots?: number;
   is_archived: boolean;
-  registration_link?: string;
+  registration_link?: string;  // This is the correct property name from the database
   created_at: string;
   updated_at: string;
 }

@@ -1,4 +1,3 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,31 +30,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      // Fetch the user's role from the user_roles table (new approach)
       const { data: userRoleData, error: userRoleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle to not throw an error if no role is found
+        .maybeSingle();
       
       if (userRoleError) {
         console.error('Error fetching user role from user_roles table:', userRoleError);
-        // Fall back to profiles table if user_roles query fails
         fallbackToProfilesTable(userId);
         return;
       }
       
       if (userRoleData) {
-        // User has a role in the new user_roles table
         console.log('Role found in user_roles table:', userRoleData.role);
         setUserRole(userRoleData.role as UserRole);
         return;
       }
       
-      // If we get here, the user doesn't have a role in the user_roles table yet
-      // Fall back to the profiles table
       fallbackToProfilesTable(userId);
-      
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       setUserRole('user' as UserRole);
@@ -64,7 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const fallbackToProfilesTable = async (userId: string) => {
     try {
-      // Try to fetch from profiles table as fallback
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -77,7 +69,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      // Set role from profiles table
       console.log('Role found in profiles table:', data.role);
       setUserRole((data?.role as UserRole) ?? 'user' as UserRole);
     } catch (error) {
@@ -86,7 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Function to check if user has the required role(s)
   const hasRole = (requiredRole: UserRole | UserRole[]): boolean => {
     if (!user || !userRole) return false;
 
@@ -106,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Use setTimeout(0) to avoid deadlocks with Supabase's auth state
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);
