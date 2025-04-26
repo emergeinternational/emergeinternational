@@ -1,4 +1,3 @@
-
 import { Calendar, CalendarDays, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,22 +43,28 @@ const Events = () => {
         
         const { data, error } = await supabase
           .from('events')
-          .select('*')
-          .order('date', { ascending: true })
-          .gte('date', new Date().toISOString());
+          .select('*');
         
         if (error) {
           throw error;
         }
         
-        const eventsWithTickets: Event[] = (data || []).map(event => ({
+        console.log("Raw events data:", data);
+        
+        if (!data || data.length === 0) {
+          console.log("No events found in the database");
+          setEvents([]);
+          return;
+        }
+        
+        const eventsWithTickets: Event[] = data.map(event => ({
           ...event,
           icon: getEventIcon(event.name),
           tickets: generateTicketsForEvent(event)
         }));
         
+        console.log("Processed events:", eventsWithTickets);
         setEvents(eventsWithTickets);
-        console.log("Fetched events:", eventsWithTickets);
       } catch (error) {
         console.error("Error fetching events:", error);
         toast({
@@ -278,7 +283,7 @@ const Events = () => {
                   onValueChange={(value) => handleTicketSelect(selectedEvent.id, value)}
                   className="gap-3"
                 >
-                  {selectedEvent.tickets.map((ticket) => (
+                  {selectedEvent.tickets?.map((ticket) => (
                     <div key={ticket.type} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50">
                       <RadioGroupItem value={ticket.type} id={`${selectedEvent.id}-${ticket.type}`} />
                       <div className="flex-1">
