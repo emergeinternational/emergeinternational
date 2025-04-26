@@ -1,6 +1,7 @@
 
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import { usePageTitle } from "../utils/usePageTitle";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,8 @@ interface MainLayoutProps {
 }
 
 const MainLayout = ({ children, variant = "light", hideFooter = false }: MainLayoutProps) => {
+  usePageTitle(); // Add the hook here
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation variant={variant} />

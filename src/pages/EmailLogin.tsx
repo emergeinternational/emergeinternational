@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "../components/Logo";
@@ -8,8 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { OTPVerification } from "@/components/auth/OTPVerification";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
 import { LoginSignupForm } from "@/components/auth/LoginSignupForm";
+import { usePageTitle } from "../utils/usePageTitle";
 
 const EmailLogin = () => {
+  usePageTitle();
   const [email, setEmail] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,14 +23,12 @@ const EmailLogin = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if this is a recovery link by examining URL parameters
     const searchParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
     
     console.log("URL search params:", searchParams.toString());
     console.log("URL hash:", hash);
     
-    // Check both hash-based and query parameter methods
     const isRecovery = 
       (hash && hash.includes('type=recovery')) || 
       searchParams.has('type') && searchParams.get('type') === 'recovery';

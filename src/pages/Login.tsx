@@ -1,10 +1,11 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
+import { usePageTitle } from "../utils/usePageTitle";
 
 const Login = () => {
+  usePageTitle();
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("English");
