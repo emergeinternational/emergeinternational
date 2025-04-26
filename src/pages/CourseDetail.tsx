@@ -5,8 +5,13 @@ import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award, AlertTriangle } from "lucide-react";
-import { getCourseById, updateCourseProgress, getCertificateEligibility } from "../services/courseService";
+import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award, AlertTriangle, Timer } from "lucide-react";
+import { 
+  getCourseById, 
+  updateCourseProgress, 
+  getCertificateEligibility, 
+  trackCourseEngagement
+} from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -21,10 +26,13 @@ const CourseDetail = () => {
   const [isExternalCourse, setIsExternalCourse] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [videoWatchTime, setVideoWatchTime] = useState(0);
   const [externalVisited, setExternalVisited] = useState(false);
   const [certificateEligibility, setCertificateEligibility] = useState<any>(null);
   const [certificateApproved, setCertificateApproved] = useState(false);
+  const [courseNotAvailable, setCourseNotAvailable] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
+  const watchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -47,21 +55,38 @@ const CourseDetail = () => {
         
         setCourse(courseData);
         
-        setIsExternalCourse(!!courseData.source_url);
+        // Check if course is external by source_url
+        const hasCourseUrl = !!courseData.source_url;
+        setIsExternalCourse(hasCourseUrl);
+        
+        // Check if course content is available
+        const isAvailable = hasCourseUrl || !!courseData.video_embed_url;
+        setCourseNotAvailable(!isAvailable);
         
         if (user) {
-          // Simulate progress from existing data
-          setProgress(Math.floor(Math.random() * 100));
-          
-          // Check certificate eligibility
+          // Get any existing progress for this course
           try {
+            const progressData = await updateCourseProgress(
+              user.id,
+              courseData.id,
+              "in_progress", 
+              courseData.category_id,
+              undefined,
+              true // just retrieve, don't update
+            );
+            
+            if (progressData && progressData.progress) {
+              setProgress(progressData.progress);
+            }
+            
+            // Check certificate eligibility
             const eligibility = await getCertificateEligibility(user.id);
-            setCertificateEligibility(eligibility);
             if (eligibility) {
+              setCertificateEligibility(eligibility);
               setCertificateApproved(eligibility.admin_approved);
             }
           } catch (error) {
-            console.error("Error fetching certificate eligibility:", error);
+            console.error("Error fetching user progress:", error);
           }
         }
       } catch (error) {
@@ -89,84 +114,127 @@ const CourseDetail = () => {
       navigate("/login", { state: { returnUrl: `/education/course/${id}` } });
       return;
     }
+    
+    if (courseNotAvailable) {
+      toast({
+        title: "Course Not Available",
+        description: "This course will be available shortly. Thank you for your patience.",
+      });
+      return;
+    }
 
     try {
       if (isExternalCourse && course.source_url) {
-        window.open(course.source_url, "_blank");
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
+        // Track engagement with external course
+        await trackCourseEngagement(course.id);
         
-        toast({
-          title: "Course Started",
-          description: "We've opened the course in a new tab. Complete it and return here to mark as finished.",
-        });
+        // Open external course in new tab
+        window.open(course.source_url, "_blank");
+        
+        // Update progress to show user started the course
+        await updateCourseProgress(
+          user.id, 
+          course.id, 
+          "in_progress", 
+          course.category_id, 
+          20
+        );
         
         setProgress(20);
         setExternalVisited(true);
-      } else {
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
-        setProgress(20);
         toast({
           title: "Course Started",
-          description: "Your progress has been saved. Watch the video to completion to mark the course as complete.",
+          description: "We've opened the course in a new tab. Your progress is being tracked.",
         });
+      } else if (course.video_embed_url) {
+        // Update progress to show user started the course
+        await updateCourseProgress(
+          user.id, 
+          course.id, 
+          "in_progress", 
+          course.category_id, 
+          20
+        );
+        
+        setProgress(20);
+        
+        toast({
+          title: "Course Started",
+          description: "Your progress is being tracked. Please watch the entire video to complete the course.",
+        });
+        
+        // Start tracking video watch time
+        if (watchTimerRef.current) {
+          clearInterval(watchTimerRef.current);
+        }
+        
+        watchTimerRef.current = setInterval(() => {
+          setVideoWatchTime(prev => prev + 1);
+        }, 1000);
       }
     } catch (error) {
-      console.error("Error updating course progress:", error);
+      console.error("Error starting course:", error);
       toast({
         title: "Error",
-        description: "Failed to update course progress. Please try again.",
+        description: "Failed to start course. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleVideoEnd = () => {
-    setVideoWatched(true);
-    toast({
-      title: "Video Completed",
-      description: "You can now mark this course as complete.",
-    });
-  };
-
-  const handleCompleteCourse = async () => {
-    if (!user || !course) return;
+  // Handle video events
+  const handleVideoProgress = async () => {
+    if (!user || !course || !videoRef.current) return;
     
     try {
-      if (!isExternalCourse && !videoWatched) {
+      // Track video watch time
+      const videoDuration = 600; // Placeholder - would be determined from video metadata
+      const watchPercentage = Math.min((videoWatchTime / videoDuration) * 100, 100);
+      
+      // Update progress based on watch percentage
+      if (watchPercentage >= 90) {
+        setVideoWatched(true);
+        
+        // Update progress in database
+        await updateCourseProgress(
+          user.id, 
+          course.id, 
+          "in_progress", 
+          course.category_id, 
+          90
+        );
+        
+        setProgress(90);
+        
         toast({
-          title: "Watch the Video",
-          description: "Please watch the complete video before marking the course as complete.",
-          variant: "destructive",
+          title: "Almost Complete",
+          description: "You've watched most of the video. An admin will verify your completion.",
         });
-        return;
+        
+        // Stop the timer
+        if (watchTimerRef.current) {
+          clearInterval(watchTimerRef.current);
+          watchTimerRef.current = null;
+        }
       }
-      
-      await updateCourseProgress(user.id, course.id, "completed", course.category_id);
-      setProgress(100);
-      
-      // Refresh certificate eligibility after completing course
-      const eligibility = await getCertificateEligibility(user.id);
-      setCertificateEligibility(eligibility);
-      if (eligibility) {
-        setCertificateApproved(eligibility.admin_approved);
-      }
-      
-      toast({
-        title: "Course Completed",
-        description: eligibility?.is_eligible 
-          ? "Your completion has been recorded. Check your progress toward earning a certificate."
-          : "Your completion has been recorded.",
-      });
     } catch (error) {
-      console.error("Error completing course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to mark course as completed. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error tracking video progress:", error);
     }
   };
+  
+  // Call handleVideoProgress every 10 seconds
+  useEffect(() => {
+    if (videoWatchTime > 0 && videoWatchTime % 10 === 0) {
+      handleVideoProgress();
+    }
+    
+    return () => {
+      if (watchTimerRef.current) {
+        clearInterval(watchTimerRef.current);
+      }
+    };
+  }, [videoWatchTime]);
 
   if (loading) {
     return (
@@ -210,7 +278,7 @@ const CourseDetail = () => {
             Back to courses
           </button>
           
-          <h1 className="emerge-heading text-4xl mb-4">{course.title}</h1>
+          <h1 className="emerge-heading text-4xl mb-4">{courseNotAvailable ? "Course Coming Soon" : course.title}</h1>
           <div className="flex items-center gap-3 mb-6">
             <span className="bg-emerge-gold text-black px-3 py-1 text-xs uppercase">
               {course.levelName || (course.category_id === "beginner" ? "BEGINNER" : 
@@ -222,7 +290,12 @@ const CourseDetail = () => {
               <span>{course.duration || "Self-paced"}</span>
             </div>
           </div>
-          <p className="text-lg max-w-3xl">{course.summary}</p>
+          <p className="text-lg max-w-3xl">
+            {courseNotAvailable ? 
+              "This course will be available shortly. Thank you for your patience." : 
+              course.summary
+            }
+          </p>
         </div>
       </div>
 
@@ -232,22 +305,31 @@ const CourseDetail = () => {
             <div className="mb-8">
               <h2 className="emerge-heading text-2xl mb-4">Course Overview</h2>
               <div className="prose max-w-none">
-                <p>{course.content || "This comprehensive course covers everything you need to know about fashion design principles, techniques, and industry practices. You'll learn through a combination of video lessons, practical exercises, and real-world examples."}</p>
-                <p className="mt-4">By the end of this course, you'll have developed the skills necessary to create your own fashion designs and understand how they fit into the broader industry context.</p>
+                <p>
+                  {courseNotAvailable ? 
+                    "We're currently preparing this course content to ensure the highest quality learning experience. Please check back soon!" : 
+                    (course.content || "This comprehensive course covers everything you need to know about fashion design principles, techniques, and industry practices. You'll learn through a combination of video lessons, practical exercises, and real-world examples.")
+                  }
+                </p>
+                {!courseNotAvailable && (
+                  <p className="mt-4">By the end of this course, you'll have developed the skills necessary to create your own fashion designs and understand how they fit into the broader industry context.</p>
+                )}
               </div>
             </div>
 
-            <div className="mb-8">
-              <h2 className="emerge-heading text-2xl mb-4">What You'll Learn</h2>
-              <ul className="space-y-2">
-                {getCourseObjectives(course.title, course.category_id).map((objective, index) => (
-                  <li key={index} className="flex items-start">
-                    <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                    <span>{objective}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {!courseNotAvailable && (
+              <div className="mb-8">
+                <h2 className="emerge-heading text-2xl mb-4">What You'll Learn</h2>
+                <ul className="space-y-2">
+                  {getCourseObjectives(course.title, course.category_id).map((objective, index) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
+                      <span>{objective}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             
             {user && certificateEligibility?.is_eligible && certificateApproved && (
               <div className="mb-8">
@@ -278,26 +360,32 @@ const CourseDetail = () => {
                     <h3 className="text-xl font-medium">Certificate Pending Approval</h3>
                   </div>
                   <p className="mb-4">
-                    Congratulations! You've completed the required courses and workshops to earn your certificate.
+                    You've completed the required courses and workshops to earn your certificate.
                     Your certificate is currently under review by our administrators and will be available soon.
                   </p>
                 </div>
               </div>
             )}
 
-            {!isExternalCourse && course?.video_embed_url && (
+            {!courseNotAvailable && !isExternalCourse && course?.video_embed_url && (
               <div className="mb-8">
                 <h2 className="emerge-heading text-2xl mb-4">Course Content</h2>
                 <div className="bg-white p-6 border">
-                  <div className="aspect-video bg-gray-200">
+                  <div className="aspect-video bg-gray-200 relative">
                     <iframe
                       ref={videoRef}
                       src={course.video_embed_url}
                       className="w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
-                      onEnded={handleVideoEnd}
                     />
+                    
+                    {videoWatchTime > 0 && (
+                      <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full flex items-center">
+                        <Timer className="h-4 w-4 mr-1" />
+                        <span>Watched: {Math.floor(videoWatchTime / 60)}:{(videoWatchTime % 60).toString().padStart(2, '0')}</span>
+                      </div>
+                    )}
                   </div>
                   
                   {user && progress > 0 && (
@@ -307,17 +395,13 @@ const CourseDetail = () => {
                         <span>{progress}% complete</span>
                       </div>
                       <Progress value={progress} className="h-2" />
+                      {progress >= 90 && (
+                        <p className="mt-2 text-sm text-green-600">
+                          <CheckCircle className="inline-block h-4 w-4 mr-1" />
+                          You've watched enough of this video. An administrator will verify your completion.
+                        </p>
+                      )}
                     </div>
-                  )}
-
-                  {user && progress > 0 && progress < 100 && (
-                    <Button
-                      onClick={handleCompleteCourse}
-                      className="mt-4 w-full bg-emerge-gold hover:bg-emerge-gold/90"
-                      disabled={!videoWatched}
-                    >
-                      {videoWatched ? "Mark Course Complete" : "Watch Video to Complete"}
-                    </Button>
                   )}
                 </div>
               </div>
@@ -328,19 +412,34 @@ const CourseDetail = () => {
             <div className="bg-white border p-6 sticky top-4">
               <div className="aspect-video overflow-hidden mb-4">
                 <img 
-                  src={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"} 
-                  alt={course.title} 
+                  src={courseNotAvailable ? 
+                    "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop" : 
+                    (course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop")
+                  } 
+                  alt={courseNotAvailable ? "Coming Soon" : course.title} 
                   className="w-full h-full object-cover"
                 />
               </div>
               
-              {user && progress > 0 && progress < 100 && (
+              {user && progress > 0 && (
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-1">
                     <span>Your progress</span>
                     <span>{progress}% complete</span>
                   </div>
                   <Progress value={progress} className="h-2" />
+                  {progress >= 90 && !isExternalCourse && (
+                    <p className="mt-2 text-sm text-green-600 flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Pending admin verification
+                    </p>
+                  )}
+                  {externalVisited && isExternalCourse && (
+                    <p className="mt-2 text-sm text-yellow-600 flex items-center">
+                      <AlertTriangle className="h-4 w-4 mr-1" />
+                      Completion pending admin verification
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -360,46 +459,36 @@ const CourseDetail = () => {
                   )}
                 </div>
               ) : (
-                <>
-                  {isExternalCourse ? (
-                    <Button 
-                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
-                      onClick={handleStartCourse}
-                    >
+                <Button 
+                  className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
+                  onClick={handleStartCourse}
+                  disabled={courseNotAvailable}
+                >
+                  {courseNotAvailable ? (
+                    "Coming Soon"
+                  ) : isExternalCourse ? (
+                    <>
                       <span>Visit Course</span>
                       <ExternalLink size={16} className="ml-1" />
-                    </Button>
+                    </>
                   ) : progress > 0 ? (
-                    <Button 
-                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
-                      onClick={handleCompleteCourse}
-                      disabled={!videoWatched && !isExternalCourse}
-                    >
-                      {videoWatched ? "Mark Course Complete" : "Finish Video to Complete"}
-                    </Button>
+                    "Continue Course"
                   ) : (
-                    <Button 
-                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
-                      onClick={handleStartCourse}
-                    >
-                      Start Course
-                    </Button>
+                    "Start Course"
                   )}
-                  
-                  {isExternalCourse && externalVisited && (
-                    <Button 
-                      className="w-full bg-white border border-emerge-gold text-emerge-gold hover:bg-gray-50"
-                      onClick={handleCompleteCourse}
-                    >
-                      Mark Course Complete
-                    </Button>
-                  )}
-                </>
+                </Button>
               )}
               
               <div className="mt-4 text-sm text-gray-500">
                 <p>Self-paced learning - start and complete at any time</p>
-                <p className="mt-2">Certificate eligibility requires completing multiple courses and workshops</p>
+                <p className="mt-2">
+                  Certificate eligibility requirements:
+                </p>
+                <ul className="list-disc list-inside pl-2 mt-1">
+                  <li>5-10 online courses (varies by category)</li>
+                  <li>3 mandatory workshops/events</li>
+                  <li>Admin verification and approval</li>
+                </ul>
               </div>
             </div>
           </div>

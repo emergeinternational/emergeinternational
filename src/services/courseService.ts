@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -17,6 +18,7 @@ export interface Course {
   content?: string;
   source_url?: string;
   career_interests?: string[];
+  video_embed_url?: string;
 }
 
 export interface CourseProgress {
@@ -29,6 +31,7 @@ export interface CourseProgress {
   course_category?: string;
   created_at: string;
   updated_at: string;
+  progress?: number;
 }
 
 export interface CertificateEligibility {
@@ -274,13 +277,57 @@ export const getUserCourseProgress = async (userId: string): Promise<CourseProgr
   }
 };
 
+// Track user engagement with a course
+export const trackCourseEngagement = async (courseId: string): Promise<boolean> => {
+  try {
+    // First check if we have an engagement record for this course
+    const { data: existingData } = await supabase
+      .from('course_engagement')
+      .select('*')
+      .eq('course_id', courseId)
+      .maybeSingle();
+    
+    if (existingData) {
+      // Update existing record
+      const { error } = await supabase
+        .from('course_engagement')
+        .update({
+          total_clicks: existingData.total_clicks + 1,
+          last_click_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingData.id);
+      
+      if (error) throw error;
+    } else {
+      // Create new record
+      const { error } = await supabase
+        .from('course_engagement')
+        .insert([{
+          course_id: courseId,
+          total_clicks: 1,
+          last_click_date: new Date().toISOString(),
+        }]);
+      
+      if (error) throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error tracking course engagement:", error);
+    return false;
+  }
+};
+
+// Update course progress
 export const updateCourseProgress = async (
   userId: string,
   courseId: string,
   status: 'in_progress' | 'completed',
   courseCategory?: string,
-  progress?: number
-): Promise<boolean> => {
+  progress?: number,
+  retrieveOnly: boolean = false
+): Promise<CourseProgress | boolean> => {
   try {
     // Check if progress record exists
     const { data: existingData } = await supabase
@@ -290,6 +337,10 @@ export const updateCourseProgress = async (
       .eq('course_id', courseId)
       .maybeSingle();
     
+    if (retrieveOnly) {
+      return existingData || false;
+    }
+    
     const updateData = {
       status,
       progress: progress || (status === 'completed' ? 100 : 0),
@@ -298,14 +349,28 @@ export const updateCourseProgress = async (
     };
     
     if (existingData) {
-      const { error } = await supabase
-        .from('user_course_progress')
-        .update(updateData)
-        .eq('id', existingData.id);
+      // Only update if the new progress is higher than existing
+      if (!progress || existingData.progress < progress) {
+        const { error, data } = await supabase
+          .from('user_course_progress')
+          .update(updateData)
+          .eq('id', existingData.id)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        // Check if user is eligible for certificate after completing course
+        if (status === 'completed') {
+          await checkCertificateEligibility(userId);
+        }
+        
+        return data;
+      }
       
-      if (error) throw error;
+      return existingData;
     } else {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('user_course_progress')
         .insert([{
           user_id: userId,
@@ -313,19 +378,57 @@ export const updateCourseProgress = async (
           course_category: courseCategory,
           date_started: new Date().toISOString(),
           ...updateData
-        }]);
+        }])
+        .select()
+        .single();
       
       if (error) throw error;
+      
+      // Check if user is eligible for certificate after completing course
+      if (status === 'completed') {
+        await checkCertificateEligibility(userId);
+      }
+      
+      return data;
     }
+  } catch (error) {
+    console.error("Error updating course progress:", error);
+    return false;
+  }
+};
+
+// Admin-controlled course completion
+export const adminCompleteCourse = async (
+  userId: string,
+  courseId: string,
+  adminId: string,
+  courseCategory?: string
+): Promise<boolean> => {
+  try {
+    // Check if admin has proper permissions first (implementation omitted)
     
-    // Check if user is eligible for certificate after completing course
-    if (status === 'completed') {
-      await checkCertificateEligibility(userId);
-    }
+    // Update course progress to completed
+    const { error } = await supabase
+      .from('user_course_progress')
+      .upsert([{
+        user_id: userId,
+        course_id: courseId,
+        status: 'completed',
+        progress: 100,
+        date_completed: new Date().toISOString(),
+        date_started: new Date().toISOString(), // fallback if this is a new record
+        course_category: courseCategory,
+        updated_at: new Date().toISOString()
+      }]);
+    
+    if (error) throw error;
+    
+    // Check certificate eligibility after admin approval
+    await checkCertificateEligibility(userId);
     
     return true;
   } catch (error) {
-    console.error("Error updating course progress:", error);
+    console.error("Error in admin course completion:", error);
     return false;
   }
 };

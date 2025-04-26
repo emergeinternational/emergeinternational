@@ -8,7 +8,8 @@ import {
   XCircle, 
   Award, 
   BookOpen, 
-  AlertTriangle 
+  AlertTriangle,
+  Eye
 } from "lucide-react";
 import { 
   Table, 
@@ -28,6 +29,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const CertificateManagement = () => {
   const { toast } = useToast();
@@ -36,6 +43,7 @@ const CertificateManagement = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showRevocationDialog, setShowRevocationDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -120,6 +128,29 @@ const CertificateManagement = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const getUserCourseDetails = (user: any) => {
+    // This would come from the backend in a real implementation
+    // Sample data for demonstration
+    return {
+      embeddedCoursesWatched: [
+        { title: "Fashion Design 101", watchPercent: 95, date: "2023-05-15" },
+        { title: "Advanced Pattern Making", watchPercent: 98, date: "2023-05-20" },
+      ],
+      externalCoursesVisited: [
+        { title: "Digital Fashion Marketing", visitDate: "2023-05-18" },
+        { title: "Sustainable Fashion", visitDate: "2023-05-25" },
+      ],
+      workshopsAttended: [
+        { title: "Acting for Models Workshop", date: "2023-06-01" },
+        { title: "Portfolio Development", date: "2023-06-15" },
+      ],
+    };
+  };
+
+  const hasMetRequirements = (user: any) => {
+    return user.online_courses_completed >= 5 && user.workshops_completed >= 3;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -144,6 +175,18 @@ const CertificateManagement = () => {
         </Button>
       </div>
 
+      <div className="bg-emerge-cream p-4 rounded border border-amber-200">
+        <h3 className="font-medium flex items-center">
+          <AlertTriangle className="h-4 w-4 mr-2 text-amber-600" />
+          Certificate Requirements
+        </h3>
+        <ul className="mt-2 text-sm space-y-1">
+          <li>• Minimum of 5 online courses completed</li>
+          <li>• Minimum of 3 workshops attended</li>
+          <li>• Manual admin verification required for all certificates</li>
+        </ul>
+      </div>
+
       {!loading && eligibleUsers.length === 0 ? (
         <div className="bg-emerge-cream p-8 text-center rounded-md">
           <BookOpen className="h-12 w-12 mx-auto mb-2 text-emerge-gold/60" />
@@ -158,8 +201,9 @@ const CertificateManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
-                <TableHead>Course Requirements</TableHead>
-                <TableHead>Workshop Requirements</TableHead>
+                <TableHead>Online Courses</TableHead>
+                <TableHead>Workshops</TableHead>
+                <TableHead>Requirements</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -167,7 +211,7 @@ const CertificateManagement = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     <p className="mt-2 text-sm text-gray-500">Loading eligible users...</p>
                   </TableCell>
@@ -184,15 +228,28 @@ const CertificateManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
-                        <span>{user.online_courses_completed} online courses completed</span>
+                        <div className={`h-2 w-2 rounded-full ${user.online_courses_completed >= 5 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.online_courses_completed} online courses</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
-                        <span>{user.workshops_completed} workshops completed</span>
+                        <div className={`h-2 w-2 rounded-full ${user.workshops_completed >= 3 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.workshops_completed} workshops</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {hasMetRequirements(user) ? (
+                        <Badge variant="success" className="flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          All Met
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center text-amber-600 border-amber-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Not Met
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {user.admin_approved ? (
@@ -208,31 +265,48 @@ const CertificateManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.admin_approved ? (
+                      <div className="space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-500 border-red-300 hover:bg-red-50"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
                           onClick={() => {
                             setSelectedUser(user);
-                            setShowRevocationDialog(true);
+                            setShowDetailsDialog(true);
                           }}
                         >
-                          Revoke Certificate
+                          <Eye className="h-4 w-4 mr-1" />
+                          Details
                         </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 border-green-300 hover:bg-green-50"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowApprovalDialog(true);
-                          }}
-                        >
-                          Approve Certificate
-                        </Button>
-                      )}
+                        
+                        {user.admin_approved ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 border-red-300 hover:bg-red-50"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowRevocationDialog(true);
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Revoke
+                          </Button>
+                        ) : hasMetRequirements(user) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-300 hover:bg-green-50"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowApprovalDialog(true);
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -252,6 +326,22 @@ const CertificateManagement = () => {
               This will allow the user to download their certificate immediately.
             </DialogDescription>
           </DialogHeader>
+          
+          {selectedUser && (
+            <div className="my-4 p-4 bg-gray-50 rounded border">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="font-medium">Online Courses:</p>
+                  <p>{selectedUser.online_courses_completed} completed</p>
+                </div>
+                <div>
+                  <p className="font-medium">Workshops:</p>
+                  <p>{selectedUser.workshops_completed} completed</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -262,7 +352,7 @@ const CertificateManagement = () => {
             </Button>
             <Button 
               onClick={handleApprove}
-              disabled={actionLoading}
+              disabled={actionLoading || (selectedUser && !hasMetRequirements(selectedUser))}
               className="bg-emerge-gold hover:bg-emerge-gold/90"
             >
               {actionLoading ? (
@@ -309,6 +399,153 @@ const CertificateManagement = () => {
               ) : (
                 "Revoke Certificate"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* User Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>User Course & Workshop Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about course completion and workshop attendance for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded border">
+                  <h3 className="font-medium flex items-center">
+                    <BookOpen className="h-4 w-4 mr-2 text-emerge-gold" />
+                    Online Course Progress
+                  </h3>
+                  <p className="text-lg font-bold mt-1">{selectedUser.online_courses_completed} courses</p>
+                  <p className="text-xs text-gray-500">Minimum required: 5</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded border">
+                  <h3 className="font-medium flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2 text-emerge-gold" />
+                    Workshop Attendance
+                  </h3>
+                  <p className="text-lg font-bold mt-1">{selectedUser.workshops_completed} workshops</p>
+                  <p className="text-xs text-gray-500">Minimum required: 3</p>
+                </div>
+              </div>
+              
+              <Accordion type="single" collapsible className="w-full">
+                {getUserCourseDetails(selectedUser).embeddedCoursesWatched.length > 0 && (
+                  <AccordionItem value="embedded-courses">
+                    <AccordionTrigger>
+                      <span className="flex items-center">
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                        Embedded Courses Watched
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course Title</TableHead>
+                            <TableHead>Watch Percentage</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getUserCourseDetails(selectedUser).embeddedCoursesWatched.map((course, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{course.title}</TableCell>
+                              <TableCell>{course.watchPercent}%</TableCell>
+                              <TableCell>{formatDate(course.date)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+                  
+                {getUserCourseDetails(selectedUser).externalCoursesVisited.length > 0 && (
+                  <AccordionItem value="external-courses">
+                    <AccordionTrigger>
+                      <span className="flex items-center">
+                        <ExternalLink className="h-4 w-4 mr-2 text-blue-600" />
+                        External Courses Visited
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course Title</TableHead>
+                            <TableHead>Visit Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getUserCourseDetails(selectedUser).externalCoursesVisited.map((course, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{course.title}</TableCell>
+                              <TableCell>{formatDate(course.visitDate)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+                  
+                {getUserCourseDetails(selectedUser).workshopsAttended.length > 0 && (
+                  <AccordionItem value="workshops">
+                    <AccordionTrigger>
+                      <span className="flex items-center">
+                        <Award className="h-4 w-4 mr-2 text-emerge-gold" />
+                        Workshops Attended
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Workshop Title</TableHead>
+                            <TableHead>Date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getUserCourseDetails(selectedUser).workshopsAttended.map((workshop, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{workshop.title}</TableCell>
+                              <TableCell>{formatDate(workshop.date)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
+              </Accordion>
+            </div>
+          )}
+          
+          <DialogFooter>
+            {!selectedUser?.admin_approved && hasMetRequirements(selectedUser) && (
+              <Button 
+                onClick={() => {
+                  setShowDetailsDialog(false);
+                  setShowApprovalDialog(true);
+                }}
+                className="bg-emerge-gold hover:bg-emerge-gold/90"
+              >
+                Approve Certificate
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDetailsDialog(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
