@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Course, CourseProgress } from "./courseTypes";
+import type { Course } from "./courseTypes";
+import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
@@ -267,28 +268,38 @@ export const getCourses = async (
       return [];
     }
 
-    const courses = data.map(item => ({
-      id: item.id,
-      title: item.title,
-      summary: item.summary,
-      category: item.category_id || '',
-      level: item.content_type || '',
-      source_url: item.source_url,
-      image_url: item.image_url,
-      content_type: item.content_type,
-      category_id: item.category_id,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      career_interests: []
-    }));
+    const coursesWithValidImages = await Promise.all(
+      data.map(async (item) => {
+        const validatedImageUrl = await validateAndUpdateCourseImage(
+          item.id, 
+          item.title, 
+          item.image_url
+        );
+
+        return {
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          category: item.category_id || '',
+          level: item.content_type || '',
+          source_url: item.source_url,
+          image_url: validatedImageUrl,
+          content_type: item.content_type,
+          category_id: item.category_id,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          career_interests: []
+        };
+      })
+    );
 
     if (careerInterest && careerInterest !== "all") {
-      return courses.filter(course => 
+      return coursesWithValidImages.filter(course => 
         course.career_interests?.includes(careerInterest)
       );
     }
 
-    return courses;
+    return coursesWithValidImages;
   } catch (error) {
     console.error("Unexpected error in getCourses:", error);
     return [];

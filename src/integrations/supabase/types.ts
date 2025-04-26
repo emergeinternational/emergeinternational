@@ -138,7 +138,9 @@ export type Database = {
           content_type: string
           created_at: string | null
           id: string
+          image_theme: string | null
           image_url: string | null
+          image_validated: boolean | null
           is_archived: boolean | null
           is_featured: boolean
           published_at: string | null
@@ -153,7 +155,9 @@ export type Database = {
           content_type: string
           created_at?: string | null
           id?: string
+          image_theme?: string | null
           image_url?: string | null
+          image_validated?: boolean | null
           is_archived?: boolean | null
           is_featured?: boolean
           published_at?: string | null
@@ -168,7 +172,9 @@ export type Database = {
           content_type?: string
           created_at?: string | null
           id?: string
+          image_theme?: string | null
           image_url?: string | null
+          image_validated?: boolean | null
           is_archived?: boolean | null
           is_featured?: boolean
           published_at?: string | null
