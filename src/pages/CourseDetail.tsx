@@ -40,17 +40,29 @@ const CourseDetail = () => {
           return;
         }
         
+        // Check if the course has a valid link
+        if (courseData.source_url && 
+            (courseData.source_url === "example.com" || 
+             !isValidURL(courseData.source_url))) {
+          toast({
+            title: "Invalid course",
+            description: "This course has an invalid link and has been removed.",
+            variant: "destructive",
+          });
+          navigate("/education");
+          return;
+        }
+        
         setCourse(courseData);
         
-        // Check if course is external based on having a source_url
-        setIsExternalCourse(!!courseData.source_url);
+        // Check if course is external based on having a valid source_url
+        setIsExternalCourse(!!courseData.source_url && isValidURL(courseData.source_url));
         
         // If user is logged in, fetch their progress
         if (user) {
           try {
-            // Simulate progress for now
-            // In a real implementation, this would fetch from user_course_progress
-            setProgress(Math.floor(Math.random() * 100));
+            // Always set initial progress to 0 for new users
+            setProgress(0);
           } catch (error) {
             console.error("Error fetching user progress:", error);
           }
@@ -70,6 +82,16 @@ const CourseDetail = () => {
     fetchCourse();
   }, [id, user, toast, navigate]);
 
+  // Helper function to validate URLs
+  const isValidURL = (url: string) => {
+    try {
+      new URL(url.startsWith('http') ? url : `https://${url}`);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const handleStartCourse = async () => {
     if (!user) {
       toast({
@@ -84,7 +106,7 @@ const CourseDetail = () => {
     try {
       if (isExternalCourse && course.source_url) {
         // For external courses, open in new tab and update progress
-        window.open(course.source_url, "_blank");
+        window.open(course.source_url.startsWith('http') ? course.source_url : `https://${course.source_url}`, "_blank");
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
         toast({
@@ -92,22 +114,18 @@ const CourseDetail = () => {
           description: "We've opened the course in a new tab. Your progress will be tracked.",
         });
         
-        // Set progress to at least 20% when starting
-        if (progress === 0) {
-          setProgress(20);
-        }
+        // Set progress to 20% when starting
+        setProgress(20);
       } else {
         // For embedded courses, update progress
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
         // Simulate course completion after "watching" embedded content
-        if (progress === 0) {
-          setProgress(20);
-          toast({
-            title: "Course Started",
-            description: "Your progress has been saved.",
-          });
-        }
+        setProgress(20);
+        toast({
+          title: "Course Started",
+          description: "Your progress has been saved.",
+        });
       }
     } catch (error) {
       console.error("Error updating course progress:", error);
@@ -140,7 +158,7 @@ const CourseDetail = () => {
     }
   };
 
-  // New function to handle marking external courses as complete
+  // Function to handle marking external courses as complete
   const handleMarkExternalCourseComplete = async () => {
     if (!user || !course) return;
     
@@ -430,6 +448,30 @@ const getCourseObjectives = (title: string, category: string): string[] => {
     objectives.push("Performance techniques for camera and stage");
     objectives.push("Character development and emotional expression");
     objectives.push("Industry networking and audition preparation");
+  }
+
+  if (titleLower.includes('photo') || titleLower.includes('photography')) {
+    objectives.push("Camera settings and equipment selection for fashion shoots");
+    objectives.push("Lighting techniques for studio and location photography");
+    objectives.push("Post-processing and image editing for professional results");
+  }
+  
+  if (titleLower.includes('video') || titleLower.includes('videography')) {
+    objectives.push("Video production planning and storyboarding");
+    objectives.push("Camera movement and composition for dynamic fashion videos");
+    objectives.push("Editing techniques and software mastery");
+  }
+  
+  if (titleLower.includes('music') || titleLower.includes('audio')) {
+    objectives.push("Music composition and production for fashion events");
+    objectives.push("Audio engineering fundamentals for recording and mixing");
+    objectives.push("Building a portfolio of industry-specific music projects");
+  }
+  
+  if (titleLower.includes('art') || titleLower.includes('painting')) {
+    objectives.push("Artistic techniques and media selection for fashion illustration");
+    objectives.push("Color theory and application in visual arts");
+    objectives.push("Creating cohesive collections of art for fashion applications");
   }
   
   // Add level-specific objectives

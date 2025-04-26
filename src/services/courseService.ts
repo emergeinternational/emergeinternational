@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -60,73 +61,194 @@ export const getCourses = async (
       throw error;
     }
     
-    // Map database results to Course interface
-    const courses = data.map(item => ({
-      id: item.id,
-      title: item.title,
-      summary: item.summary || '',
-      content_type: item.content_type,
-      image_url: getRelevantCourseImage(item.title, item.category_id, item.image_url),
-      category_id: item.category_id,
-      is_featured: item.is_featured,
-      published_at: item.published_at,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-      source_url: item.source_url,
-      // Add mock career interests for now - would be stored in DB in production
-      career_interests: getCourseCareerInterests(item.title, item.category_id)
-    }));
+    // Map database results to Course interface and ensure unique images
+    const usedImages = new Set<string>();
+    const courses = data.map(item => {
+      // Get a unique image for each course
+      const image = getUniqueImageForCourse(item.title, item.category_id, usedImages, item.image_url);
+      usedImages.add(image);
+      
+      return {
+        id: item.id,
+        title: item.title,
+        summary: item.summary || '',
+        content_type: item.content_type,
+        image_url: image,
+        category_id: item.category_id,
+        is_featured: item.is_featured,
+        published_at: item.published_at,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+        source_url: isValidUrl(item.source_url) ? item.source_url : undefined,
+        // Add career interests
+        career_interests: getCourseCareerInterests(item.title, item.category_id)
+      };
+    });
+    
+    // Filter courses with invalid source_url
+    const validCourses = courses.filter(course => 
+      !course.source_url || isValidUrl(course.source_url)
+    );
     
     // Apply career interest filter if provided
     if (careerInterest && careerInterest !== 'all') {
-      return courses.filter(course => 
+      return validCourses.filter(course => 
         course.career_interests?.includes(careerInterest)
       );
     }
     
-    return courses;
+    return validCourses;
   } catch (error) {
     console.error("Unexpected error in getCourses:", error);
     return [];
   }
 };
 
-// Get relevant image for course based on title and category
-const getRelevantCourseImage = (title: string, category: string, defaultImage?: string): string => {
-  if (defaultImage && defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop') {
+// Helper function to validate URLs
+const isValidUrl = (url?: string): boolean => {
+  if (!url) return false;
+  
+  try {
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    return url !== 'example.com' && !url.includes('placeholder');
+  } catch (e) {
+    return false;
+  }
+};
+
+// Get unique image for course based on title, category, and already used images
+const getUniqueImageForCourse = (
+  title: string, 
+  category: string, 
+  usedImages: Set<string>, 
+  defaultImage?: string
+): string => {
+  // If the default image is valid and not already used, use it
+  if (defaultImage && 
+      defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop' && 
+      !usedImages.has(defaultImage)) {
     return defaultImage;
   }
   
   const titleLower = title.toLowerCase();
+  const possibleImages: string[] = [];
   
   // Match course with relevant image based on keywords
   if (titleLower.includes('design') || titleLower.includes('fashion')) {
-    return 'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('model') || titleLower.includes('modeling')) {
-    return 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('photo') || titleLower.includes('photography')) {
-    return 'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('social') || titleLower.includes('marketing')) {
-    return 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('act') || titleLower.includes('perform')) {
-    return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop';
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop'
+    );
+  } 
+  
+  if (titleLower.includes('model') || titleLower.includes('modeling')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1492321936769-b49830bc1d1e?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1533561797500-4fad4750814e?w=800&auto=format&fit=crop'
+    );
+  } 
+  
+  if (titleLower.includes('photo') || titleLower.includes('photography')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1452830978618-d6feae7d0ffa?w=800&auto=format&fit=crop'
+    );
+  } 
+  
+  if (titleLower.includes('social') || titleLower.includes('marketing')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1620288627223-53302f4e8c74?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop'
+    );
+  } 
+  
+  if (titleLower.includes('act') || titleLower.includes('perform')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1460881680858-30d872d5b530?w=800&auto=format&fit=crop'
+    );
   }
   
-  // Category-based images if no title match
-  if (category === 'beginner') {
-    return 'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop';
-  } else if (category === 'intermediate') {
-    return 'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop';
-  } else if (category === 'advanced') {
-    return 'https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop';
+  if (titleLower.includes('video') || titleLower.includes('film')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1492683962492-deef0ec456c0?w=800&auto=format&fit=crop'
+    );
   }
   
-  // Default image
-  return 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop';
+  if (titleLower.includes('music') || titleLower.includes('audio')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop'
+    );
+  }
+  
+  if (titleLower.includes('art') || titleLower.includes('paint')) {
+    possibleImages.push(
+      'https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop'
+    );
+  }
+  
+  // Category-based images if no title match or all title matches are used
+  if (possibleImages.length === 0 || possibleImages.every(img => usedImages.has(img))) {
+    if (category === 'beginner') {
+      possibleImages.push(
+        'https://images.unsplash.com/photo-1595062584313-44e69e3ef863?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop'
+      );
+    } else if (category === 'intermediate') {
+      possibleImages.push(
+        'https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=800&auto=format&fit=crop'
+      );
+    } else if (category === 'advanced') {
+      possibleImages.push(
+        'https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1487611459768-bd414656ea10?w=800&auto=format&fit=crop'
+      );
+    }
+  }
+  
+  // Additional fallback images
+  const fallbackImages = [
+    'https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1487865384004-2a1822e63d2d?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1605816847348-d645e308b252?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1524436396230-c4ecc44ddba4?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1502675135487-e971002a6adb?w=800&auto=format&fit=crop'
+  ];
+  
+  // Add fallbacks if needed
+  if (possibleImages.length === 0) {
+    possibleImages.push(...fallbackImages);
+  }
+  
+  // Find the first image that hasn't been used
+  for (const img of possibleImages) {
+    if (!usedImages.has(img)) {
+      return img;
+    }
+  }
+  
+  // If all possible images are used, create a unique URL with a timestamp
+  return `https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop&t=${Date.now()}`;
 };
 
-// Get mock career interests for courses
+// Get mock career interests for courses with expanded options
 const getCourseCareerInterests = (title: string, category: string): string[] => {
   const titleLower = title.toLowerCase();
   const interests = [];
@@ -151,9 +273,34 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
     interests.push('entertainment talent');
   }
   
+  if (titleLower.includes('photo') || titleLower.includes('camera') || titleLower.includes('photography')) {
+    interests.push('photographer');
+  }
+  
+  if (titleLower.includes('video') || titleLower.includes('film') || titleLower.includes('cinematography')) {
+    interests.push('videographer');
+  }
+  
+  if (titleLower.includes('music') || titleLower.includes('audio') || titleLower.includes('sound')) {
+    interests.push('musical artist');
+  }
+  
+  if (titleLower.includes('paint') || titleLower.includes('art') || titleLower.includes('drawing')) {
+    interests.push('fine artist');
+  }
+  
   // Ensure each course has at least one interest
   if (interests.length === 0) {
-    interests.push('designer', 'model'); // Default to these two
+    // Assign based on category as fallback
+    if (category === 'beginner') {
+      interests.push('designer', 'model');
+    } else if (category === 'intermediate') {
+      interests.push('photographer', 'videographer');
+    } else if (category === 'advanced') {
+      interests.push('musical artist', 'fine artist');
+    } else {
+      interests.push('designer', 'model'); // Default
+    }
   }
   
   return interests;
@@ -186,6 +333,10 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
         console.error("Error fetching course:", error);
         // Continue to fallback options
       } else if (data) {
+        // Validate source_url if present
+        if (data.source_url && !isValidUrl(data.source_url)) {
+          data.source_url = undefined;
+        }
         return mapCourseData(data);
       }
     }
@@ -199,9 +350,17 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
     });
     
     if (course) {
+      // Validate source_url if present
+      if (course.source_url && !isValidUrl(course.source_url)) {
+        course.source_url = undefined;
+      }
+      
+      // Get a unique image for this course
+      const uniqueImage = getUniqueImageForCourse(course.title, course.category_id, new Set(), course.image_url);
+      
       return {
         ...course,
-        image_url: getRelevantCourseImage(course.title, course.category_id, course.image_url),
+        image_url: uniqueImage,
         career_interests: getCourseCareerInterests(course.title, course.category_id)
       };
     }
@@ -227,14 +386,14 @@ const mapCourseData = (data: any): Course => {
     title: data.title,
     summary: data.summary || '',
     content_type: data.content_type,
-    image_url: getRelevantCourseImage(data.title, data.category_id, data.image_url),
+    image_url: getUniqueImageForCourse(data.title, data.category_id, new Set(), data.image_url),
     category_id: data.category_id,
     is_featured: data.is_featured,
     published_at: data.published_at,
     created_at: data.created_at,
     updated_at: data.updated_at,
     duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    source_url: data.source_url,
+    source_url: isValidUrl(data.source_url) ? data.source_url : undefined,
     career_interests: getCourseCareerInterests(data.title, data.category_id)
   };
 };
@@ -341,7 +500,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["designer"]
+      career_interests: ["designer"],
+      source_url: "https://www.coursera.org/learn/fashion-design"
     },
     { 
       id: "2", 
@@ -354,7 +514,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["designer", "social media influencer"]
+      career_interests: ["designer", "social media influencer"],
+      source_url: "https://www.edx.org/learn/fashion-marketing"
     },
     { 
       id: "3", 
@@ -367,7 +528,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["designer"]
+      career_interests: ["designer"],
+      source_url: "https://www.masterclass.com/classes/fashion-design"
     },
     { 
       id: "4", 
@@ -380,7 +542,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model"]
+      career_interests: ["designer", "model"],
+      source_url: "https://www.futurelearn.com/courses/sustainable-fashion"
     },
     { 
       id: "5", 
@@ -393,7 +556,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model", "actor"]
+      career_interests: ["designer", "model", "actor"],
+      source_url: "https://www.skillshare.com/classes/fashion-portfolio"
     },
     { 
       id: "6", 
@@ -406,7 +570,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["model", "actor"]
+      career_interests: ["model", "actor"],
+      source_url: "https://www.youtube.com/watch?v=modelacting"
     },
     {
       id: "7",
@@ -419,7 +584,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["social media influencer", "model"]
+      career_interests: ["social media influencer", "model"],
+      source_url: "https://www.udemy.com/course/fashion-influencer"
     },
     {
       id: "8",
@@ -432,7 +598,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["entertainment talent", "actor"]
+      career_interests: ["entertainment talent", "actor"],
+      source_url: "https://www.creativelive.com/entertainment-career"
     }
   ];
 
@@ -448,7 +615,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["photographer"]
+      career_interests: ["photographer"],
+      source_url: "https://www.nikonschool.com/en/photography-courses/beginner"
     },
     {
       id: "10",
@@ -461,7 +629,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["videographer"]
+      career_interests: ["videographer"],
+      source_url: "https://www.lynda.com/videography-courses"
     },
     {
       id: "11",
@@ -474,7 +643,8 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["musical artist"]
+      career_interests: ["musical artist"],
+      source_url: "https://www.berklee.edu/courses/music-production"
     },
     {
       id: "12",
@@ -487,7 +657,64 @@ export const getStaticCourses = (): Course[] => {
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      career_interests: ["fine artist"]
+      career_interests: ["fine artist"],
+      source_url: "https://www.domestika.org/en/courses/illustration"
+    },
+    {
+      id: "13",
+      category_id: "advanced",
+      title: "Fashion Photography Masterclass",
+      summary: "Learn professional fashion photography techniques from industry experts.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1452830978618-d6feae7d0ffa?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["photographer", "designer"],
+      source_url: "https://www.kelbyone.com/fashion-photography"
+    },
+    {
+      id: "14",
+      category_id: "intermediate",
+      title: "Documentary Filmmaking",
+      summary: "Create compelling visual stories through documentary film production.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["videographer"],
+      source_url: "https://www.nyfa.edu/documentary-filmmaking"
+    },
+    {
+      id: "15",
+      category_id: "advanced",
+      title: "Songwriting and Composition",
+      summary: "Develop your skills in writing memorable melodies and compelling lyrics.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["musical artist"],
+      source_url: "https://www.coursera.org/learn/songwriting"
+    },
+    {
+      id: "16",
+      category_id: "beginner",
+      title: "Watercolor Techniques",
+      summary: "Master the fundamentals of watercolor painting from basic washes to advanced effects.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["fine artist"],
+      source_url: "https://www.artistnetwork.com/watercolor-courses"
     }
   ];
 
