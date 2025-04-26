@@ -33,7 +33,6 @@ import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
-import CourseDetail from "./pages/CourseDetail";
 
 const queryClient = new QueryClient();
 
@@ -64,7 +63,6 @@ function App() {
                 
                 {/* Public Routes - Accessible without authentication */}
                 <Route path="/education" element={<Education />} />
-                <Route path="/education/course/:courseId" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/terms" element={<Terms />} />

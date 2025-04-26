@@ -1,86 +1,171 @@
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search, Sliders } from "lucide-react";
-import MainLayout from "@/layouts/MainLayout";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import MainLayout from "../layouts/MainLayout";
+import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar } from "lucide-react";
+import CourseCard from "../components/education/CourseCard";
+import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CategoryFilter } from "@/components/education/CategoryFilter";
-import { LevelFilter } from "@/components/education/LevelFilter";
-import { LanguageFilter } from "@/components/education/LanguageFilter";
-import { CourseCard } from "@/components/education/CourseCard";
-import { EmptyCourseState } from "@/components/education/EmptyCourseState";
-import { LearningDashboard } from "@/components/education/LearningDashboard";
-import { getCourseCategories, getCourses, enrollInCourse, getUserEnrollments } from "@/services/courseService";
-import type { EducationLevel, Language } from "@/types/education";
+import { 
+  getEducationCategories, 
+  getEducationContent,
+  EducationCategory, 
+  EducationContent 
+} from "../services/educationService";
+import { getWorkshops, Workshop } from "../services/workshopService";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
-export default function Education() {
-  const [selectedCategory, setSelectedCategory] = useState<string>();
-  const [selectedLevel, setSelectedLevel] = useState<EducationLevel>();
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("browse");
+const Education = () => {
+  const [activeLevel, setActiveLevel] = useState("all");
+  const [categories, setCategories] = useState<EducationCategory[]>([]);
+  const [educationContent, setEducationContent] = useState<EducationContent[]>([]);
+  const [upcomingWorkshops, setUpcomingWorkshops] = useState<Workshop[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
+  
+  const levels = [
+    { id: "beginner", name: "BEGINNER" },
+    { id: "intermediate", name: "INTERMEDIATE" },
+    { id: "advanced", name: "ADVANCED" },
+    { id: "workshop", name: "WORKSHOPS" },
+  ];
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch categories, education content, and workshops
+        const categoriesData = await getEducationCategories();
+        setCategories(categoriesData);
+        
+        const contentData = await getEducationContent(
+          activeLevel === "all" ? undefined : activeLevel,
+          20
+        );
+        setEducationContent(contentData);
+        
+        const workshopsData = await getWorkshops();
+        setUpcomingWorkshops(workshopsData.slice(0, 3));
+        
+        // Fallback to static content if no dynamic content yet
+        if (contentData.length === 0) {
+          setEducationContent(getStaticCourses());
+        }
+        
+      } catch (error) {
+        console.error("Error fetching education data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load education content. Please try again later.",
+          variant: "destructive",
+        });
+        
+        // Fallback to static content
+        setEducationContent(getStaticCourses());
+        
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const categories = useQuery({
-    queryKey: ["courseCategories"],
-    queryFn: getCourseCategories
-  });
+    fetchData();
+  }, [activeLevel, toast]);
 
-  const courses = useQuery({
-    queryKey: ["courses", selectedCategory, selectedLevel, selectedLanguage, searchQuery],
-    queryFn: () => getCourses(selectedCategory, selectedLevel, selectedLanguage, searchQuery)
-  });
-
-  const enrollments = useQuery({
-    queryKey: ["userEnrollments"],
-    queryFn: getUserEnrollments,
-    enabled: !!user
-  });
-
-  // Map enrollments to course IDs for progress tracking
-  const courseProgress = enrollments.data?.reduce((acc, enrollment) => {
-    acc[enrollment.courseId] = enrollment.progressPercent;
-    return acc;
-  }, {} as Record<string, number>) || {};
-
-  const handleEnroll = async (courseId: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to enroll in courses.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      await enrollInCourse(courseId);
-      await enrollments.refetch();
-      
-      toast({
-        title: "Enrolled Successfully",
-        description: "You can now start learning this course."
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to enroll in the course. Please try again.",
-        variant: "destructive"
-      });
-    }
+  // Fallback function for static courses while content database is being populated
+  const getStaticCourses = () => {
+    return [
+      { 
+        id: "1", 
+        category_id: "beginner",
+        title: "Fashion Design 101", 
+        summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
+        content_type: "course",
+        image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
+        is_featured: true,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      { 
+        id: "2", 
+        category_id: "beginner",
+        title: "Digital Fashion Marketing", 
+        summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
+        content_type: "course",
+        image_url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop",
+        is_featured: false,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      { 
+        id: "3", 
+        category_id: "advanced",
+        title: "Advanced Pattern Making", 
+        summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
+        content_type: "course",
+        image_url: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&auto=format&fit=crop",
+        is_featured: false,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      { 
+        id: "4", 
+        category_id: "intermediate",
+        title: "Sustainable Fashion", 
+        summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
+        content_type: "course",
+        image_url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&auto=format&fit=crop",
+        is_featured: true,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      { 
+        id: "5", 
+        category_id: "intermediate",
+        title: "Fashion Portfolio", 
+        summary: "Create a professional portfolio showcasing your designs. Learn photography, styling, and digital presentation techniques.",
+        content_type: "course",
+        image_url: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=800&auto=format&fit=crop",
+        is_featured: false,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      { 
+        id: "6", 
+        category_id: "workshop",
+        title: "Innovation Workshop", 
+        summary: "Explore cutting-edge textile techniques and innovative materials in this intensive hands-on workshop.",
+        content_type: "workshop",
+        image_url: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop",
+        is_featured: true,
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+    ];
   };
 
-  const clearAllFilters = () => {
-    setSelectedCategory(undefined);
-    setSelectedLevel(undefined);
-    setSearchQuery("");
-  };
+  // Format workshop data for the component
+  const formattedWorkshops = upcomingWorkshops.map(workshop => ({
+    id: parseInt(workshop.id.substring(0, 8), 16),
+    name: workshop.name,
+    date: new Date(workshop.date).toLocaleDateString('en-US', {
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric'
+    }),
+    location: workshop.location,
+    spots: workshop.spots
+  }));
+
+  const filteredCourses = activeLevel === "all" 
+    ? educationContent 
+    : educationContent.filter(content => content.category_id === activeLevel);
 
   return (
     <MainLayout>
@@ -89,143 +174,180 @@ export default function Education() {
           <div className="max-w-3xl">
             <h1 className="emerge-heading text-5xl mb-6">Emerge Fashion Academy</h1>
             <p className="text-xl mb-8">
-              Discover our comprehensive range of free courses designed to develop 
+              Discover our comprehensive range of courses and workshops designed to develop 
               the next generation of African fashion talent. From beginner to advanced levels, 
               learn from industry experts and build your future in fashion.
             </p>
-            
-            {user && (
-              <div className="flex gap-4">
-                <Button
-                  variant={activeTab === "browse" ? "default" : "outline"}
-                  onClick={() => setActiveTab("browse")}
-                >
-                  Browse Courses
-                </Button>
-                <Button
-                  variant={activeTab === "dashboard" ? "default" : "outline"}
-                  onClick={() => setActiveTab("dashboard")}
-                >
-                  My Learning
-                </Button>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="text-emerge-gold" size={24} />
+                <span>Expert Instructors</span>
               </div>
-            )}
+              <div className="flex items-center gap-2">
+                <BookOpen className="text-emerge-gold" size={24} />
+                <span>Hands-on Learning</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Library className="text-emerge-gold" size={24} />
+                <span>Industry Recognition</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <div className="emerge-container py-12">
-        {activeTab === "browse" ? (
-          <div className="flex flex-col space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Search courses..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+        <div className="mb-12 flex overflow-x-auto pb-2 hide-scrollbar">
+          <button
+            onClick={() => setActiveLevel("all")}
+            className={`px-4 py-2 mr-2 whitespace-nowrap ${
+              activeLevel === "all"
+                ? "text-emerge-gold border-b-2 border-emerge-gold"
+                : "text-gray-600"
+            }`}
+          >
+            ALL
+          </button>
+          {levels.map(level => (
+            <button
+              key={level.id}
+              onClick={() => setActiveLevel(level.id)}
+              className={`px-4 py-2 mr-2 whitespace-nowrap ${
+                activeLevel === level.id
+                  ? "text-emerge-gold border-b-2 border-emerge-gold"
+                  : "text-gray-600"
+              }`}
+            >
+              {level.name}
+            </button>
+          ))}
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-pulse text-emerge-gold">Loading educational content...</div>
+          </div>
+        ) : filteredCourses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {filteredCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                id={parseInt(course.id.substring(0, 8), 16)}
+                name={course.title}
+                level={course.category_id}
+                description={course.summary || ""}
+                image={course.image_url || "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop"}
+                duration={course.content_type === "course" ? "10-12 weeks" : "1-2 days"}
+                levelName={levels.find(l => l.id === course.category_id)?.name || course.category_id}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-emerge-cream p-6 mb-16">
+            <p className="text-lg">No content available for this category.</p>
+            <p className="text-gray-600 mt-2">Please check back soon for new content!</p>
+          </div>
+        )}
+        
+        <UpcomingWorkshops workshops={formattedWorkshops} />
+        
+        <section className="mt-16">
+          <h2 className="emerge-heading text-2xl mb-6">Latest Fashion Resources</h2>
+          <div className="bg-emerge-cream p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-5 border border-gray-100">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <Calendar size={20} className="text-emerge-gold" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Industry Insights</h3>
+                    <p className="text-sm text-gray-600 mb-2">Latest articles from fashion industry experts</p>
+                    <ul className="text-sm space-y-2">
+                      <li className="flex items-center justify-between">
+                        <span>Sustainability Trends in 2025</span>
+                        <a href="https://www.voguebusiness.com/sustainability" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>African Textiles: Global Impact</span>
+                        <a href="https://www.businessoffashion.com/articles/" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Digital Fashion Marketplaces</span>
+                        <a href="https://www.notjustalabel.com/editorial" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
-              
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="flex gap-2 items-center md:hidden">
-                    <Sliders className="h-4 w-4" />
-                    Filters
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-full sm:w-[340px] bg-emerge-darkBg border-gray-800 text-white">
-                  <div className="space-y-6 py-6">
-                    {categories.data && (
-                      <CategoryFilter
-                        categories={categories.data}
-                        selectedCategory={selectedCategory}
-                        onSelectCategory={setSelectedCategory}
-                      />
-                    )}
-                    <LevelFilter
-                      selectedLevel={selectedLevel}
-                      onSelectLevel={setSelectedLevel}
-                    />
-                    <LanguageFilter
-                      selectedLanguage={selectedLanguage}
-                      onSelectLanguage={setSelectedLanguage}
-                    />
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4"
-                      onClick={clearAllFilters}
-                    >
-                      Clear All Filters
-                    </Button>
+              <div className="bg-white p-5 border border-gray-100">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <Clock size={20} className="text-emerge-gold" />
                   </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="hidden md:block space-y-8">
-                {categories.data && (
-                  <CategoryFilter
-                    categories={categories.data}
-                    selectedCategory={selectedCategory}
-                    onSelectCategory={setSelectedCategory}
-                  />
-                )}
-                <LevelFilter
-                  selectedLevel={selectedLevel}
-                  onSelectLevel={setSelectedLevel}
-                />
-                <LanguageFilter
-                  selectedLanguage={selectedLanguage}
-                  onSelectLanguage={setSelectedLanguage}
-                />
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={clearAllFilters}
-                >
-                  Clear All Filters
-                </Button>
-              </div>
-              
-              <div className="lg:col-span-3">
-                {courses.isLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="bg-gray-800 aspect-video rounded-t-lg"></div>
-                        <div className="bg-gray-800/50 p-4 rounded-b-lg space-y-2">
-                          <div className="h-4 bg-gray-700 rounded w-1/3"></div>
-                          <div className="h-6 bg-gray-700 rounded w-3/4"></div>
-                          <div className="h-4 bg-gray-700 rounded w-full"></div>
-                          <div className="h-10 bg-gray-700 rounded w-full"></div>
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <h3 className="font-medium">Video Tutorials</h3>
+                    <p className="text-sm text-gray-600 mb-2">Curated video lessons from fashion professionals</p>
+                    <ul className="text-sm space-y-2">
+                      <li className="flex items-center justify-between">
+                        <span>Pattern Making for Beginners</span>
+                        <a href="https://www.youtube.com/results?search_query=pattern+making+for+beginners" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Social Media for Fashion Brands</span>
+                        <a href="https://www.youtube.com/results?search_query=social+media+for+fashion+brands" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Sustainable Fabric Selection</span>
+                        <a href="https://www.youtube.com/results?search_query=sustainable+fabric+selection" target="_blank" rel="noopener noreferrer" className="text-emerge-gold">
+                          <ExternalLink size={14} />
+                        </a>
+                      </li>
+                    </ul>
                   </div>
-                ) : courses.data?.length ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {courses.data.map((course) => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        onEnroll={handleEnroll}
-                        userProgress={courseProgress[course.id]}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyCourseState onClearFilters={clearAllFilters} />
-                )}
+                </div>
               </div>
             </div>
           </div>
-        ) : (
-          <LearningDashboard />
-        )}
+        </section>
+        
+        <section className="mt-16">
+          <h2 className="emerge-heading text-2xl mb-6">Internationally Certified Courses</h2>
+          <div className="bg-white border p-8 max-w-3xl">
+            <p className="mb-6 text-lg">
+              Our fashion education programs are certified by leading international fashion 
+              institutions, ensuring your learning meets global industry standards. Graduates 
+              receive recognized certifications valued by employers worldwide.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+              <div className="aspect-square bg-emerge-cream flex items-center justify-center p-4">
+                <span className="text-sm text-gray-600 text-center">Fashion Institute of Design</span>
+              </div>
+              <div className="aspect-square bg-emerge-cream flex items-center justify-center p-4">
+                <span className="text-sm text-gray-600 text-center">International Fashion Council</span>
+              </div>
+              <div className="aspect-square bg-emerge-cream flex items-center justify-center p-4">
+                <span className="text-sm text-gray-600 text-center">African Fashion Alliance</span>
+              </div>
+              <div className="aspect-square bg-emerge-cream flex items-center justify-center p-4">
+                <span className="text-sm text-gray-600 text-center">Global Design Institute</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </MainLayout>
   );
-}
+};
+
+export default Education;
