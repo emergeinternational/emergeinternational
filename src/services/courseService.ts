@@ -15,6 +15,8 @@ export interface Course {
   updated_at: string;
   levelName?: string;
   duration?: string;
+  content?: string;
+  source_url?: string;
 }
 
 export interface CourseProgress {
@@ -71,6 +73,7 @@ export const getCourses = async (
       created_at: item.created_at,
       updated_at: item.updated_at,
       duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+      source_url: item.source_url,
     }));
   } catch (error) {
     console.error("Unexpected error in getCourses:", error);
@@ -110,7 +113,8 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
       published_at: data.published_at,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days'
+      duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
+      source_url: data.source_url,
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
