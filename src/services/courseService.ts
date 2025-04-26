@@ -2,52 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, UserCourseEnrollment, EducationLevel, Certificate, Language, CompletionStatus } from '@/types/education';
 
-// Define the missing CourseSource type
+// Define types to match database schema
 type CourseSource = 'internal' | 'external' | 'embedded';
-
-// Define the database response types to match the actual schema
-type EducationContentResponse = {
-  id: string;
-  title: string;
-  summary?: string;
-  description?: string;
-  category_id?: string;
-  level?: string;
-  source_type?: string;
-  source_url?: string;
-  image_url?: string;
-  video_url?: string;
-  content?: any;
-  duration_minutes?: number;
-  is_archived: boolean;
-  is_featured: boolean;
-  language?: string;
-  created_at: string;
-  updated_at: string;
-  published_at: string;
-  archive_date?: string;
-  content_type: string;
-};
-
-type UserProgressResponse = {
-  id: string;
-  user_id: string;
-  course_id: string;
-  status?: string;
-  progress_percent?: number;
-  last_position?: string;
-  date_started?: string;
-  date_completed?: string;
-  certificate_id?: string;
-  course_category?: string;
-  created_at: string;
-  updated_at: string;
-  education_content?: {
-    title?: string;
-    category_id?: string;
-    level?: string;
-  };
-};
 
 // Get all course categories
 export const getCourseCategories = async (): Promise<CourseCategory[]> => {
@@ -101,24 +57,26 @@ export const getCourses = async (
   if (error) throw error;
   
   // Map the education_content data to Course format
-  return (data || []).map((content: EducationContentResponse) => ({
-    id: content.id,
-    title: content.title,
-    slug: content.title?.toLowerCase().replace(/\s+/g, '-') || '',
-    overview: content.summary || '',
-    description: content.description || content.summary || '',
-    categoryId: content.category_id || '',
-    level: (content.level as EducationLevel) || 'beginner',
-    source: (content.source_type as CourseSource) || 'external',
-    externalUrl: content.source_url,
-    thumbnailUrl: content.image_url,
-    videoUrl: content.video_url,
-    content: content.content,
-    durationMinutes: content.duration_minutes,
-    status: content.is_archived ? 'archived' : 'published',
-    featured: content.is_featured || false,
-    language: (content.language as Language) || 'en'
-  }));
+  return (data || []).map(content => {
+    return {
+      id: content.id,
+      title: content.title,
+      slug: content.title?.toLowerCase().replace(/\s+/g, '-') || '',
+      overview: content.summary || '',
+      description: content.description || content.summary || '',
+      categoryId: content.category_id || '',
+      level: (content.level as EducationLevel) || 'beginner',
+      source: (content.source_type as CourseSource) || 'external',
+      externalUrl: content.source_url,
+      thumbnailUrl: content.image_url,
+      videoUrl: content.video_url,
+      content: content.content,
+      durationMinutes: content.duration_minutes,
+      status: content.is_archived ? 'archived' : 'published',
+      featured: content.is_featured || false,
+      language: (content.language as Language) || 'en'
+    };
+  });
 };
 
 // Enroll user in a course
@@ -146,24 +104,32 @@ export const getUserEnrollments = async (): Promise<UserCourseEnrollment[]> => {
   
   const { data, error } = await supabase
     .from('user_course_progress')
-    .select('*, education_content(title, category_id, level)')
+    .select(`
+      *,
+      education_content(title, category_id, level)
+    `)
     .eq('user_id', user.id)
     .order('date_started', { ascending: false });
   
   if (error) throw error;
   
   // Map the user_course_progress data to UserCourseEnrollment format
-  return (data || []).map((progress: UserProgressResponse) => ({
-    id: progress.id,
-    userId: progress.user_id,
-    courseId: progress.course_id,
-    status: (progress.status as CompletionStatus) || 'not_started',
-    progressPercent: progress.progress_percent || 0,
-    lastPosition: progress.last_position,
-    startedAt: progress.date_started || new Date().toISOString(),
-    completedAt: progress.date_completed,
-    certificateId: progress.certificate_id
-  }));
+  return (data || []).map(progress => {
+    // Extract the education_content if it exists
+    const courseDetails = progress.education_content || {};
+    
+    return {
+      id: progress.id,
+      userId: progress.user_id,
+      courseId: progress.course_id,
+      status: (progress.status as CompletionStatus) || 'not_started',
+      progressPercent: progress.progress_percent || 0,
+      lastPosition: progress.last_position,
+      startedAt: progress.date_started || new Date().toISOString(),
+      completedAt: progress.date_completed,
+      certificateId: progress.certificate_id
+    };
+  });
 };
 
 // Update course progress
@@ -229,18 +195,20 @@ export const getUserCertificates = async (): Promise<Certificate[]> => {
   if (coursesError) throw coursesError;
   
   // Create certificates based on completed courses
-  const certificates: Certificate[] = (completedCourses || []).map((course: UserProgressResponse) => {
-    // Safely access nested properties with optional chaining
+  const certificates: Certificate[] = (completedCourses || []).map(course => {
+    // Safely access nested properties
     const educationContent = course.education_content || {};
+    const title = typeof educationContent === 'object' ? educationContent.title : undefined;
+    const categoryId = typeof educationContent === 'object' ? educationContent.category_id : undefined;
     
     return {
       id: course.id,
       userId: user.id,
       courseId: course.course_id,
-      categoryId: educationContent.category_id,
+      categoryId: categoryId,
       issueDate: course.date_completed || new Date().toISOString(),
       type: 'course',
-      title: `${educationContent.title || 'Course'} Certificate`,
+      title: `${title || 'Course'} Certificate`,
       downloadUrl: `/api/certificates/${course.id}`
     };
   });
