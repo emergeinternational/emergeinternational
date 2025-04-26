@@ -6,7 +6,7 @@ export interface Course {
   title: string;
   summary: string;
   content_type: string;
-  image_url?: string;
+  image_url: string;
   category_id: string;
   is_featured: boolean;
   published_at: string;
@@ -276,7 +276,6 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&auto=format&fit=crop'
   ];
   
-  // Additional category-specific and level-specific images
   const beginnerImages = [
     'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop',
@@ -399,7 +398,6 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
   }
   
   // Ensure each course has at least one interest - distribute across categories based on level
-  // This ensures we have courses distributed across all levels for each career category
   if (interests.size === 0) {
     if (category === 'beginner') {
       // Beginner courses distributed among all career types
@@ -555,7 +553,7 @@ const mapCourseData = (data: any): Course => {
     title: data.title,
     summary: data.summary || '',
     content_type: data.content_type,
-    image_url: data.image_url,
+    image_url: data.image_url || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop',
     category_id: data.category_id,
     is_featured: data.is_featured,
     published_at: data.published_at,
