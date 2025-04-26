@@ -247,6 +247,50 @@ export type Database = {
         }
         Relationships: []
       }
+      event_registrations: {
+        Row: {
+          amount: number
+          created_at: string
+          event_id: string
+          id: string
+          payment_proof_url: string | null
+          payment_status: string
+          ticket_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          event_id: string
+          id?: string
+          payment_proof_url?: string | null
+          payment_status?: string
+          ticket_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          payment_proof_url?: string | null
+          payment_status?: string
+          ticket_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           capacity: number | null
@@ -685,6 +729,21 @@ export type Database = {
           telegram_name: string | null
           updated_at: string
         }
+      }
+      get_event_registrations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          event_id: string
+          user_id: string
+          ticket_type: string
+          amount: number
+          payment_status: string
+          payment_proof_url: string
+          created_at: string
+          profiles: Json
+          events: Json
+        }[]
       }
       has_role: {
         Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
