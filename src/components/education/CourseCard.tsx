@@ -34,7 +34,7 @@ const CourseCard = ({
   const courseDesc = description || "We're preparing new educational content in this category. Check back soon for updates.";
   const courseImage = image || "/images/placeholder-course.jpg";
   const courseDuration = duration || "Coming soon";
-  const courseLevelName = levelName || level.toUpperCase();
+  const courseLevelName = levelName || (level ? level.toUpperCase() : "BEGINNER");
   const courseVideoUrl = videoUrl || "";
   
   const toggleVideo = (e: React.MouseEvent) => {
