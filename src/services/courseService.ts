@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Course, CourseCategory, UserCourseEnrollment, EducationLevel, Certificate, Language } from '@/types/education';
+import { Course, CourseCategory, UserCourseEnrollment, EducationLevel, Certificate, Language, CompletionStatus } from '@/types/education';
 
 // Get all course categories
 export const getCourseCategories = async (): Promise<CourseCategory[]> => {
@@ -57,20 +57,20 @@ export const getCourses = async (
   return (data || []).map(content => ({
     id: content.id,
     title: content.title,
-    slug: content.title.toLowerCase().replace(/\s+/g, '-'),
+    slug: content.title?.toLowerCase().replace(/\s+/g, '-') || '',
     overview: content.summary || '',
     description: content.description || content.summary || '',
     categoryId: content.category_id || '',
-    level: content.level || 'beginner',
-    source: content.source_type || 'external',
+    level: (content.level as EducationLevel) || 'beginner',
+    source: (content.source_type as CourseSource) || 'external',
     externalUrl: content.source_url,
     thumbnailUrl: content.image_url,
     videoUrl: content.video_url,
     content: content.content,
     durationMinutes: content.duration_minutes,
     status: content.is_archived ? 'archived' : 'published',
-    featured: content.is_featured,
-    language: content.language || 'en'
+    featured: content.is_featured || false,
+    language: (content.language as Language) || 'en'
   }));
 };
 
@@ -110,7 +110,7 @@ export const getUserEnrollments = async (): Promise<UserCourseEnrollment[]> => {
     id: progress.id,
     userId: progress.user_id,
     courseId: progress.course_id,
-    status: progress.status as CompletionStatus || 'not_started',
+    status: (progress.status as CompletionStatus) || 'not_started',
     progressPercent: progress.progress_percent || 0,
     lastPosition: progress.last_position,
     startedAt: progress.date_started || new Date().toISOString(),
@@ -151,9 +151,13 @@ export const updateCourseProgress = async (
   
   // If course is completed, trigger certificate generation
   if (progressPercent === 100) {
-    await supabase.functions.invoke('education-automation', {
-      body: { operation: 'generate-certificates' }
-    });
+    try {
+      await supabase.functions.invoke('education-automation', {
+        body: { operation: 'generate-certificates' }
+      });
+    } catch (e) {
+      console.error('Failed to generate certificate:', e);
+    }
   }
 };
 
@@ -162,34 +166,36 @@ export const getUserCertificates = async (): Promise<Certificate[]> => {
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) throw new Error('User must be authenticated');
   
-  const { data, error } = await supabase
-    .from('user_certificates')
+  // Since there's an issue with the user_certificates table, 
+  // we'll use a different approach to get certificates
+  // This is a temporary solution until the table structure is updated
+  
+  const { data: completedCourses, error: coursesError } = await supabase
+    .from('user_course_progress')
     .select(`
       *,
-      education_content(title),
-      education_categories(name)
+      education_content(title, category_id, level)
     `)
     .eq('user_id', user.id)
-    .order('issue_date', { ascending: false });
+    .eq('status', 'completed');
+    
+  if (coursesError) throw coursesError;
   
-  if (error) throw error;
-  
-  return (data || []).map(cert => {
-    const title = cert.certificate_type === 'course' 
-      ? `${cert.education_content?.title || 'Course'} Certificate` 
-      : `${cert.education_categories?.name || 'Category'} Mastery Certificate`;
-      
+  // Create certificates based on completed courses
+  const certificates: Certificate[] = (completedCourses || []).map(course => {
     return {
-      id: cert.id,
-      userId: cert.user_id,
-      courseId: cert.course_id,
-      categoryId: cert.category_id,
-      issueDate: cert.issue_date,
-      type: cert.certificate_type,
-      title: title,
-      downloadUrl: `/api/certificates/${cert.id}`
+      id: course.id,
+      userId: user.id,
+      courseId: course.course_id,
+      categoryId: course.education_content?.category_id,
+      issueDate: course.date_completed || new Date().toISOString(),
+      type: 'course',
+      title: `${course.education_content?.title || 'Course'} Certificate`,
+      downloadUrl: `/api/certificates/${course.id}`
     };
   });
+  
+  return certificates;
 };
 
 // Get course content
@@ -206,11 +212,52 @@ export const getCourseContent = async (courseId: string): Promise<any> => {
   try {
     await supabase.from('course_engagement').upsert({
       course_id: courseId,
-      last_click_date: new Date().toISOString()
+      last_click_date: new Date().toISOString(),
+      total_clicks: 1
     }, { onConflict: 'course_id' });
   } catch (e) {
     console.error('Failed to track engagement', e);
   }
   
   return data;
+};
+
+// Check if user has completed all courses in a category
+export const checkCategoryCompletion = async (categoryId: string): Promise<boolean> => {
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) return false;
+  
+  // Get all courses in the category
+  const { data: categoryCourses, error: coursesError } = await supabase
+    .from('education_content')
+    .select('id')
+    .eq('category_id', categoryId);
+    
+  if (coursesError || !categoryCourses || categoryCourses.length === 0) return false;
+  
+  // Get user's completed courses in this category
+  const { data: userCompletedCourses, error: completedError } = await supabase
+    .from('user_course_progress')
+    .select('course_id')
+    .eq('user_id', user.id)
+    .eq('status', 'completed')
+    .in('course_id', categoryCourses.map(c => c.id));
+    
+  if (completedError) return false;
+  
+  // Check if user completed all courses in the category
+  return userCompletedCourses && userCompletedCourses.length === categoryCourses.length;
+};
+
+// Refresh course offerings function
+export const refreshCourseOfferings = async (): Promise<void> => {
+  // This would typically be called by a cron job every 2 weeks
+  // The implementation depends on how you want to refresh the courses
+  try {
+    await supabase.functions.invoke('education-automation', {
+      body: { operation: 'refresh-courses' }
+    });
+  } catch (e) {
+    console.error('Failed to refresh courses:', e);
+  }
 };

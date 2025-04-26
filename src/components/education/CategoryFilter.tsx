@@ -39,7 +39,7 @@ export function CategoryFilter({
           onClick={() => onSelectCategory(undefined)}
         >
           <BookOpen className="h-4 w-4" />
-          <span>All</span>
+          <span>All Categories</span>
         </Button>
         
         {categories.map((category) => {

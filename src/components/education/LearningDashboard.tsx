@@ -1,13 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getUserEnrollments, getUserCertificates } from "@/services/courseService";
-import { UserCourseEnrollment, Certificate } from "@/types/education";
-import { useQuery } from "@tanstack/react-query";
+import { getUserEnrollments, getUserCertificates, checkCategoryCompletion } from "@/services/courseService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CertificateCard } from "./CertificateCard";
 import { CourseProgressCard } from "./CourseProgressCard";
 import { MedalIcon, BookOpenCheck, Award } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 export function LearningDashboard() {
@@ -32,23 +31,43 @@ export function LearningDashboard() {
     queryFn: getUserCertificates
   });
 
-  useEffect(() => {
-    if (enrollmentsError) {
-      toast({
-        title: "Error",
-        description: "Failed to load your course progress. Please try again.",
-        variant: "destructive"
-      });
-    }
-    
-    if (certificatesError) {
-      toast({
-        title: "Error",
-        description: "Failed to load your certificates. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [enrollmentsError, certificatesError, toast]);
+  // Check if user has completed all courses in each category
+  const { data: categoryCompletions } = useQuery({
+    queryKey: ["categoryCompletions", enrollments],
+    queryFn: async () => {
+      if (!enrollments) return {};
+      
+      // Get unique category IDs from enrollments
+      const categoryIds = [...new Set(enrollments
+        .filter(e => e.status === 'completed')
+        .map(e => e.courseId)
+      )];
+      
+      const completions: Record<string, boolean> = {};
+      for (const categoryId of categoryIds) {
+        completions[categoryId] = await checkCategoryCompletion(categoryId);
+      }
+      
+      return completions;
+    },
+    enabled: !!enrollments
+  });
+
+  if (enrollmentsError) {
+    toast({
+      title: "Error",
+      description: "Failed to load your course progress. Please try again.",
+      variant: "destructive"
+    });
+  }
+  
+  if (certificatesError) {
+    toast({
+      title: "Error",
+      description: "Failed to load your certificates. Please try again.",
+      variant: "destructive"
+    });
+  }
 
   const inProgressCourses = enrollments?.filter(
     enrollment => enrollment.status === 'not_started' || enrollment.status === 'in_progress'
@@ -152,6 +171,25 @@ export function LearningDashboard() {
                   certificate={certificate} 
                 />
               ))}
+              
+              {/* Display category mastery certificates if available */}
+              {categoryCompletions && Object.entries(categoryCompletions)
+                .filter(([_, isComplete]) => isComplete)
+                .map(([categoryId]) => (
+                  <CertificateCard
+                    key={`category-${categoryId}`}
+                    certificate={{
+                      id: `category-${categoryId}`,
+                      userId: '',
+                      categoryId: categoryId,
+                      issueDate: new Date().toISOString(),
+                      type: 'category',
+                      title: 'Emerge International Certificate',
+                      downloadUrl: `/api/certificates/category/${categoryId}`
+                    }}
+                  />
+                ))
+              }
             </div>
           ) : (
             <Alert>

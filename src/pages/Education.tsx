@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Sliders } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CategoryFilter } from "@/components/education/CategoryFilter";
 import { LevelFilter } from "@/components/education/LevelFilter";
 import { LanguageFilter } from "@/components/education/LanguageFilter";
-import { InterestsFilter } from "@/components/education/InterestsFilter";
 import { CourseCard } from "@/components/education/CourseCard";
 import { EmptyCourseState } from "@/components/education/EmptyCourseState";
 import { LearningDashboard } from "@/components/education/LearningDashboard";
@@ -23,7 +22,6 @@ export default function Education() {
   const [selectedCategory, setSelectedCategory] = useState<string>();
   const [selectedLevel, setSelectedLevel] = useState<EducationLevel>();
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
-  const [selectedInterest, setSelectedInterest] = useState<string>();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("browse");
   const { toast } = useToast();
@@ -81,7 +79,6 @@ export default function Education() {
   const clearAllFilters = () => {
     setSelectedCategory(undefined);
     setSelectedLevel(undefined);
-    setSelectedInterest(undefined);
     setSearchQuery("");
   };
 
@@ -155,10 +152,6 @@ export default function Education() {
                       selectedLanguage={selectedLanguage}
                       onSelectLanguage={setSelectedLanguage}
                     />
-                    <InterestsFilter 
-                      selectedInterest={selectedInterest}
-                      onSelectInterest={setSelectedInterest}
-                    />
                     <Button 
                       variant="outline" 
                       className="w-full mt-4"
@@ -187,10 +180,6 @@ export default function Education() {
                 <LanguageFilter
                   selectedLanguage={selectedLanguage}
                   onSelectLanguage={setSelectedLanguage}
-                />
-                <InterestsFilter 
-                  selectedInterest={selectedInterest}
-                  onSelectInterest={setSelectedInterest}
                 />
                 <Button 
                   variant="outline" 
