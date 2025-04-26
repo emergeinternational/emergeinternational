@@ -1,726 +1,306 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Define interfaces based on actual database schema
 export interface Course {
   id: string;
   title: string;
   summary?: string;
-  content_type: string;
-  image_url?: string;
-  category_id: string;
-  is_featured: boolean;
-  published_at: string;
-  created_at: string;
-  updated_at: string;
-  levelName?: string;
+  description?: string;
+  category: string;
+  level: string;
   duration?: string;
-  content?: string;
-  source_url?: string;
-  career_interests?: string[];
-  video_embed_url?: string;
+  instructor?: string;
+  image?: string;
+  link?: string;
+  slug?: string;
+  rating?: number;
+  reviews?: number;
+  isPopular?: boolean;
+  isFeatured?: boolean;
+  prerequisites?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
+// Add progress property to CourseProgress interface
 export interface CourseProgress {
   id: string;
-  user_id: string;
   course_id: string;
-  status: string;
-  course_category?: string;
-  date_started: string;
-  date_completed?: string;
-  created_at: string;
-  updated_at: string;
-  progress: number;
-}
-
-export interface CertificateEligibility {
-  id: string;
   user_id: string;
-  online_courses_completed: number;
-  workshops_completed: number;
-  is_eligible: boolean;
-  admin_approved: boolean;
+  status: string;
+  course_category: string;
+  date_started: string;
+  date_completed: string;
   created_at: string;
   updated_at: string;
-  profiles?: {
-    full_name: string | null;
-    email: string | null;
-  };
+  progress: number; // Add the missing progress property
 }
 
-// Get courses with optional filtering
-export const getCourses = async (
-  categoryId?: string,
-  limit: number = 10,
-  featuredOnly: boolean = false,
-  careerInterest?: string
-): Promise<Course[]> => {
-  try {
-    let query = supabase
-      .from('education_content')
-      .select('*')
-      .order('published_at', { ascending: false })
-      .limit(limit);
-    
-    if (categoryId && categoryId !== 'all') {
-      query = query.eq('category_id', categoryId);
-    }
-    
-    if (featuredOnly) {
-      query = query.eq('is_featured', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error("Error fetching courses:", error);
-      throw error;
-    }
-    
-    // Map database results to Course interface
-    const courses = data.map(item => ({
-      id: item.id,
-      title: item.title,
-      summary: item.summary || '',
-      content_type: item.content_type,
-      image_url: getRelevantCourseImage(item.title, item.category_id, item.image_url),
-      category_id: item.category_id,
-      is_featured: item.is_featured,
-      published_at: item.published_at,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-      source_url: item.source_url,
-      career_interests: getCourseCareerInterests(item.title, item.category_id)
-    }));
-    
-    // Apply career interest filter if provided
-    if (careerInterest && careerInterest !== 'all') {
-      return courses.filter(course => 
-        course.career_interests?.includes(careerInterest)
-      );
-    }
-    
-    return courses;
-  } catch (error) {
-    console.error("Unexpected error in getCourses:", error);
-    return [];
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Review {
+  id: string;
+  course_id: string;
+  user_id: string;
+  rating: number;
+  comment: string;
+  created_at?: string;
+}
+
+export const calculateCourseCompletion = (progress: number): string => {
+  if (progress < 25) {
+    return "Beginner";
+  } else if (progress < 50) {
+    return "Intermediate";
+  } else if (progress < 75) {
+    return "Advanced";
+  } else {
+    return "Completed";
   }
 };
 
-// Get relevant image for course based on title and category
-const getRelevantCourseImage = (title: string, category: string, defaultImage?: string): string => {
-  if (defaultImage && defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop') {
-    return defaultImage;
-  }
-  
-  const titleLower = title.toLowerCase();
-  
-  if (titleLower.includes('photo') || titleLower.includes('photography')) {
-    return 'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('video') || titleLower.includes('film')) {
-    return 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('music') || titleLower.includes('sing') || titleLower.includes('perform')) {
-    return 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('art') || titleLower.includes('paint')) {
-    return 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('event') || titleLower.includes('plan')) {
-    return 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('design') || titleLower.includes('fashion')) {
-    return 'https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('model') || titleLower.includes('modeling')) {
-    return 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('social') || titleLower.includes('marketing')) {
-    return 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop';
-  } else if (titleLower.includes('act') || titleLower.includes('perform')) {
-    return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop';
-  }
-  
-  // Category-based images if no title match
-  return 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop';
-};
+export const getUserCourseProgress = async (userId?: string): Promise<CourseProgress[]> => {
+  if (!userId) return [];
 
-// Get mock career interests for courses
-const getCourseCareerInterests = (title: string, category: string): string[] => {
-  const titleLower = title.toLowerCase();
-  const interests = new Set<string>();
-  
-  if (titleLower.includes('photo') || titleLower.includes('photography')) {
-    interests.add('photographer');
-  }
-  
-  if (titleLower.includes('video') || titleLower.includes('film')) {
-    interests.add('videographer');
-  }
-  
-  if (titleLower.includes('music') || titleLower.includes('sing') || titleLower.includes('perform')) {
-    interests.add('musical_artist');
-  }
-  
-  if (titleLower.includes('art') || titleLower.includes('paint')) {
-    interests.add('fine_artist');
-  }
-  
-  if (titleLower.includes('event') || titleLower.includes('plan')) {
-    interests.add('event_planner');
-  }
-  
-  if (titleLower.includes('design') || titleLower.includes('fashion')) {
-    interests.add('designer');
-  }
-  
-  if (titleLower.includes('model') || titleLower.includes('portfolio') || titleLower.includes('runway')) {
-    interests.add('model');
-  }
-  
-  if (titleLower.includes('act') || titleLower.includes('perform') || titleLower.includes('stage')) {
-    interests.add('actor');
-  }
-  
-  if (titleLower.includes('social') || titleLower.includes('media') || titleLower.includes('marketing')) {
-    interests.add('social media influencer');
-  }
-  
-  if (titleLower.includes('entertainment') || titleLower.includes('talent')) {
-    interests.add('entertainment talent');
-  }
-  
-  // Ensure each course has at least one interest
-  if (interests.size === 0) {
-    interests.add('designer');
-  }
-  
-  return Array.from(interests);
-};
-
-// Get featured courses
-export const getFeaturedCourses = async (limit: number = 3): Promise<Course[]> => {
-  return getCourses(undefined, limit, true);
-};
-
-// Get a specific course by ID
-export const getCourseById = async (courseId: string): Promise<Course | null> => {
-  try {
-    console.log("Getting course with ID:", courseId);
-    
-    if (!courseId || courseId === 'undefined' || courseId === 'null') {
-      console.error("Invalid course ID provided:", courseId);
-      return null;
-    }
-    
-    // First try to fetch from database using UUID
-    if (isValidUUID(courseId)) {
-      const { data, error } = await supabase
-        .from('education_content')
-        .select('*')
-        .eq('id', courseId)
-        .single();
-      
-      if (error) {
-        console.error("Error fetching course:", error);
-        // Continue to fallback options
-      } else if (data) {
-        return mapCourseData(data);
-      }
-    }
-    
-    // If database fetch fails or invalid UUID, fall back to static courses
-    const allCourses = getStaticCourses();
-    const course = allCourses.find(c => {
-      // Match by ID directly or by its numeric representation
-      const numericId = parseInt(courseId);
-      return c.id === courseId || (!isNaN(numericId) && parseInt(c.id) === numericId);
-    });
-    
-    if (course) {
-      return {
-        ...course,
-        image_url: getRelevantCourseImage(course.title, course.category_id, course.image_url),
-        career_interests: getCourseCareerInterests(course.title, course.category_id)
-      };
-    }
-    
-    console.error("Course not found with ID:", courseId);
-    return null;
-  } catch (error) {
-    console.error("Unexpected error in getCourseById:", error);
-    return null;
-  }
-};
-
-// Check if string is a valid UUID
-const isValidUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
-};
-
-// Map database result to Course interface
-const mapCourseData = (data: any): Course => {
-  return {
-    id: data.id,
-    title: data.title,
-    summary: data.summary || '',
-    content_type: data.content_type,
-    image_url: getRelevantCourseImage(data.title, data.category_id, data.image_url),
-    category_id: data.category_id,
-    is_featured: data.is_featured,
-    published_at: data.published_at,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    source_url: data.source_url,
-    career_interests: getCourseCareerInterests(data.title, data.category_id)
-  };
-};
-
-// Get course progress for a user
-export const getUserCourseProgress = async (userId: string): Promise<CourseProgress[]> => {
   try {
     const { data, error } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId);
-    
+      .from("user_course_progress")
+      .select("*")
+      .eq("user_id", userId);
+
     if (error) {
-      console.error("Error fetching course progress:", error);
-      throw error;
+      console.error("Error fetching user course progress:", error);
+      return [];
     }
-    
-    // Ensure every record has a progress field, defaulting to 0 if missing
-    return (data || []).map(record => ({
-      ...record,
-      progress: record.progress || 0
-    })) as CourseProgress[];
+
+    // Map the data to include progress property if it doesn't exist
+    return data.map((item): CourseProgress => ({
+      ...item,
+      progress: item.progress || 0 // Ensure progress property exists
+    }));
   } catch (error) {
     console.error("Unexpected error in getUserCourseProgress:", error);
     return [];
   }
 };
 
-// Track user engagement with a course
-export const trackCourseEngagement = async (courseId: string): Promise<boolean> => {
+export const updateCourseProgress = async (
+  courseId: string,
+  userId: string,
+  category: string,
+  progressValue: number = 0,
+  status: string = "in_progress"
+): Promise<CourseProgress | null> => {
   try {
-    // First check if we have an engagement record for this course
-    const { data: existingData } = await supabase
-      .from('course_engagement')
-      .select('*')
-      .eq('course_id', courseId)
+    // Check if progress already exists
+    const { data: existingProgress } = await supabase
+      .from("user_course_progress")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("user_id", userId)
       .maybeSingle();
-    
-    if (existingData) {
-      // Update existing record
-      const { error } = await supabase
-        .from('course_engagement')
+
+    if (existingProgress) {
+      // Update existing progress
+      const { data, error } = await supabase
+        .from("user_course_progress")
         .update({
-          total_clicks: existingData.total_clicks + 1,
-          last_click_date: new Date().toISOString(),
+          status,
+          progress: progressValue, // Use the progress parameter
+          date_completed: status === "completed" ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', existingData.id);
-      
-      if (error) throw error;
-    } else {
-      // Create new record
-      const { error } = await supabase
-        .from('course_engagement')
-        .insert([{
-          course_id: courseId,
-          total_clicks: 1,
-          last_click_date: new Date().toISOString(),
-        }]);
-      
-      if (error) throw error;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error tracking course engagement:", error);
-    return false;
-  }
-};
-
-// Update course progress
-export const updateCourseProgress = async (
-  userId: string,
-  courseId: string,
-  status: 'in_progress' | 'completed',
-  courseCategory?: string,
-  progress?: number,
-  retrieveOnly: boolean = false
-): Promise<CourseProgress | boolean> => {
-  try {
-    // Check if progress record exists
-    const { data: existingData } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('course_id', courseId)
-      .maybeSingle();
-    
-    if (retrieveOnly) {
-      // Ensure we return an object with progress property if it exists
-      if (existingData) {
-        return {
-          ...existingData,
-          // If progress doesn't exist in the database, default to 0
-          progress: existingData.progress || 0
-        } as CourseProgress;
-      }
-      return false;
-    }
-    
-    const updateData = {
-      status,
-      progress: progress || (status === 'completed' ? 100 : 0),
-      updated_at: new Date().toISOString(),
-      date_completed: status === 'completed' ? new Date().toISOString() : null
-    };
-    
-    if (existingData) {
-      // Only update if the new progress is higher than existing
-      if (!progress || (existingData.progress || 0) < progress) {
-        const { error, data } = await supabase
-          .from('user_course_progress')
-          .update(updateData)
-          .eq('id', existingData.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        
-        // Check if user is eligible for certificate after completing course
-        if (status === 'completed') {
-          await checkCertificateEligibility(userId);
-        }
-        
-        return {
-          ...data,
-          progress: data.progress || 0
-        } as CourseProgress;
-      }
-      
-      return {
-        ...existingData,
-        progress: existingData.progress || 0
-      } as CourseProgress;
-    } else {
-      const { error, data } = await supabase
-        .from('user_course_progress')
-        .insert([{
-          user_id: userId,
-          course_id: courseId,
-          course_category: courseCategory,
-          date_started: new Date().toISOString(),
-          ...updateData
-        }])
+        .eq("id", existingProgress.id)
         .select()
         .single();
-      
-      if (error) throw error;
-      
-      // Check if user is eligible for certificate after completing course
-      if (status === 'completed') {
-        await checkCertificateEligibility(userId);
+
+      if (error) {
+        console.error("Error updating course progress:", error);
+        return null;
       }
-      
+
       return {
         ...data,
-        progress: data.progress || 0
-      } as CourseProgress;
-    }
-  } catch (error) {
-    console.error("Error updating course progress:", error);
-    return false;
-  }
-};
-
-// Admin-controlled course completion
-export const adminCompleteCourse = async (
-  userId: string,
-  courseId: string,
-  adminId: string,
-  courseCategory?: string
-): Promise<boolean> => {
-  try {
-    // Check if admin has proper permissions first (implementation omitted)
-    
-    // Update course progress to completed
-    const { error } = await supabase
-      .from('user_course_progress')
-      .upsert([{
-        user_id: userId,
-        course_id: courseId,
-        status: 'completed',
-        progress: 100,
-        date_completed: new Date().toISOString(),
-        date_started: new Date().toISOString(), // fallback if this is a new record
-        course_category: courseCategory,
-        updated_at: new Date().toISOString()
-      }]);
-    
-    if (error) throw error;
-    
-    // Check certificate eligibility after admin approval
-    await checkCertificateEligibility(userId);
-    
-    return true;
-  } catch (error) {
-    console.error("Error in admin course completion:", error);
-    return false;
-  }
-};
-
-// Check if a user is eligible for a certificate
-export const checkCertificateEligibility = async (userId: string): Promise<boolean> => {
-  try {
-    // Get online course completions
-    const { data: onlineCourses, error: coursesError } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'completed');
-    
-    if (coursesError) throw coursesError;
-    
-    // Get workshop completions 
-    const { data: workshopCompletions, error: workshopsError } = await supabase
-      .from('user_course_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .eq('course_category', 'workshop');
-    
-    if (workshopsError) throw workshopsError;
-    
-    // Count completions
-    const onlineCoursesCompleted = onlineCourses ? onlineCourses.length : 0;
-    const workshopsCompleted = workshopCompletions ? workshopCompletions.length : 0;
-    
-    // Check eligibility criteria (5+ online courses and 3+ workshops)
-    const isEligible = onlineCoursesCompleted >= 5 && workshopsCompleted >= 3;
-    
-    // Update or create eligibility record
-    const { data: existingEligibility } = await supabase
-      .from('certificate_eligibility')
-      .select()
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (existingEligibility) {
-      await supabase
-        .from('certificate_eligibility')
-        .update({
-          is_eligible: isEligible,
-          online_courses_completed: onlineCoursesCompleted,
-          workshops_completed: workshopsCompleted,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingEligibility.id);
+        progress: data.progress || progressValue // Ensure progress exists
+      };
     } else {
-      await supabase
-        .from('certificate_eligibility')
-        .insert([{
+      // Create new progress
+      const { data, error } = await supabase
+        .from("user_course_progress")
+        .insert({
+          course_id: courseId,
           user_id: userId,
-          is_eligible: isEligible,
-          admin_approved: false,
-          online_courses_completed: onlineCoursesCompleted,
-          workshops_completed: workshopsCompleted
-        }]);
-    }
-    
-    return isEligible;
-  } catch (error) {
-    console.error("Error checking certificate eligibility:", error);
-    return false;
-  }
-};
+          course_category: category,
+          status,
+          progress: progressValue,
+          date_started: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-// Get certificate eligibility status for a user
-export const getCertificateEligibility = async (userId: string): Promise<CertificateEligibility | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('certificate_eligibility')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          email
-        )
-      `)
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (error) throw error;
-    return data;
+      if (error) {
+        console.error("Error creating course progress:", error);
+        return null;
+      }
+
+      return {
+        ...data,
+        progress: data.progress || progressValue // Ensure progress exists
+      };
+    }
   } catch (error) {
-    console.error("Error fetching certificate eligibility:", error);
+    console.error("Unexpected error in updateCourseProgress:", error);
     return null;
   }
 };
 
-// Update certificate approval status (admin only)
-export const updateCertificateApproval = async (
-  eligibilityId: string,
-  approved: boolean
-): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('certificate_eligibility')
-      .update({
-        admin_approved: approved,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', eligibilityId);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error("Error updating certificate approval:", error);
-    return false;
-  }
-};
+export const getCourseProgress = async (
+  courseId: string,
+  userId?: string
+): Promise<CourseProgress | null> => {
+  if (!userId) return null;
 
-// Get list of users eligible for certificates (for admin)
-export const getEligibleUsers = async (): Promise<CertificateEligibility[]> => {
   try {
     const { data, error } = await supabase
-      .from('certificate_eligibility')
-      .select(`
-        *,
-        profiles:user_id (
-          full_name,
-          email
-        )
-      `)
-      .eq('is_eligible', true)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
+      .from("user_course_progress")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching course progress:", error);
+      return null;
+    }
+
+    if (!data) return null;
+
+    return {
+      ...data,
+      progress: data.progress || 0 // Ensure progress exists
+    };
+  } catch (error) {
+    console.error("Unexpected error in getCourseProgress:", error);
+    return null;
+  }
+};
+
+export const getCourseById = async (id: string): Promise<Course | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching course by ID:", error);
+      return null;
+    }
+
+    return data || null;
+  } catch (error) {
+    console.error("Unexpected error in getCourseById:", error);
+    return null;
+  }
+};
+
+export const getAllCourses = async (): Promise<Course[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*");
+
+    if (error) {
+      console.error("Error fetching all courses:", error);
+      return [];
+    }
+
     return data || [];
   } catch (error) {
-    console.error("Error fetching eligible users:", error);
+    console.error("Unexpected error in getAllCourses:", error);
     return [];
   }
 };
 
-// Get recommended courses based on user interests
-export const getRecommendedCourses = async (userId: string, limit: number = 3): Promise<Course[]> => {
+export const getPopularCourses = async (): Promise<Course[]> => {
   try {
-    // For now, just return featured courses as recommendations
-    // In future this could be based on user preferences or course history
-    return getFeaturedCourses(limit);
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("isPopular", true);
+
+    if (error) {
+      console.error("Error fetching popular courses:", error);
+      return [];
+    }
+
+    return data || [];
   } catch (error) {
-    console.error("Unexpected error in getRecommendedCourses:", error);
+    console.error("Unexpected error in getPopularCourses:", error);
     return [];
   }
 };
 
-// Get static courses as fallback
-export const getStaticCourses = (): Course[] => {
-  return [
-    { 
-      id: "1", 
-      category_id: "beginner",
-      title: "Fashion Design 101", 
-      summary: "Master the fundamentals of fashion design through hands-on projects. Learn sketching, pattern making, and create your first collection.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer"]
-    },
-    { 
-      id: "2", 
-      category_id: "beginner",
-      title: "Digital Fashion Marketing", 
-      summary: "Learn to market fashion products effectively using social media, email marketing, and digital advertising strategies.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "social media influencer"]
-    },
-    { 
-      id: "3", 
-      category_id: "advanced",
-      title: "Advanced Pattern Making", 
-      summary: "Master complex pattern making techniques for haute couture and ready-to-wear collections. Includes draping and 3D modeling.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1558906307-54289c8a9bd4?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer"]
-    },
-    { 
-      id: "4", 
-      category_id: "intermediate",
-      title: "Sustainable Fashion", 
-      summary: "Learn eco-friendly design practices, sustainable materials sourcing, and ethical production methods for conscious fashion.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1551232864-3f0890e580d9?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model"]
-    },
-    { 
-      id: "5", 
-      category_id: "intermediate",
-      title: "Fashion Portfolio", 
-      summary: "Create a professional portfolio showcasing your designs. Learn photography, styling, and digital presentation techniques.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["designer", "model", "actor"]
-    },
-    { 
-      id: "6", 
-      category_id: "workshop",
-      title: "Acting for Models Workshop", 
-      summary: "Improve your camera presence and runway confidence with acting techniques in this intensive hands-on workshop.",
-      content_type: "workshop",
-      image_url: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["model", "actor"]
-    },
-    {
-      id: "7",
-      category_id: "beginner",
-      title: "Social Media for Fashion Influencers",
-      summary: "Learn to build your fashion brand on Instagram, TikTok and other platforms with effective content strategies.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&auto=format&fit=crop",
-      is_featured: true,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["social media influencer", "model"]
-    },
-    {
-      id: "8",
-      category_id: "intermediate",
-      title: "Entertainment Industry Navigation",
-      summary: "Discover how to build your career in the entertainment industry, from networking to portfolio development.",
-      content_type: "course",
-      image_url: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop",
-      is_featured: false,
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      career_interests: ["entertainment talent", "actor"]
+export const getCoursesWithProgress = async (
+  userId?: string
+): Promise<(Course & { userProgress?: CourseProgress | null })[]> => {
+  try {
+    const courses = await getAllCourses();
+    
+    if (!userId) {
+      return courses.map(course => ({ ...course, userProgress: null }));
     }
-  ];
+
+    const userProgress = await getUserCourseProgress(userId);
+    
+    return courses.map(course => {
+      const progress = userProgress.find(p => p.course_id === course.id);
+      return {
+        ...course,
+        userProgress: progress ? {
+          ...progress,
+          progress: progress.progress || 0 // Ensure progress property exists
+        } : null
+      };
+    });
+  } catch (error) {
+    console.error("Error in getCoursesWithProgress:", error);
+    return [];
+  }
+};
+
+export const getCoursesForCategory = async (
+  category: string,
+  userId?: string
+): Promise<(Course & { userProgress?: CourseProgress | null })[]> => {
+  try {
+    const courses = await getAllCourses();
+    const categoryCourses = courses.filter(course => course.category === category);
+    
+    if (!userId) {
+      return categoryCourses.map(course => ({ ...course, userProgress: null }));
+    }
+
+    const userProgress = await getUserCourseProgress(userId);
+    
+    return categoryCourses.map(course => {
+      const progress = userProgress.find(p => p.course_id === course.id);
+      return {
+        ...course,
+        userProgress: progress ? {
+          ...progress,
+          progress: progress.progress || 0 // Ensure progress property exists
+        } : null
+      };
+    });
+  } catch (error) {
+    console.error("Error in getCoursesForCategory:", error);
+    return [];
+  }
 };
