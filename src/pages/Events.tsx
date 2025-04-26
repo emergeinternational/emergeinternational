@@ -1,3 +1,4 @@
+
 import { Calendar, CalendarDays, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import MainLayout from "@/layouts/MainLayout";
 
 interface EventTicket {
   type: string;
@@ -261,7 +263,7 @@ const Events = () => {
                 minute: '2-digit' 
               })}</p>
               <p><strong>Location:</strong> {selectedEvent?.location}</p>
-              <p><strong>Available Spots:</strong> {selectedEvent?.spots || "Limited availability"}</p>
+              <p><strong>Available Spots:</strong> {selectedEvent?.capacity || "Limited availability"}</p>
               <div className="pt-2">
                 <p className="font-medium mb-1">Description:</p>
                 <p>{selectedEvent?.description || "Join us for this exciting event hosted by Emerge International!"}</p>
