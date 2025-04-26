@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { MapPin, Users, ArrowRight, AlertTriangle } from "lucide-react";

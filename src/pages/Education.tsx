@@ -14,6 +14,20 @@ import { getCourses, Course, getStaticCourses } from "../services/courseService"
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+const careerInterests = [
+  { id: "all", name: "ALL CAREERS" },
+  { id: "model", name: "MODEL", image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=160&auto=format&fit=crop" },
+  { id: "designer", name: "DESIGNER", image: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=160&auto=format&fit=crop" },
+  { id: "actor", name: "ACTOR", image: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=160&auto=format&fit=crop" },
+  { id: "photographer", name: "PHOTOGRAPHER", image: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=160&auto=format&fit=crop" },
+  { id: "videographer", name: "VIDEOGRAPHER", image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=160&auto=format&fit=crop" },
+  { id: "musical_artist", name: "MUSICAL ARTIST", image: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=160&auto=format&fit=crop" },
+  { id: "fine_artist", name: "FINE ARTIST", image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=160&auto=format&fit=crop" },
+  { id: "event_planner", name: "EVENT PLANNER", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=160&auto=format&fit=crop" },
+  { id: "social media influencer", name: "SOCIAL MEDIA", image: "https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=160&auto=format&fit=crop" },
+  { id: "entertainment talent", name: "ENTERTAINMENT", image: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=160&auto=format&fit=crop" }
+];
+
 const Education = () => {
   const [activeLevel, setActiveLevel] = useState("all");
   const [activeCareerInterest, setActiveCareerInterest] = useState("all");
@@ -31,15 +45,6 @@ const Education = () => {
     { id: "workshop", name: "WORKSHOPS" },
   ];
   
-  const careerInterests = [
-    { id: "all", name: "ALL CAREERS" },
-    { id: "model", name: "MODEL" },
-    { id: "designer", name: "DESIGNER" },
-    { id: "actor", name: "ACTOR" },
-    { id: "social media influencer", name: "SOCIAL MEDIA" },
-    { id: "entertainment talent", name: "ENTERTAINMENT" },
-  ];
-
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
@@ -163,76 +168,23 @@ const Education = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                <button 
-                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
-                  onClick={() => {
-                    setActiveCareerInterest("model");
-                    setShowCareerFilter(true);
-                  }}
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=160&auto=format&fit=crop" 
-                    className="w-16 h-16 object-cover rounded-full"
-                    alt="Model"
-                  />
-                  <span className="text-sm font-medium">Model</span>
-                </button>
-                <button 
-                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
-                  onClick={() => {
-                    setActiveCareerInterest("designer");
-                    setShowCareerFilter(true);
-                  }}
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=160&auto=format&fit=crop" 
-                    className="w-16 h-16 object-cover rounded-full"
-                    alt="Designer"
-                  />
-                  <span className="text-sm font-medium">Designer</span>
-                </button>
-                <button 
-                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
-                  onClick={() => {
-                    setActiveCareerInterest("actor");
-                    setShowCareerFilter(true);
-                  }}
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=160&auto=format&fit=crop" 
-                    className="w-16 h-16 object-cover rounded-full"
-                    alt="Actor"
-                  />
-                  <span className="text-sm font-medium">Actor</span>
-                </button>
-                <button 
-                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
-                  onClick={() => {
-                    setActiveCareerInterest("social media influencer");
-                    setShowCareerFilter(true);
-                  }}
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=160&auto=format&fit=crop" 
-                    className="w-16 h-16 object-cover rounded-full"
-                    alt="Social Media"
-                  />
-                  <span className="text-sm font-medium">Social Media</span>
-                </button>
-                <button 
-                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
-                  onClick={() => {
-                    setActiveCareerInterest("entertainment talent");
-                    setShowCareerFilter(true);
-                  }}
-                >
-                  <img 
-                    src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=160&auto=format&fit=crop" 
-                    className="w-16 h-16 object-cover rounded-full"
-                    alt="Entertainment"
-                  />
-                  <span className="text-sm font-medium">Entertainment</span>
-                </button>
+                {careerInterests.slice(1).map(interest => (
+                  <button 
+                    key={interest.id}
+                    className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
+                    onClick={() => {
+                      setActiveCareerInterest(interest.id);
+                      setShowCareerFilter(true);
+                    }}
+                  >
+                    <img 
+                      src={interest.image}
+                      className="w-16 h-16 object-cover rounded-full"
+                      alt={interest.name}
+                    />
+                    <span className="text-sm font-medium">{interest.name}</span>
+                  </button>
+                ))}
               </div>
               <div className="text-center mt-4">
                 <button
