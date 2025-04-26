@@ -16,10 +16,10 @@ export interface Course {
   duration: string;
   content?: string;
   source_url: string;
-  career_interests?: string[];
+  career_interests: string[];
   is_placeholder?: boolean;
   is_link_valid?: boolean;
-  last_validation?: string;
+  last_validation: string;
 }
 
 export interface CourseProgress {
@@ -220,7 +220,7 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1527142879-95b61a0b8226?w=800&auto=format&fit=crop'
+    'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop'
   ];
   
   const artImages = [
@@ -228,8 +228,8 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1531913764028-8e7e53415bb0?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1503342394128-c104d54dba01?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1558591710-d09badcd78c1?w=800&auto=format&fit=crop'
+    'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1605289355680-75fb41239154?w=800&auto=format&fit=crop'
   ];
   
   const designImages = [
@@ -545,24 +545,24 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-// Map database course to frontend course model
+// Map database course to frontend course model - updated to ensure all required fields are present
 const mapCourseData = (data: any): Course => {
   return {
-    id: data.id,
-    title: data.title,
+    id: data.id || `placeholder-${Date.now()}`,
+    title: data.title || "New Course Coming Soon",
     summary: data.summary || '',
-    content_type: data.content_type,
+    content_type: data.content_type || "course",
     image_url: data.image_url || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop',
-    category_id: data.category_id,
-    is_featured: data.is_featured,
-    published_at: data.published_at,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
+    category_id: data.category_id || "beginner",
+    is_featured: data.is_featured || false,
+    published_at: data.published_at || new Date().toISOString(),
+    created_at: data.created_at || new Date().toISOString(),
+    updated_at: data.updated_at || new Date().toISOString(),
     duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
     source_url: data.source_url || '',
     is_link_valid: isValidUrl(data.source_url),
     is_placeholder: false,
-    career_interests: getCourseCareerInterests(data.title, data.category_id),
+    career_interests: getCourseCareerInterests(data.title || '', data.category_id || 'beginner'),
     last_validation: new Date().toISOString()
   };
 };
@@ -583,7 +583,10 @@ export const getStaticCourses = (): Course[] => {
       updated_at: new Date().toISOString(),
       duration: "10-12 weeks",
       source_url: "https://www.youtube.com/playlist?list=PLjHFU8UBjlNu5XLSJ3oiJYQKurFnhTg9S",
-      career_interests: ["designer", "model"]
+      career_interests: ["designer", "model"],
+      is_placeholder: false,
+      is_link_valid: true,
+      last_validation: new Date().toISOString()
     },
     {
       id: "2",
@@ -598,7 +601,10 @@ export const getStaticCourses = (): Course[] => {
       updated_at: new Date().toISOString(),
       duration: "8 weeks",
       source_url: "https://www.youtube.com/playlist?list=PLjWd5gFyz2O6wbPTgtYFnMrjK3JjwCFvY",
-      career_interests: ["photographer"]
+      career_interests: ["photographer"],
+      is_placeholder: false,
+      is_link_valid: true,
+      last_validation: new Date().toISOString()
     },
     {
       id: "3",
@@ -613,7 +619,10 @@ export const getStaticCourses = (): Course[] => {
       updated_at: new Date().toISOString(),
       duration: "6 weeks",
       source_url: "https://www.youtube.com/playlist?list=PLjeFjdH56A9rN_R1WopU4TDYRhq3JwMJy",
-      career_interests: ["model"]
+      career_interests: ["model"],
+      is_placeholder: false,
+      is_link_valid: true,
+      last_validation: new Date().toISOString()
     }
   ];
 };
