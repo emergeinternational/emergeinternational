@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Course {
@@ -200,7 +199,6 @@ export const getCourseProgress = async (
   }
 };
 
-// Add missing functions that were referenced in other files
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
     const { data, error } = await supabase
@@ -443,7 +441,6 @@ export const getCoursesForCategory = async (
   }
 };
 
-// Add getCourses function needed for Education.tsx
 export const getCourses = async (
   level?: string,
   limit: number = 20,
