@@ -28,6 +28,7 @@ export const getUserCourseProgress = async (userId?: string): Promise<CourseProg
       return [];
     }
 
+    // Ensure all items have a progress field with a numeric value
     return data.map((item): CourseProgress => ({
       ...item,
       progress: typeof item.progress === 'number' ? item.progress : 0

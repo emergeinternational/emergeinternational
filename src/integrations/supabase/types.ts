@@ -565,6 +565,7 @@ export type Database = {
           date_completed: string | null
           date_started: string | null
           id: string
+          progress: number | null
           status: string | null
           updated_at: string | null
           user_id: string
@@ -576,6 +577,7 @@ export type Database = {
           date_completed?: string | null
           date_started?: string | null
           id?: string
+          progress?: number | null
           status?: string | null
           updated_at?: string | null
           user_id: string
@@ -587,6 +589,7 @@ export type Database = {
           date_completed?: string | null
           date_started?: string | null
           id?: string
+          progress?: number | null
           status?: string | null
           updated_at?: string | null
           user_id?: string

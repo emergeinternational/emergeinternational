@@ -35,7 +35,7 @@ export interface CourseProgress {
   date_completed: string;
   created_at: string;
   updated_at: string;
-  progress: number;
+  progress: number; // Ensure this field is explicitly defined
 }
 
 export interface Category {
