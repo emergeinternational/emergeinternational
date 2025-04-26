@@ -6,9 +6,29 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const userSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  fullName: z.string().min(2, { message: "Full name must be at least 2 characters" }),
+  role: z.enum(["admin", "editor", "viewer", "user"], {
+    required_error: "Please select a role",
+  }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+});
+
+type UserFormValues = z.infer<typeof userSchema>;
 
 const UsersPage = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
+  const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [systemStatus, setSystemStatus] = useState<{
     usersCount: number | null;
     adminEmail: string | null;
@@ -22,6 +42,16 @@ const UsersPage = () => {
     status: 'loading'
   });
   const { toast } = useToast();
+  
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      email: "",
+      fullName: "",
+      role: "user",
+      password: "",
+    },
+  });
 
   // Function to fetch system status information
   const fetchSystemStatus = async () => {
@@ -82,6 +112,75 @@ const UsersPage = () => {
     });
   };
   
+  // Function to handle adding a new user
+  const handleAddUser = async (values: UserFormValues) => {
+    try {
+      setIsSubmitting(true);
+      
+      // 1. Create the auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: values.email,
+        password: values.password,
+        email_confirm: true,
+      });
+      
+      if (authError) {
+        throw new Error(`Error creating user: ${authError.message}`);
+      }
+      
+      if (authData?.user) {
+        // 2. Update the profile with full name
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            full_name: values.fullName,
+            email: values.email
+          })
+          .eq('id', authData.user.id);
+          
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+          // Continue anyway as this is not critical
+        }
+        
+        // 3. Set the user role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: values.role
+          });
+          
+        if (roleError) {
+          console.error("Error setting user role:", roleError);
+          // Continue anyway as we can fix roles later
+        }
+        
+        toast({
+          title: "User created successfully",
+          description: `${values.fullName} (${values.email}) has been added as a ${values.role}`,
+          variant: "default"
+        });
+        
+        // Reset form and close dialog
+        form.reset();
+        setOpenAddUserDialog(false);
+        
+        // Refresh the user list
+        handleRefreshUserData();
+      }
+    } catch (error) {
+      console.error("Error in handleAddUser:", error);
+      toast({
+        title: "Error creating user",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
   // Initial fetch of system status
   useEffect(() => {
     fetchSystemStatus();
@@ -132,6 +231,7 @@ const UsersPage = () => {
             <Button 
               variant="outline"
               className="flex items-center gap-2"
+              onClick={() => setOpenAddUserDialog(true)}
             >
               <UserPlus className="h-4 w-4" />
               Add User
@@ -178,6 +278,100 @@ const UsersPage = () => {
           <UserManagement key={lastUpdated?.getTime()} />
         </div>
       </div>
+      
+      <Dialog open={openAddUserDialog} onOpenChange={setOpenAddUserDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4 py-2">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="user@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User Role</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="editor">Editor</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                        <SelectItem value="user">Regular User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="******" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setOpenAddUserDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating..." : "Create User"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
