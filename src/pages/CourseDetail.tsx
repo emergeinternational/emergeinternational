@@ -140,6 +140,28 @@ const CourseDetail = () => {
     }
   };
 
+  // New function to handle marking external courses as complete
+  const handleMarkExternalCourseComplete = async () => {
+    if (!user || !course) return;
+    
+    try {
+      await updateCourseProgress(user.id, course.id, "completed", course.category_id);
+      setProgress(100);
+      toast({
+        title: "Congratulations!",
+        description: "You have completed this course. Your certificate is ready.",
+      });
+      setShowCertificate(true);
+    } catch (error) {
+      console.error("Error completing course:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark course as completed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -272,6 +294,25 @@ const CourseDetail = () => {
                 </div>
               </div>
             )}
+            
+            {/* Add "Mark as Complete" button for external courses when user has started but not completed */}
+            {isExternalCourse && user && progress > 0 && progress < 100 && (
+              <div className="mb-8">
+                <div className="bg-white p-6 border">
+                  <h3 className="text-lg font-medium mb-4">Complete External Course</h3>
+                  <p className="mb-4">
+                    Have you completed the external course content? Click the button below to mark this course as completed
+                    and receive your certificate.
+                  </p>
+                  <Button 
+                    className="bg-emerge-gold hover:bg-emerge-gold/90"
+                    onClick={handleMarkExternalCourseComplete}
+                  >
+                    Mark Course Complete
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-1">
@@ -310,7 +351,7 @@ const CourseDetail = () => {
               ) : (
                 <Button 
                   className="w-full bg-emerge-gold hover:bg-emerge-gold/90"
-                  onClick={progress > 0 ? handleCompleteCourse : handleStartCourse}
+                  onClick={progress > 0 && !isExternalCourse ? handleCompleteCourse : handleStartCourse}
                 >
                   {isExternalCourse ? (
                     <>
@@ -340,7 +381,7 @@ const CourseDetail = () => {
             <DialogTitle className="text-center text-2xl">Certificate of Completion</DialogTitle>
           </DialogHeader>
           <div className="p-8 border-4 border-double border-emerge-gold/30 text-center">
-            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY</div>
+            <div className="text-emerge-gold mb-4">EMERGE FASHION ACADEMY INTERNATIONAL</div>
             <h2 className="text-3xl font-serif mb-2">Certificate of Achievement</h2>
             <p className="mb-6">This is to certify that</p>
             <p className="text-xl mb-6">{user?.email || "Student"}</p>
