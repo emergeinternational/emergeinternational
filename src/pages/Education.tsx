@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, Filter } from "lucide-react";
@@ -100,9 +101,9 @@ const Education = () => {
     fetchCourses();
   }, [activeLevel, activeCareerInterest, toast]);
 
-  // Format workshop data for the component
+  // Format workshop data for the component - ensure id is used as string
   const formattedWorkshops = upcomingWorkshops.map(workshop => ({
-    id: workshop.id,
+    id: workshop.id, // This is already a string from workshopService.ts
     name: workshop.name,
     date: new Date(workshop.date).toLocaleDateString('en-US', {
       month: 'long', 

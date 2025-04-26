@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 interface Workshop {
-  id: number;
+  id: string; // Changed from number to string to match the Workshop interface in workshopService.ts
   name: string;
   date: string;
   location: string;

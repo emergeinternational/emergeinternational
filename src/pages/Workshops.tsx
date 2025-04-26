@@ -71,7 +71,7 @@ const Workshops = () => {
               ) : upcomingWorkshops.length > 0 ? (
                 <UpcomingWorkshops 
                   workshops={upcomingWorkshops.map(w => ({
-                    id: parseInt(w.id.substring(0, 8), 16),
+                    id: w.id, // Using the string ID directly
                     name: w.name,
                     date: new Date(w.date).toLocaleDateString('en-US', {
                       month: 'long',
