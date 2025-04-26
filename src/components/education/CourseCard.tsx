@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 
 interface CourseCardProps {
   id: string | number;
@@ -10,14 +10,27 @@ interface CourseCardProps {
   image: string;
   duration?: string;
   levelName: string;
+  sourceUrl?: string;
+  isHosted?: boolean;
 }
 
-const CourseCard = ({ id, name, level, description, image, duration, levelName }: CourseCardProps) => {
-  return (
-    <Link 
-      to={`/education/course/${id}`} 
-      className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
-    >
+const CourseCard = ({ 
+  id, 
+  name, 
+  level, 
+  description, 
+  image, 
+  duration, 
+  levelName,
+  sourceUrl,
+  isHosted = false
+}: CourseCardProps) => {
+  // Determine if the course is internal or external
+  const isExternalCourse = sourceUrl && !isHosted;
+  
+  // Component for the card content (used for both internal and external links)
+  const CardContent = () => (
+    <>
       <div className="aspect-video overflow-hidden">
         <img 
           src={image} 
@@ -46,10 +59,42 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName }
         </p>
         <div className="mt-4">
           <span className="text-emerge-gold group-hover:underline flex items-center">
-            Learn More <ChevronRight size={16} className="ml-1" />
+            {isExternalCourse ? (
+              <>
+                Visit External Course <ExternalLink size={16} className="ml-1" />
+              </>
+            ) : (
+              <>
+                Learn More <ChevronRight size={16} className="ml-1" />
+              </>
+            )}
           </span>
         </div>
       </div>
+    </>
+  );
+
+  // Render different wrappers based on whether it's internal or external
+  if (isExternalCourse) {
+    return (
+      <a 
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
+        aria-label={`External course: ${name}`}
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <Link 
+      to={`/education/course/${id}`} 
+      className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
+    >
+      <CardContent />
     </Link>
   );
 };

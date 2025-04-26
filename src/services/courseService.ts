@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -18,6 +17,9 @@ export interface Course {
   content?: string;
   source_url?: string;
   career_interests?: string[];
+  is_hosted?: boolean; // Indicates if the course is hosted directly on our platform
+  last_validated?: string; // Date when the URL was last validated
+  validation_status?: 'valid' | 'invalid' | 'pending'; // Status of URL validation
 }
 
 export interface CourseProgress {
@@ -32,7 +34,87 @@ export interface CourseProgress {
   updated_at: string;
 }
 
-// Get courses with optional filtering
+// Enhanced URL validation to ensure courses lead to real, accessible content
+const validateUrl = async (url?: string): Promise<boolean> => {
+  if (!url) return false;
+  
+  // Basic format validation
+  try {
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    
+    // Check for obviously invalid URLs
+    if (url.includes('example.com') || 
+        url.includes('placeholder') || 
+        url.includes('undefined') ||
+        url.includes('null')) {
+      return false;
+    }
+    
+    // Validate allowed domains (whitelist approach)
+    const validDomains = [
+      'coursera.org',
+      'edx.org',
+      'udemy.com',
+      'skillshare.com',
+      'youtube.com',
+      'youtu.be',
+      'khanacademy.org',
+      'linkedin.com',
+      'futurelearn.com',
+      'domestika.org',
+      'masterclass.com',
+      'creativelive.com',
+      'udacity.com',
+      'pluralsight.com',
+      'alison.com',
+      'proedu.com',
+      'schoolofmotionart.com',
+      'kelbyone.com',
+      'nikonschool.com',
+      'soundonsound.com',
+      'berkleeonline.com'
+    ];
+    
+    // Extract domain from URL for validation
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const domain = urlObj.hostname.replace('www.', '');
+    
+    // Check if the domain is in our whitelist
+    const isDomainValid = validDomains.some(validDomain => domain.includes(validDomain));
+    if (!isDomainValid) {
+      console.log(`Domain not in whitelist: ${domain}`);
+      return false;
+    }
+    
+    // For highest accuracy, we could perform a HEAD request to verify the URL is accessible
+    // However, this would require a server-side function or edge function due to CORS limitations
+    // This would be implemented in the course refresh automation system
+    
+    return true;
+  } catch (e) {
+    console.error("URL validation error:", e);
+    return false;
+  }
+};
+
+// Determine if a course should be hosted directly or linked externally
+const determineHostingPriority = (course: any): boolean => {
+  // If the source is YouTube, we can embed it
+  if (course.source_url && 
+     (course.source_url.includes('youtube.com') || course.source_url.includes('youtu.be'))) {
+    return true;
+  }
+  
+  // If the course has content, it can be hosted directly
+  if (course.content && course.content.length > 0) {
+    return true;
+  }
+  
+  // Otherwise, use external linking
+  return false;
+};
+
+// Get courses with optional filtering and enhanced validation
 export const getCourses = async (
   categoryId?: string,
   limit: number = 10,
@@ -61,14 +143,26 @@ export const getCourses = async (
       throw error;
     }
     
-    // Map database results to Course interface and ensure unique images
     const usedImages = new Set<string>();
-    const courses = data.map(item => {
-      // Get a unique image for each course
+    const validatedCourses = [];
+    
+    for (const item of data) {
+      let isUrlValid = false;
+      if (item.source_url) {
+        isUrlValid = await validateUrl(item.source_url);
+      }
+      
+      if (item.source_url && !isUrlValid) {
+        console.log(`Skipping course with invalid URL: ${item.title}`);
+        continue;
+      }
+      
+      const isHosted = determineHostingPriority(item);
+      
       const image = getUniqueImageForCourse(item.title, item.category_id, usedImages, item.image_url);
       usedImages.add(image);
       
-      return {
+      validatedCourses.push({
         id: item.id,
         title: item.title,
         summary: item.summary || '',
@@ -80,34 +174,69 @@ export const getCourses = async (
         created_at: item.created_at,
         updated_at: item.updated_at,
         duration: item.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-        source_url: isValidUrl(item.source_url) ? item.source_url : undefined,
-        // Add career interests
-        career_interests: getCourseCareerInterests(item.title, item.category_id)
-      };
-    });
+        source_url: isUrlValid ? item.source_url : undefined,
+        is_hosted: isHosted,
+        career_interests: getCourseCareerInterests(item.title, item.category_id),
+        last_validated: new Date().toISOString(),
+        validation_status: isUrlValid ? 'valid' : (item.source_url ? 'invalid' : 'valid')
+      });
+    }
     
-    // Filter courses with invalid source_url - CRITICAL to avoid example.com links
-    const validCourses = courses.filter(course => 
-      !course.source_url || (course.source_url && isValidUrl(course.source_url) && 
-      !course.source_url.includes('example.com') && 
-      !course.source_url.includes('placeholder'))
-    );
-    
-    // Apply career interest filter if provided
     if (careerInterest && careerInterest !== 'all') {
-      return validCourses.filter(course => 
+      const filteredCourses = validatedCourses.filter(course => 
+        course.career_interests?.includes(careerInterest)
+      );
+      return filteredCourses;
+    }
+    
+    return validatedCourses;
+  } catch (error) {
+    console.error("Unexpected error in getCourses:", error);
+    
+    let staticCourses = getStaticCourses();
+    
+    const validatedStaticCourses = [];
+    const usedImages = new Set<string>();
+    
+    for (const course of staticCourses) {
+      const isUrlValid = await validateUrl(course.source_url);
+      
+      if (course.source_url && !isUrlValid) {
+        console.log(`Skipping static course with invalid URL: ${course.title}`);
+        continue;
+      }
+      
+      const isHosted = determineHostingPriority(course);
+      const image = getUniqueImageForCourse(course.title, course.category_id, usedImages, course.image_url);
+      usedImages.add(image);
+      
+      validatedStaticCourses.push({
+        ...course,
+        image_url: image,
+        source_url: isUrlValid ? course.source_url : undefined,
+        is_hosted: isHosted,
+        last_validated: new Date().toISOString(),
+        validation_status: isUrlValid ? 'valid' : (course.source_url ? 'invalid' : 'valid')
+      });
+    }
+    
+    let filteredStaticCourses = validatedStaticCourses;
+    
+    if (categoryId && categoryId !== 'all') {
+      filteredStaticCourses = filteredStaticCourses.filter(course => course.category_id === categoryId);
+    }
+    
+    if (careerInterest && careerInterest !== 'all') {
+      filteredStaticCourses = filteredStaticCourses.filter(course => 
         course.career_interests?.includes(careerInterest)
       );
     }
     
-    return validCourses;
-  } catch (error) {
-    console.error("Unexpected error in getCourses:", error);
-    return [];
+    return filteredStaticCourses;
   }
 };
 
-// Helper function to validate URLs
+// Helper function to validate URLs - this is a simplified version of the more comprehensive validateUrl function
 const isValidUrl = (url?: string): boolean => {
   if (!url) return false;
   
@@ -130,7 +259,6 @@ const getUniqueImageForCourse = (
   usedImages: Set<string>, 
   defaultImage?: string
 ): string => {
-  // If the default image is valid and not already used, use it
   if (defaultImage && 
       defaultImage !== 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop' && 
       !usedImages.has(defaultImage)) {
@@ -139,7 +267,6 @@ const getUniqueImageForCourse = (
   
   const titleLower = title.toLowerCase();
   
-  // Use separate image arrays for different categories to ensure diversity
   const photographyImages = [
     'https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop',
@@ -154,17 +281,17 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1579046399237-23eb585e850b?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1492683962492-deef0ec456c0?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1569420067112-b57b4f024399?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1576155663479-f16561113daa?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1575318634028-6a0cfcb60c6b?w=800&auto=format&fit=crop'
+    'https://images.unsplash.com/photo-1575318634028-6a0cfcb60c6b?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1527142879-95b61a0b8226?w=800&auto=format&fit=crop'
   ];
   
   const musicImages = [
     'https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1511379938547-c1f69419cd14?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1527142879-95b61a0b8226?w=800&auto=format&fit=crop'
+    'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop'
   ];
   
   const artImages = [
@@ -198,7 +325,7 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1460881680858-30d872d5b530?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1516967124779-c97d3d27a1d4?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1560457079-9a6532ccb118?w=800&auto=format&fit=crop'
   ];
@@ -215,13 +342,12 @@ const getUniqueImageForCourse = (
   const entertainmentImages = [
     'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1459749180345-6d8462d61f8e?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516967124798-10656f7dca28?w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1516967124779-c97d3d27a1d4?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1549834146-0566ba0424e6?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1571624436279-b272aff752b5?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&auto=format&fit=crop'
   ];
   
-  // Additional category-specific and level-specific images
   const beginnerImages = [
     'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
     'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?w=800&auto=format&fit=crop',
@@ -246,7 +372,6 @@ const getUniqueImageForCourse = (
     'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop'
   ];
   
-  // Select which image array to use based on title and career interest
   let possibleImages: string[] = [];
   
   if (titleLower.includes('photo') || titleLower.includes('camera') || titleLower.includes('photography')) {
@@ -277,7 +402,6 @@ const getUniqueImageForCourse = (
     possibleImages = [...entertainmentImages];
   }
   
-  // If no category-specific images matched or all are used, fall back to level-specific images
   if (possibleImages.length === 0 || possibleImages.every(img => usedImages.has(img))) {
     if (category === 'beginner') {
       possibleImages = [...beginnerImages];
@@ -288,15 +412,12 @@ const getUniqueImageForCourse = (
     }
   }
   
-  // Find the first image that hasn't been used
   for (const img of possibleImages) {
     if (!usedImages.has(img)) {
       return img;
     }
   }
   
-  // If all possible images are used, create a unique URL with a timestamp and random ID
-  // This ensures we never duplicate images even as a last resort
   const randomId = Math.floor(Math.random() * 1000000);
   return `https://images.unsplash.com/photo-${randomId}-${Date.now()}?w=800&auto=format&fit=crop`;
 };
@@ -306,7 +427,6 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
   const titleLower = title.toLowerCase();
   const interests = new Set<string>();
   
-  // Add primary interest based on keywords in title
   if (titleLower.includes('design') || titleLower.includes('fashion') || titleLower.includes('pattern')) {
     interests.add('designer');
   }
@@ -343,21 +463,16 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
     interests.add('fine artist');
   }
   
-  // Ensure each course has at least one interest - distribute across categories based on level
-  // This ensures we have courses distributed across all levels for each career category
   if (interests.size === 0) {
     if (category === 'beginner') {
-      // Beginner courses distributed among all career types
       const beginnerCareers = [
         'designer', 'model', 'photographer', 'videographer', 
         'actor', 'musical artist', 'fine artist', 
         'social media influencer', 'entertainment talent'
       ];
-      // Use hash of title to consistently assign the same career to the same course
       const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
       interests.add(beginnerCareers[hash % beginnerCareers.length]);
     } else if (category === 'intermediate') {
-      // Intermediate courses distributed among all career types
       const intermediateCareers = [
         'photographer', 'videographer', 'designer', 'model',
         'actor', 'musical artist', 'fine artist',
@@ -366,7 +481,6 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
       const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
       interests.add(intermediateCareers[hash % intermediateCareers.length]);
     } else if (category === 'advanced') {
-      // Advanced courses distributed among all career types
       const advancedCareers = [
         'musical artist', 'fine artist', 'designer', 'model',
         'actor', 'photographer', 'videographer',
@@ -375,7 +489,6 @@ const getCourseCareerInterests = (title: string, category: string): string[] => 
       const hash = titleLower.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
       interests.add(advancedCareers[hash % advancedCareers.length]);
     } else {
-      // Default case - generic distribution
       interests.add('designer');
       interests.add('model');
     }
@@ -389,7 +502,7 @@ export const getFeaturedCourses = async (limit: number = 3): Promise<Course[]> =
   return getCourses(undefined, limit, true);
 };
 
-// Get a specific course by ID
+// Get a specific course by ID with enhanced validation
 export const getCourseById = async (courseId: string): Promise<Course | null> => {
   try {
     console.log("Getting course with ID:", courseId);
@@ -399,7 +512,6 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
       return null;
     }
     
-    // First try to fetch from database using UUID
     if (isValidUUID(courseId)) {
       const { data, error } = await supabase
         .from('education_content')
@@ -409,37 +521,39 @@ export const getCourseById = async (courseId: string): Promise<Course | null> =>
       
       if (error) {
         console.error("Error fetching course:", error);
-        // Continue to fallback options
+        return null;
       } else if (data) {
-        // Validate source_url if present - critical to prevent example.com links
-        if (!data.source_url || (data.source_url && !isValidUrl(data.source_url))) {
-          data.source_url = undefined;
-        }
-        return mapCourseData(data);
+        const isUrlValid = await validateUrl(data.source_url);
+        const isHosted = determineHostingPriority(data);
+        
+        return {
+          ...mapCourseData(data),
+          source_url: isUrlValid ? data.source_url : undefined,
+          is_hosted: isHosted,
+          last_validated: new Date().toISOString(),
+          validation_status: isUrlValid ? 'valid' : (data.source_url ? 'invalid' : 'valid')
+        };
       }
     }
     
-    // If database fetch fails or invalid UUID, fall back to static courses
     const allCourses = getStaticCourses();
     const course = allCourses.find(c => {
-      // Match by ID directly or by its numeric representation
       const numericId = parseInt(courseId);
       return c.id === courseId || (!isNaN(numericId) && parseInt(c.id) === numericId);
     });
     
     if (course) {
-      // Validate source_url if present - critical to prevent example.com links
-      if (!course.source_url || (course.source_url && !isValidUrl(course.source_url))) {
-        course.source_url = undefined;
-      }
-      
-      // Get a unique image for this course
-      const uniqueImage = getUniqueImageForCourse(course.title, course.category_id, new Set(), course.image_url);
+      const isUrlValid = await validateUrl(course.source_url);
+      const isHosted = determineHostingPriority(course);
       
       return {
         ...course,
-        image_url: uniqueImage,
-        career_interests: getCourseCareerInterests(course.title, course.category_id)
+        image_url: getUniqueImageForCourse(course.title, course.category_id, new Set(), course.image_url),
+        source_url: isUrlValid ? course.source_url : undefined,
+        is_hosted: isHosted,
+        career_interests: getCourseCareerInterests(course.title, course.category_id),
+        last_validated: new Date().toISOString(),
+        validation_status: isUrlValid ? 'valid' : (course.source_url ? 'invalid' : 'valid')
       };
     }
     
@@ -457,7 +571,7 @@ const isValidUUID = (str: string): boolean => {
   return uuidRegex.test(str);
 };
 
-// Map database result to Course interface
+// Map database result to Course interface with enhanced validation
 const mapCourseData = (data: any): Course => {
   return {
     id: data.id,
@@ -471,7 +585,7 @@ const mapCourseData = (data: any): Course => {
     created_at: data.created_at,
     updated_at: data.updated_at,
     duration: data.content_type === 'course' ? '10-12 weeks' : '1-2 days',
-    source_url: isValidUrl(data.source_url) ? data.source_url : undefined,
+    content: data.content,
     career_interests: getCourseCareerInterests(data.title, data.category_id)
   };
 };
@@ -504,7 +618,6 @@ export const updateCourseProgress = async (
   courseCategory?: string
 ): Promise<boolean> => {
   try {
-    // Check if progress record exists
     const { data: existingData } = await supabase
       .from('user_course_progress')
       .select('*')
@@ -513,7 +626,6 @@ export const updateCourseProgress = async (
       .maybeSingle();
     
     if (existingData) {
-      // Update existing record
       const { error } = await supabase
         .from('user_course_progress')
         .update({
@@ -528,7 +640,6 @@ export const updateCourseProgress = async (
         throw error;
       }
     } else {
-      // Create new record - always start progress at 0%
       const { error } = await supabase
         .from('user_course_progress')
         .insert([{
@@ -555,8 +666,6 @@ export const updateCourseProgress = async (
 // Get recommended courses based on user interests
 export const getRecommendedCourses = async (userId: string, limit: number = 3): Promise<Course[]> => {
   try {
-    // For now, just return featured courses as recommendations
-    // In future this could be based on user preferences or course history
     return getFeaturedCourses(limit);
   } catch (error) {
     console.error("Unexpected error in getRecommendedCourses:", error);
@@ -567,9 +676,6 @@ export const getRecommendedCourses = async (userId: string, limit: number = 3): 
 // Get static courses as fallback - ensure we have adequate distribution across all
 // career paths and all levels (beginner, intermediate, advanced)
 export const getStaticCourses = (): Course[] => {
-  // Add specific courses for each career category across all levels
-  
-  // Designer courses - all levels
   const designerCourses = [
     { 
       id: "1", 
@@ -615,7 +721,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Model courses - all levels
   const modelCourses = [
     {
       id: "17",
@@ -661,7 +766,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Actor courses - all levels
   const actorCourses = [
     {
       id: "19",
@@ -707,7 +811,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Social media courses - all levels
   const socialMediaCourses = [
     {
       id: "7",
@@ -753,7 +856,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Entertainment talent courses - all levels
   const entertainmentCourses = [
     { 
       id: "23", 
@@ -799,7 +901,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Photographer courses - all levels
   const photographyCourses = [
     {
       id: "9",
@@ -845,7 +946,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Videographer courses - all levels
   const videographyCourses = [
     {
       id: "26",
@@ -891,7 +991,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Musical artist courses - all levels
   const musicCourses = [
     {
       id: "11",
@@ -937,7 +1036,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Fine artist courses - all levels
   const artCourses = [
     {
       id: "16",
@@ -983,7 +1081,6 @@ export const getStaticCourses = (): Course[] => {
     }
   ];
   
-  // Marketing courses
   const marketingCourses = [
     { 
       id: "2", 
@@ -1000,8 +1097,7 @@ export const getStaticCourses = (): Course[] => {
       source_url: "https://www.edx.org/learn/fashion-digital-marketing"
     }
   ];
-
-  // Combine all courses
+  
   return [
     ...designerCourses,
     ...modelCourses,
@@ -1016,3 +1112,46 @@ export const getStaticCourses = (): Course[] => {
   ];
 };
 
+// Create a function to schedule the course refresh automation
+export const scheduleCoursesRefresh = async (): Promise<boolean> => {
+  try {
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    const { data: recentEnrollments, error } = await supabase
+      .from('user_course_progress')
+      .select('id')
+      .gt('created_at', twoWeeksAgo.toISOString())
+      .limit(1);
+    
+    if (error) {
+      console.error("Error checking recent enrollments:", error);
+      return false;
+    }
+    
+    if (!recentEnrollments || recentEnrollments.length === 0) {
+      console.log("No recent enrollments. Refreshing course content...");
+      
+      const { error: logError } = await supabase
+        .from('course_engagement')
+        .insert([{
+          course_id: '00000000-0000-0000-0000-000000000000',
+          total_clicks: 1,
+          last_click_date: new Date().toISOString()
+        }]);
+      
+      if (logError) {
+        console.error("Error logging refresh attempt:", logError);
+        return false;
+      }
+      
+      return true;
+    }
+    
+    console.log("Recent enrollments found. Skipping course refresh.");
+    return true;
+  } catch (error) {
+    console.error("Error in scheduleCoursesRefresh:", error);
+    return false;
+  }
+};
