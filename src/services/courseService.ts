@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -330,7 +329,7 @@ export const getRecommendedCourses = async (userId: string, limit: number = 3): 
 
 // Get static courses as fallback
 export const getStaticCourses = (): Course[] => {
-  return [
+  const existingCourses = [
     { 
       id: "1", 
       category_id: "beginner",
@@ -436,4 +435,61 @@ export const getStaticCourses = (): Course[] => {
       career_interests: ["entertainment talent", "actor"]
     }
   ];
+
+  const newCourses = [
+    {
+      id: "9",
+      category_id: "beginner",
+      title: "Photography Fundamentals",
+      summary: "Master the basics of photography, from camera settings to composition techniques.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["photographer"]
+    },
+    {
+      id: "10",
+      category_id: "intermediate",
+      title: "Professional Videography",
+      summary: "Learn advanced video production techniques, from pre to post-production.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["videographer"]
+    },
+    {
+      id: "11",
+      category_id: "beginner",
+      title: "Music Production Essentials",
+      summary: "Start your journey in music production with fundamental concepts and techniques.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["musical artist"]
+    },
+    {
+      id: "12",
+      category_id: "intermediate",
+      title: "Digital Art and Painting",
+      summary: "Explore digital art tools and techniques for creating professional artwork.",
+      content_type: "course",
+      image_url: "https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=800&auto=format&fit=crop",
+      is_featured: false,
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      career_interests: ["fine artist"]
+    }
+  ];
+
+  return [...existingCourses, ...newCourses];
 };

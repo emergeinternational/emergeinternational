@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, Filter } from "lucide-react";
@@ -39,6 +38,10 @@ const Education = () => {
     { id: "actor", name: "ACTOR" },
     { id: "social media influencer", name: "SOCIAL MEDIA" },
     { id: "entertainment talent", name: "ENTERTAINMENT" },
+    { id: "photographer", name: "PHOTOGRAPHER" },
+    { id: "videographer", name: "VIDEOGRAPHER" },
+    { id: "musical artist", name: "MUSICAL ARTIST" },
+    { id: "fine artist", name: "FINE ARTIST" }
   ];
 
   const fetchCourses = async () => {
@@ -223,6 +226,62 @@ const Education = () => {
                     alt="Entertainment"
                   />
                   <span className="text-sm font-medium">Entertainment</span>
+                </button>
+                <button 
+                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
+                  onClick={() => {
+                    setActiveCareerInterest("photographer");
+                    setShowCareerFilter(true);
+                  }}
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=160&auto=format&fit=crop" 
+                    className="w-16 h-16 object-cover rounded-full"
+                    alt="Photographer"
+                  />
+                  <span className="text-sm font-medium">Photographer</span>
+                </button>
+                <button 
+                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
+                  onClick={() => {
+                    setActiveCareerInterest("videographer");
+                    setShowCareerFilter(true);
+                  }}
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=160&auto=format&fit=crop" 
+                    className="w-16 h-16 object-cover rounded-full"
+                    alt="Videographer"
+                  />
+                  <span className="text-sm font-medium">Videographer</span>
+                </button>
+                <button 
+                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
+                  onClick={() => {
+                    setActiveCareerInterest("musical artist");
+                    setShowCareerFilter(true);
+                  }}
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=160&auto=format&fit=crop" 
+                    className="w-16 h-16 object-cover rounded-full"
+                    alt="Musical Artist"
+                  />
+                  <span className="text-sm font-medium">Musical Artist</span>
+                </button>
+                <button 
+                  className="p-3 border rounded hover:bg-emerge-gold/10 hover:border-emerge-gold flex flex-col items-center gap-2 transition-all"
+                  onClick={() => {
+                    setActiveCareerInterest("fine artist");
+                    setShowCareerFilter(true);
+                  }}
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1473091534298-04dcbce3278c?w=160&auto=format&fit=crop" 
+                    className="w-16 h-16 object-cover rounded-full"
+                    alt="Fine Artist"
+                  />
+                  <span className="text-sm font-medium">Fine Artist</span>
                 </button>
               </div>
               <div className="text-center mt-4">
