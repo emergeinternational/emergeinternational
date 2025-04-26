@@ -23,6 +23,12 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName }
           src={image} 
           alt={name} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            // Fallback image if the original fails to load
+            const target = e.target as HTMLImageElement;
+            target.onerror = null; // Prevents infinite loop
+            target.src = "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&auto=format&fit=crop";
+          }}
         />
       </div>
       <div className="p-4 flex flex-col flex-grow">
@@ -34,8 +40,8 @@ const CourseCard = ({ id, name, level, description, image, duration, levelName }
             <span className="text-xs text-emerge-gold">{duration}</span>
           )}
         </div>
-        <h3 className="font-medium text-lg mb-2">{name}</h3>
-        <p className="text-gray-600 text-sm flex-grow">
+        <h3 className="font-medium text-lg mb-2 line-clamp-2">{name}</h3>
+        <p className="text-gray-600 text-sm flex-grow line-clamp-3">
           {description}
         </p>
         <div className="mt-4">
