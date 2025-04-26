@@ -140,9 +140,9 @@ const Education = () => {
           <div className="max-w-3xl">
             <h1 className="emerge-heading text-5xl mb-6">Emerge Fashion Academy</h1>
             <p className="text-xl mb-8">
-              Discover our comprehensive range of courses and workshops designed to develop 
-              the next generation of African fashion talent. From beginner to advanced levels, 
-              learn from industry experts and build your future in fashion.
+              Discover our diverse range of courses and workshops designed to develop the next generation of creative talent. 
+              With a strong foundation rooted in African excellence and a global vision, our programs span fashion, arts, and entertainment. 
+              Whether you're a beginner or advancing your career, learn from industry leaders and build your future on the world stage.
             </p>
             <div className="flex gap-4 flex-wrap">
               <div className="flex items-center gap-2">
