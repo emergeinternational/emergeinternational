@@ -1,203 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-
-export interface Course {
-  id: string;
-  title: string;
-  summary?: string;
-  description?: string;
-  category: string;
-  level: string;
-  duration?: string;
-  instructor?: string;
-  image?: string;
-  link?: string;
-  slug?: string;
-  rating?: number;
-  reviews?: number;
-  isPopular?: boolean;
-  isFeatured?: boolean;
-  prerequisites?: string[];
-  created_at?: string;
-  updated_at?: string;
-  // Add properties that were referenced in other files
-  source_url?: string;
-  image_url?: string;
-  content_type?: string;
-  category_id?: string;
-  career_interests?: string[];
-}
-
-// Explicitly define CourseProgress interface with progress property
-export interface CourseProgress {
-  id: string;
-  course_id: string;
-  user_id: string;
-  status: string;
-  course_category: string;
-  date_started: string;
-  date_completed: string;
-  created_at: string;
-  updated_at: string;
-  progress: number; // This is the property we need to ensure exists
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Review {
-  id: string;
-  course_id: string;
-  user_id: string;
-  rating: number;
-  comment: string;
-  created_at?: string;
-}
-
-export const calculateCourseCompletion = (progress: number): string => {
-  if (progress < 25) {
-    return "Beginner";
-  } else if (progress < 50) {
-    return "Intermediate";
-  } else if (progress < 75) {
-    return "Advanced";
-  } else {
-    return "Completed";
-  }
-};
-
-export const getUserCourseProgress = async (userId?: string): Promise<CourseProgress[]> => {
-  if (!userId) return [];
-
-  try {
-    const { data, error } = await supabase
-      .from("user_course_progress")
-      .select("*")
-      .eq("user_id", userId);
-
-    if (error) {
-      console.error("Error fetching user course progress:", error);
-      return [];
-    }
-
-    // Map the data to include progress property if it doesn't exist
-    return data.map((item: any): CourseProgress => ({
-      ...item,
-      progress: typeof item.progress === 'number' ? item.progress : 0 // Ensure progress property exists
-    }));
-  } catch (error) {
-    console.error("Unexpected error in getUserCourseProgress:", error);
-    return [];
-  }
-};
-
-export const updateCourseProgress = async (
-  courseId: string,
-  userId: string,
-  category: string,
-  progressValue: number = 0,
-  status: string = "in_progress"
-): Promise<CourseProgress | null> => {
-  try {
-    // Check if progress already exists
-    const { data: existingProgress } = await supabase
-      .from("user_course_progress")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existingProgress) {
-      // Update existing progress
-      const { data, error } = await supabase
-        .from("user_course_progress")
-        .update({
-          status,
-          progress: progressValue, // Use the progress parameter
-          date_completed: status === "completed" ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", existingProgress.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error updating course progress:", error);
-        return null;
-      }
-
-      // Ensure the returned data has the progress property
-      return {
-        ...data,
-        progress: typeof data.progress === 'number' ? data.progress : progressValue
-      } as CourseProgress;
-    } else {
-      // Create new progress
-      const { data, error } = await supabase
-        .from("user_course_progress")
-        .insert({
-          course_id: courseId,
-          user_id: userId,
-          course_category: category,
-          status,
-          progress: progressValue,
-          date_started: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating course progress:", error);
-        return null;
-      }
-
-      // Ensure the returned data has the progress property
-      return {
-        ...data,
-        progress: typeof data.progress === 'number' ? data.progress : progressValue
-      } as CourseProgress;
-    }
-  } catch (error) {
-    console.error("Unexpected error in updateCourseProgress:", error);
-    return null;
-  }
-};
-
-export const getCourseProgress = async (
-  courseId: string,
-  userId?: string
-): Promise<CourseProgress | null> => {
-  if (!userId) return null;
-
-  try {
-    const { data, error } = await supabase
-      .from("user_course_progress")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error fetching course progress:", error);
-      return null;
-    }
-
-    if (!data) return null;
-
-    // Ensure the returned data has the progress property
-    return {
-      ...data,
-      progress: typeof data.progress === 'number' ? data.progress : 0
-    } as CourseProgress;
-  } catch (error) {
-    console.error("Unexpected error in getCourseProgress:", error);
-    return null;
-  }
-};
+import type { Course, CourseProgress } from "./courseTypes";
+import { getUserCourseProgress } from "./courseProgressService";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
@@ -253,7 +56,6 @@ export const trackCourseEngagement = async (courseId: string): Promise<boolean> 
     }
 
     if (existing) {
-      // Update existing engagement
       const { error } = await supabase
         .from("course_engagement")
         .update({
@@ -267,7 +69,6 @@ export const trackCourseEngagement = async (courseId: string): Promise<boolean> 
         return false;
       }
     } else {
-      // Create new engagement
       const { error } = await supabase
         .from("course_engagement")
         .insert({
@@ -302,7 +103,6 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       return null;
     }
 
-    // Map education_content fields to Course interface
     const course: Course = {
       id: data.id,
       title: data.title,
@@ -335,7 +135,6 @@ export const getAllCourses = async (): Promise<Course[]> => {
       return [];
     }
 
-    // Map education_content fields to Course interface
     return data.map(item => ({
       id: item.id,
       title: item.title,
@@ -368,7 +167,6 @@ export const getPopularCourses = async (): Promise<Course[]> => {
       return [];
     }
 
-    // Map education_content fields to Course interface
     return data.map(item => ({
       id: item.id,
       title: item.title,
@@ -469,7 +267,6 @@ export const getCourses = async (
       return [];
     }
 
-    // Map education_content fields to Course interface
     const courses = data.map(item => ({
       id: item.id,
       title: item.title,
@@ -482,12 +279,10 @@ export const getCourses = async (
       category_id: item.category_id,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      career_interests: [] // This would need to be populated from a related table
+      career_interests: []
     }));
 
-    // Filter by career interest if provided
     if (careerInterest && careerInterest !== "all") {
-      // This is a simplified example - in a real app, you'd likely need to fetch this relation from a separate table
       return courses.filter(course => 
         course.career_interests?.includes(careerInterest)
       );
@@ -501,7 +296,6 @@ export const getCourses = async (
 };
 
 export const getStaticCourses = (): Course[] => {
-  // Return some static courses as fallback that conform to the specified career paths
   return [
     {
       id: "1",
