@@ -1,4 +1,5 @@
 
+
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseCategory, UserCourseEnrollment } from '@/types/education';
 
@@ -71,11 +72,12 @@ export const enrollInCourse = async (courseId: string): Promise<void> => {
   // Use the user_course_progress table which seems to be the equivalent
   const { error } = await supabase
     .from('user_course_progress')
-    .insert([{ 
+    .insert({
       course_id: courseId,
       status: 'not_started',
-      date_started: new Date().toISOString()
-    }]);
+      date_started: new Date().toISOString(),
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    });
   
   if (error) throw error;
 };
@@ -116,3 +118,4 @@ export const updateCourseProgress = async (
   
   if (error) throw error;
 };
+
