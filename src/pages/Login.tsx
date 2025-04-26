@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const Login = () => {
   const [country, setCountry] = useState("");
@@ -99,22 +101,22 @@ const Login = () => {
 
         <div className="mb-8 space-y-6">
           <div className="space-y-2">
-            <input
+            <Input
               type="text"
               placeholder="Country"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="emerge-input w-full"
+              className="bg-emerge-darkBg text-white border-emerge-gold/50 focus:border-emerge-gold focus:ring-emerge-gold/30 w-full"
             />
           </div>
 
           <div className="space-y-2">
-            <input
+            <Input
               type="text"
               placeholder="City"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="emerge-input w-full"
+              className="bg-emerge-darkBg text-white border-emerge-gold/50 focus:border-emerge-gold focus:ring-emerge-gold/30 w-full"
             />
           </div>
 
@@ -148,33 +150,37 @@ const Login = () => {
         <p className="text-center text-lg mb-6">Log in or sign up to continue</p>
 
         <div className="space-y-4">
-          <button 
+          <Button 
             onClick={handleEmailContinue}
             className="emerge-button-secondary w-full"
+            variant="outline"
           >
             Continue with Email
-          </button>
+          </Button>
           
-          <button 
+          <Button 
             onClick={handlePhoneContinue}
             className="emerge-button-secondary w-full"
+            variant="outline"
           >
             Continue with Phone
-          </button>
+          </Button>
           
-          <button 
+          <Button 
             onClick={handleGoogleContinue}
             className="emerge-button-secondary w-full"
+            variant="outline"
           >
             Continue with Google
-          </button>
+          </Button>
           
-          <button 
+          <Button 
             onClick={handleAppleContinue}
             className="emerge-button-secondary w-full"
+            variant="outline"
           >
             Continue with Apple
-          </button>
+          </Button>
         </div>
 
         <div className="mt-8 flex items-start space-x-3">
