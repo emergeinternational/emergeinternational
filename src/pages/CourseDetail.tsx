@@ -5,7 +5,7 @@ import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, CheckCircle, BookOpen, Clock } from "lucide-react";
+import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award } from "lucide-react";
 import { getCourseById, updateCourseProgress, CourseProgress } from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,7 @@ const CourseDetail = () => {
       
       try {
         setLoading(true);
+        console.log("Fetching course with ID:", id);
         const courseData = await getCourseById(id);
         
         if (!courseData) {
@@ -85,6 +86,16 @@ const CourseDetail = () => {
         // For external courses, open in new tab and update progress
         window.open(course.source_url, "_blank");
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
+        
+        toast({
+          title: "Course Started",
+          description: "We've opened the course in a new tab. Your progress will be tracked.",
+        });
+        
+        // Set progress to at least 20% when starting
+        if (progress === 0) {
+          setProgress(20);
+        }
       } else {
         // For embedded courses, update progress
         await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
@@ -163,6 +174,14 @@ const CourseDetail = () => {
     <MainLayout>
       <div className="bg-emerge-darkBg text-white py-12">
         <div className="emerge-container">
+          <button 
+            onClick={() => navigate("/education")}
+            className="flex items-center text-emerge-gold hover:underline mb-4"
+          >
+            <ArrowLeft size={16} className="mr-1" />
+            Back to courses
+          </button>
+          
           <h1 className="emerge-heading text-4xl mb-4">{course.title}</h1>
           <div className="flex items-center gap-3 mb-6">
             <span className="bg-emerge-gold text-black px-3 py-1 text-xs uppercase">
@@ -193,28 +212,35 @@ const CourseDetail = () => {
             <div className="mb-8">
               <h2 className="emerge-heading text-2xl mb-4">What You'll Learn</h2>
               <ul className="space-y-2">
-                <li className="flex items-start">
-                  <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                  <span>Fundamental design principles and their application in fashion</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                  <span>Fabric selection and material knowledge</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                  <span>Pattern-making techniques for various garment types</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                  <span>Fashion illustration and technical drawing skills</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
-                  <span>Collection development from concept to presentation</span>
-                </li>
+                {getCourseObjectives(course.title, course.category_id).map((objective, index) => (
+                  <li key={index} className="flex items-start">
+                    <CheckCircle size={20} className="text-emerge-gold mr-2 mt-1 flex-shrink-0" />
+                    <span>{objective}</span>
+                  </li>
+                ))}
               </ul>
             </div>
+            
+            {user && progress === 100 && (
+              <div className="mb-8">
+                <div className="bg-green-50 border border-green-200 p-6 rounded">
+                  <div className="flex items-center mb-4">
+                    <Award className="text-emerge-gold mr-2" size={24} />
+                    <h3 className="text-xl font-medium">Course Completed</h3>
+                  </div>
+                  <p className="mb-4">
+                    Congratulations on completing this course! Your certificate has been issued
+                    and is available for download and sharing.
+                  </p>
+                  <Button 
+                    className="bg-emerge-gold hover:bg-emerge-gold/90"
+                    onClick={() => setShowCertificate(true)}
+                  >
+                    View Certificate
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {!isExternalCourse && (
               <div className="mb-8">
@@ -320,7 +346,7 @@ const CourseDetail = () => {
             <p className="text-xl mb-6">{user?.email || "Student"}</p>
             <p className="mb-6">has successfully completed the course</p>
             <p className="text-xl font-medium mb-8">{course.title}</p>
-            <p className="text-sm text-gray-500">Certificate ID: {course.id.substring(0, 8)}-{Date.now().toString(36)}</p>
+            <p className="text-sm text-gray-500">Certificate ID: {String(course.id).substring(0, 8)}-{Date.now().toString(36)}</p>
             <p className="text-sm text-gray-500">Issued on: {new Date().toLocaleDateString()}</p>
           </div>
           <div className="flex justify-center">
@@ -330,6 +356,51 @@ const CourseDetail = () => {
       </Dialog>
     </MainLayout>
   );
+};
+
+// Helper function to generate course objectives based on course title and category
+const getCourseObjectives = (title: string, category: string): string[] => {
+  const titleLower = title.toLowerCase();
+  const objectives = [];
+  
+  // General objectives that apply to most courses
+  objectives.push("Fundamental principles and their application in fashion");
+  
+  // Course title specific objectives
+  if (titleLower.includes('design')) {
+    objectives.push("Design thinking and creative problem-solving techniques");
+    objectives.push("Pattern-making techniques for various garment types");
+    objectives.push("Collection development from concept to presentation");
+  }
+  
+  if (titleLower.includes('model') || titleLower.includes('portfolio')) {
+    objectives.push("Professional portfolio development strategies");
+    objectives.push("Runway and photoshoot posing techniques");
+    objectives.push("Understanding client expectations and industry standards");
+  }
+  
+  if (titleLower.includes('market') || titleLower.includes('social')) {
+    objectives.push("Social media strategy development for fashion brands");
+    objectives.push("Content creation and scheduling for maximum engagement");
+    objectives.push("Analytics and performance tracking for digital campaigns");
+  }
+  
+  if (titleLower.includes('act') || titleLower.includes('perform')) {
+    objectives.push("Performance techniques for camera and stage");
+    objectives.push("Character development and emotional expression");
+    objectives.push("Industry networking and audition preparation");
+  }
+  
+  // Add level-specific objectives
+  if (category === 'beginner') {
+    objectives.push("Essential terminology and industry fundamentals");
+  } else if (category === 'intermediate') {
+    objectives.push("Advanced techniques and professional methodologies");
+  } else if (category === 'advanced') {
+    objectives.push("Expert-level skills and industry leadership principles");
+  }
+  
+  return objectives;
 };
 
 export default CourseDetail;

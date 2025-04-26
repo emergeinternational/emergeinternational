@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 interface CourseCardProps {
-  id: number;
+  id: string | number;
   name: string;
   level: string;
   description: string;
