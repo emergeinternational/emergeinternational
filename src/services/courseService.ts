@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define interfaces based on actual database schema
@@ -27,6 +28,17 @@ export interface CourseProgress {
   date_started: string;
   date_completed?: string;
   course_category?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CertificateEligibility {
+  id: string;
+  user_id: string;
+  is_eligible: boolean;
+  admin_approved: boolean;
+  online_courses_completed: number;
+  workshops_completed: number;
   created_at: string;
   updated_at: string;
 }
@@ -303,10 +315,150 @@ export const updateCourseProgress = async (
       if (error) throw error;
     }
     
+    // Check if user is eligible for certificate after completing course
+    if (status === 'completed') {
+      await checkCertificateEligibility(userId);
+    }
+    
     return true;
   } catch (error) {
     console.error("Error updating course progress:", error);
     return false;
+  }
+};
+
+// Check if a user is eligible for a certificate
+export const checkCertificateEligibility = async (userId: string): Promise<boolean> => {
+  try {
+    // Get online course completions
+    const { data: onlineCourses, error: coursesError } = await supabase
+      .from('user_course_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'completed');
+    
+    if (coursesError) throw coursesError;
+    
+    // Get workshop completions (simulated as we don't have actual workshop progress data)
+    // In real implementation, this would query a workshops_progress table
+    const { data: workshopCompletions, error: workshopsError } = await supabase
+      .from('user_course_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .eq('course_category', 'workshop');
+    
+    if (workshopsError) throw workshopsError;
+    
+    // Count completions
+    const onlineCoursesCompleted = onlineCourses ? onlineCourses.length : 0;
+    const workshopsCompleted = workshopCompletions ? workshopCompletions.length : 0;
+    
+    // Check eligibility criteria (5+ online courses and 3+ workshops)
+    const isEligible = onlineCoursesCompleted >= 5 && workshopsCompleted >= 3;
+    
+    // Update or create eligibility record
+    const { data: existingEligibility } = await supabase
+      .from('certificate_eligibility')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (existingEligibility) {
+      await supabase
+        .from('certificate_eligibility')
+        .update({
+          is_eligible: isEligible,
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingEligibility.id);
+    } else {
+      await supabase
+        .from('certificate_eligibility')
+        .insert([{
+          user_id: userId,
+          is_eligible: isEligible,
+          admin_approved: false,
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
+    }
+    
+    return isEligible;
+  } catch (error) {
+    console.error("Error checking certificate eligibility:", error);
+    return false;
+  }
+};
+
+// Get certificate eligibility status for a user
+export const getCertificateEligibility = async (userId: string): Promise<CertificateEligibility | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('certificate_eligibility')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching certificate eligibility:", error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Unexpected error in getCertificateEligibility:", error);
+    return null;
+  }
+};
+
+// Update certificate approval status (admin only)
+export const updateCertificateApproval = async (
+  eligibilityId: string, 
+  approved: boolean
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('certificate_eligibility')
+      .update({
+        admin_approved: approved,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', eligibilityId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error updating certificate approval:", error);
+    return false;
+  }
+};
+
+// Get list of users eligible for certificates (for admin)
+export const getEligibleUsers = async (): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('certificate_eligibility')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .eq('is_eligible', true)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching eligible users:", error);
+    return [];
   }
 };
 

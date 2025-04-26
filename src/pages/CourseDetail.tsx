@@ -1,11 +1,12 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award } from "lucide-react";
-import { getCourseById, updateCourseProgress } from "../services/courseService";
+import { ExternalLink, CheckCircle, BookOpen, Clock, ArrowLeft, Award, AlertTriangle } from "lucide-react";
+import { getCourseById, updateCourseProgress, getCertificateEligibility } from "../services/courseService";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -20,6 +21,9 @@ const CourseDetail = () => {
   const [isExternalCourse, setIsExternalCourse] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [externalVisited, setExternalVisited] = useState(false);
+  const [certificateEligibility, setCertificateEligibility] = useState<any>(null);
+  const [certificateApproved, setCertificateApproved] = useState(false);
   const videoRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -46,10 +50,18 @@ const CourseDetail = () => {
         setIsExternalCourse(!!courseData.source_url);
         
         if (user) {
+          // Simulate progress from existing data
+          setProgress(Math.floor(Math.random() * 100));
+          
+          // Check certificate eligibility
           try {
-            setProgress(Math.floor(Math.random() * 100));
+            const eligibility = await getCertificateEligibility(user.id);
+            setCertificateEligibility(eligibility);
+            if (eligibility) {
+              setCertificateApproved(eligibility.admin_approved);
+            }
           } catch (error) {
-            console.error("Error fetching user progress:", error);
+            console.error("Error fetching certificate eligibility:", error);
           }
         }
       } catch (error) {
@@ -79,9 +91,9 @@ const CourseDetail = () => {
     }
 
     try {
-      if (isExternalCourse && course.video_embed_url) {
-        window.open(course.video_embed_url, "_blank");
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category);
+      if (isExternalCourse && course.source_url) {
+        window.open(course.source_url, "_blank");
+        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
         toast({
           title: "Course Started",
@@ -89,13 +101,14 @@ const CourseDetail = () => {
         });
         
         setProgress(20);
+        setExternalVisited(true);
       } else {
-        await updateCourseProgress(user.id, course.id, "in_progress", course.category);
+        await updateCourseProgress(user.id, course.id, "in_progress", course.category_id);
         
         setProgress(20);
         toast({
           title: "Course Started",
-          description: "Your progress has been saved. Watch the video to completion to earn your certificate.",
+          description: "Your progress has been saved. Watch the video to completion to mark the course as complete.",
         });
       }
     } catch (error) {
@@ -112,7 +125,7 @@ const CourseDetail = () => {
     setVideoWatched(true);
     toast({
       title: "Video Completed",
-      description: "You can now mark this course as complete to earn your certificate.",
+      description: "You can now mark this course as complete.",
     });
   };
 
@@ -129,13 +142,22 @@ const CourseDetail = () => {
         return;
       }
       
-      await updateCourseProgress(user.id, course.id, "completed", course.category);
+      await updateCourseProgress(user.id, course.id, "completed", course.category_id);
       setProgress(100);
+      
+      // Refresh certificate eligibility after completing course
+      const eligibility = await getCertificateEligibility(user.id);
+      setCertificateEligibility(eligibility);
+      if (eligibility) {
+        setCertificateApproved(eligibility.admin_approved);
+      }
+      
       toast({
-        title: "Congratulations!",
-        description: "You have completed this course. Your certificate is ready.",
+        title: "Course Completed",
+        description: eligibility?.is_eligible 
+          ? "Your completion has been recorded. Check your progress toward earning a certificate."
+          : "Your completion has been recorded.",
       });
-      setShowCertificate(true);
     } catch (error) {
       console.error("Error completing course:", error);
       toast({
@@ -227,16 +249,16 @@ const CourseDetail = () => {
               </ul>
             </div>
             
-            {user && progress === 100 && (
+            {user && certificateEligibility?.is_eligible && certificateApproved && (
               <div className="mb-8">
                 <div className="bg-green-50 border border-green-200 p-6 rounded">
                   <div className="flex items-center mb-4">
                     <Award className="text-emerge-gold mr-2" size={24} />
-                    <h3 className="text-xl font-medium">Course Completed</h3>
+                    <h3 className="text-xl font-medium">Certificate Available</h3>
                   </div>
                   <p className="mb-4">
-                    Congratulations on completing this course! Your certificate has been issued
-                    and is available for download and sharing.
+                    Congratulations! Your certificate has been approved by our administrators.
+                    You've completed the required courses and workshops to earn your certification.
                   </p>
                   <Button 
                     className="bg-emerge-gold hover:bg-emerge-gold/90"
@@ -244,6 +266,21 @@ const CourseDetail = () => {
                   >
                     View Certificate
                   </Button>
+                </div>
+              </div>
+            )}
+            
+            {user && certificateEligibility?.is_eligible && !certificateApproved && (
+              <div className="mb-8">
+                <div className="bg-yellow-50 border border-yellow-200 p-6 rounded">
+                  <div className="flex items-center mb-4">
+                    <AlertTriangle className="text-yellow-500 mr-2" size={24} />
+                    <h3 className="text-xl font-medium">Certificate Pending Approval</h3>
+                  </div>
+                  <p className="mb-4">
+                    Congratulations! You've completed the required courses and workshops to earn your certificate.
+                    Your certificate is currently under review by our administrators and will be available soon.
+                  </p>
                 </div>
               </div>
             )}
@@ -313,34 +350,56 @@ const CourseDetail = () => {
                     <CheckCircle className="text-green-600 mr-2" />
                     <span className="font-medium">Course Completed</span>
                   </div>
-                  <Button 
-                    className="w-full mt-2 bg-emerge-gold hover:bg-emerge-gold/90"
-                    onClick={() => setShowCertificate(true)}
-                  >
-                    View Certificate
-                  </Button>
+                  {certificateEligibility?.is_eligible && certificateApproved && (
+                    <Button 
+                      className="w-full mt-2 bg-emerge-gold hover:bg-emerge-gold/90"
+                      onClick={() => setShowCertificate(true)}
+                    >
+                      View Certificate
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <Button 
-                  className="w-full bg-emerge-gold hover:bg-emerge-gold/90"
-                  onClick={progress > 0 ? handleCompleteCourse : handleStartCourse}
-                >
+                <>
                   {isExternalCourse ? (
-                    <>
+                    <Button 
+                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
+                      onClick={handleStartCourse}
+                    >
                       <span>Visit Course</span>
                       <ExternalLink size={16} className="ml-1" />
-                    </>
+                    </Button>
                   ) : progress > 0 ? (
-                    "Complete Course"
+                    <Button 
+                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
+                      onClick={handleCompleteCourse}
+                      disabled={!videoWatched && !isExternalCourse}
+                    >
+                      {videoWatched ? "Mark Course Complete" : "Finish Video to Complete"}
+                    </Button>
                   ) : (
-                    "Start Course"
+                    <Button 
+                      className="w-full bg-emerge-gold hover:bg-emerge-gold/90 mb-2"
+                      onClick={handleStartCourse}
+                    >
+                      Start Course
+                    </Button>
                   )}
-                </Button>
+                  
+                  {isExternalCourse && externalVisited && (
+                    <Button 
+                      className="w-full bg-white border border-emerge-gold text-emerge-gold hover:bg-gray-50"
+                      onClick={handleCompleteCourse}
+                    >
+                      Mark Course Complete
+                    </Button>
+                  )}
+                </>
               )}
               
               <div className="mt-4 text-sm text-gray-500">
                 <p>Self-paced learning - start and complete at any time</p>
-                <p className="mt-2">Earn a certificate upon completion</p>
+                <p className="mt-2">Certificate eligibility requires completing multiple courses and workshops</p>
               </div>
             </div>
           </div>
