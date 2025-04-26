@@ -1,5 +1,3 @@
-
-import MainLayout from "@/layouts/MainLayout";
 import { Calendar, CalendarDays, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,18 +40,16 @@ const Events = () => {
       try {
         setLoading(true);
         
-        // Directly fetch from events table
         const { data, error } = await supabase
           .from('events')
           .select('*')
           .order('date', { ascending: true })
-          .gte('date', new Date().toISOString()); // Only get future events
+          .gte('date', new Date().toISOString());
         
         if (error) {
           throw error;
         }
         
-        // Transform events with ticket information
         const eventsWithTickets: Event[] = (data || []).map(event => ({
           ...event,
           icon: getEventIcon(event.name),
@@ -96,9 +92,7 @@ const Events = () => {
       },
     ];
 
-    // If event has a specific price set
     if (event.price) {
-      // For premium events with higher prices, add VIP option
       if (event.price >= 1000) {
         defaultTickets.push({
           type: "VIP",
@@ -251,7 +245,6 @@ const Events = () => {
         </div>
       </div>
 
-      {/* Event Details Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
