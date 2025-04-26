@@ -17,11 +17,6 @@ const RoleBasedRoute = ({
   allowedRoles, 
   redirectTo = "/login" 
 }: RoleBasedRouteProps) => {
-  // For now, let's simplify this component to avoid auth errors
-  return <>{children}</>;
-  
-  // We'll uncomment this once auth is fixed
-  /*
   const { user, isLoading, hasRole } = useAuth();
 
   if (isLoading) {
@@ -41,7 +36,6 @@ const RoleBasedRoute = ({
   }
 
   return <>{children}</>;
-  */
 };
 
 export default RoleBasedRoute;

@@ -3,38 +3,19 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 interface CourseCardProps {
-  id: number | string;
+  id: number;
   name: string;
   level: string;
   description: string;
   image: string;
   duration?: string;
   levelName: string;
-  contentType?: string;
-  talentType?: string;
 }
 
-const CourseCard = ({ 
-  id, 
-  name, 
-  level, 
-  description, 
-  image, 
-  duration, 
-  levelName,
-  contentType = 'course',
-  talentType
-}: CourseCardProps) => {
-  const courseId = id.toString();
-  
-  const formatTalentType = (type?: string): string => {
-    if (!type) return '';
-    return type.charAt(0).toUpperCase() + type.slice(1);
-  };
-  
+const CourseCard = ({ id, name, level, description, image, duration, levelName }: CourseCardProps) => {
   return (
     <Link 
-      to={`/education/course/${courseId}`} 
+      to={`/education/course/${id}`} 
       className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
     >
       <div className="aspect-video overflow-hidden">
@@ -46,21 +27,11 @@ const CourseCard = ({
       </div>
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 uppercase">
-              {levelName}
-            </span>
-            {talentType && (
-              <>
-                <span className="text-xs text-gray-400">•</span>
-                <span className="text-xs text-emerge-gold">
-                  {formatTalentType(talentType)}
-                </span>
-              </>
-            )}
-          </div>
+          <span className="text-xs text-gray-500 uppercase">
+            {levelName}
+          </span>
           {duration && (
-            <span className="text-xs text-gray-500">{duration}</span>
+            <span className="text-xs text-emerge-gold">{duration}</span>
           )}
         </div>
         <h3 className="font-medium text-lg mb-2">{name}</h3>

@@ -1,39 +1,17 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useToast } from "../hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 
 const Login = () => {
   const [country, setCountry] = useState("");
   const [city, setCity] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [rememberInfo, setRememberInfo] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Load saved preferences if they exist
-  useEffect(() => {
-    try {
-      const savedPreferences = localStorage.getItem('userPreferences');
-      if (savedPreferences) {
-        const preferences = JSON.parse(savedPreferences);
-        if (preferences.country) setCountry(preferences.country);
-        if (preferences.city) setCity(preferences.city);
-        if (preferences.language) setSelectedLanguage(preferences.language);
-        setRememberInfo(true);
-      }
-    } catch (error) {
-      console.error("Error loading saved preferences:", error);
-    }
-  }, []);
 
   const languages = [
     "English", // English is now explicitly first
@@ -48,9 +26,6 @@ const Login = () => {
     "Swahili"
   ];
 
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-
   const handleContinueWithoutAccount = () => {
     if (rememberInfo) {
       localStorage.setItem('userPreferences', JSON.stringify({
@@ -58,23 +33,20 @@ const Login = () => {
         city: city.trim() || null,
         language: selectedLanguage
       }));
-    } else {
-      // If remember info is unchecked, clear any existing preferences
-      localStorage.removeItem('userPreferences');
     }
     
     navigate("/home");
   };
 
   const handleEmailContinue = () => {
-    if (rememberInfo) {
-      localStorage.setItem('userPreferences', JSON.stringify({
-        country: country.trim() || null,
-        city: city.trim() || null,
-        language: selectedLanguage
-      }));
+    if (!country.trim()) {
+      toast({
+        title: "Country is required",
+        description: "Please enter your country before continuing.",
+        variant: "destructive",
+      });
+      return;
     }
-    
     navigate("/email-login");
   };
 
@@ -100,87 +72,102 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-white flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-emerge-darkBg text-white flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-12 text-center">
           <Logo className="mx-auto mb-2" />
         </div>
 
         <div className="mb-8 space-y-6">
-          <Select value={country} onValueChange={setCountry}>
-            <SelectTrigger className="bg-transparent border-b border-emerge-gold/50 rounded-none px-0 focus:ring-0 hover:border-emerge-gold/80 transition-colors">
-              <SelectValue placeholder="Country" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1a1a1a] border border-emerge-gold/50">
-              <SelectItem value="us">United States</SelectItem>
-              <SelectItem value="uk">United Kingdom</SelectItem>
-              <SelectItem value="ca">Canada</SelectItem>
-              {/* Add more countries as needed */}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="emerge-input"
+            />
+          </div>
 
-          <Select value={city} onValueChange={setCity}>
-            <SelectTrigger className="bg-transparent border-b border-emerge-gold/50 rounded-none px-0 focus:ring-0 hover:border-emerge-gold/80 transition-colors">
-              <SelectValue placeholder="City" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1a1a1a] border border-emerge-gold/50">
-              <SelectItem value="ny">New York</SelectItem>
-              <SelectItem value="la">Los Angeles</SelectItem>
-              <SelectItem value="ch">Chicago</SelectItem>
-              {/* Add more cities as needed */}
-            </SelectContent>
-          </Select>
+          <div className="relative space-y-2">
+            <div
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="emerge-input flex justify-between items-center cursor-pointer"
+            >
+              <span>{selectedLanguage}</span>
+              <span>▼</span>
+            </div>
+            {showLanguageDropdown && (
+              <div className="absolute top-full left-0 right-0 bg-emerge-darkBg border border-emerge-gold/50 rounded-md z-10 max-h-60 overflow-y-auto">
+                {languages.map((lang) => (
+                  <div
+                    key={lang}
+                    className="p-2 hover:bg-black/20 cursor-pointer"
+                    onClick={() => {
+                      setSelectedLanguage(lang);
+                      setShowLanguageDropdown(false);
+                    }}
+                  >
+                    {lang}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="City"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="emerge-input"
+            />
+          </div>
         </div>
 
-        <p className="text-center text-xl mb-8 font-light">Log in or sign up to continue</p>
+        <p className="text-center text-lg mb-6">Log in or sign up to continue</p>
 
         <div className="space-y-4">
-          <Button 
+          <button 
             onClick={handleEmailContinue}
-            className="w-full bg-gradient-to-b from-white/90 to-white/70 text-black hover:from-white hover:to-white/80 transition-all duration-200"
-            variant="outline"
+            className="emerge-button-secondary w-full"
           >
             Continue with Email
-          </Button>
+          </button>
           
-          <Button 
+          <button 
             onClick={handlePhoneContinue}
-            className="w-full bg-gradient-to-b from-white/90 to-white/70 text-black hover:from-white hover:to-white/80 transition-all duration-200"
-            variant="outline"
+            className="emerge-button-secondary w-full"
           >
             Continue with Phone
-          </Button>
+          </button>
           
-          <Button 
+          <button 
             onClick={handleGoogleContinue}
-            className="w-full bg-gradient-to-b from-white/90 to-white/70 text-black hover:from-white hover:to-white/80 transition-all duration-200"
-            variant="outline"
+            className="emerge-button-secondary w-full"
           >
             Continue with Google
-          </Button>
+          </button>
           
-          <Button 
+          <button 
             onClick={handleAppleContinue}
-            className="w-full bg-gradient-to-b from-white/90 to-white/70 text-black hover:from-white hover:to-white/80 transition-all duration-200"
-            variant="outline"
+            className="emerge-button-secondary w-full"
           >
             Continue with Apple
-          </Button>
+          </button>
         </div>
 
         <div className="mt-8 flex items-start space-x-3">
-          <Checkbox
-            id="remember"
-            checked={rememberInfo}
-            onCheckedChange={(checked) => setRememberInfo(checked as boolean)}
-            className="border-emerge-gold/50 data-[state=checked]:bg-emerge-gold/30 data-[state=checked]:border-emerge-gold"
-          />
-          <label
-            htmlFor="remember"
-            className="text-gray-300 text-sm leading-none pt-0.5"
+          <div 
+            onClick={() => setRememberInfo(!rememberInfo)}
+            className={`w-5 h-5 border border-emerge-gold/50 flex items-center justify-center cursor-pointer ${rememberInfo ? 'bg-emerge-gold/30' : ''}`}
           >
+            {rememberInfo && <span>✓</span>}
+          </div>
+          <p className="text-gray-300 text-sm">
             Save my information on this device (no payment data saved)
-          </label>
+          </p>
         </div>
 
         <button 

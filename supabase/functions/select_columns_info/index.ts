@@ -1,5 +1,5 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
@@ -12,29 +12,57 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
     const { table_name } = await req.json();
     
-    // This is a utility function that simply checks if a table exists
-    // by querying information_schema. It's a safe operation.
-    const query = `
-      SELECT column_name, data_type, is_nullable
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = $1
-    `;
+    if (!table_name) {
+      return new Response(
+        JSON.stringify({ error: 'table_name parameter is required' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
     
-    // For this function to work, we need to use the database connection
-    // This is a simplified version - in production, you'd use the pool directly
-    return new Response(JSON.stringify({ message: "Table info check" }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
-    });
+    // Create Supabase client with the Auth context of the logged in user
+    const supabaseClient = createClient(
+      // Supabase API URL - env var exposed by default
+      Deno.env.get('SUPABASE_URL') ?? '',
+      // Supabase API ANON KEY - env var exposed by default
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      // Create client with Auth context of the user that called the function
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    
+    // Query the database
+    const { data, error } = await supabaseClient
+      .from('information_schema.columns')
+      .select('column_name, data_type, is_nullable')
+      .eq('table_name', table_name)
+      .eq('table_schema', 'public');
+      
+    if (error) {
+      console.error('Error fetching column information:', error);
+      throw error;
+    }
+    
+    return new Response(
+      JSON.stringify({ columns: data }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
-    });
+    console.error('Server error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
+    );
   }
 });

@@ -1,5 +1,5 @@
 
-import { useState, createContext, useContext } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -97,11 +97,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return userRole === requiredRole;
   };
 
-  // Use React Router context for navigation functions
-  // We need to solve the useState hook error (this must be inside a component)
-  // All auth-related hooks are initialized in useAuth.ts and the component is wrapped around the app
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state change event:", event);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Use setTimeout(0) to avoid deadlocks with Supabase's auth state
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+          }, 0);
+        } else {
+          setUserRole(null);
+        }
+        
+        if (event === 'SIGNED_IN') {
+          console.log('User signed in:', session?.user?.email);
+          navigate('/profile');
+          toast({
+            title: "Welcome back!",
+            description: "You've successfully signed in."
+          });
+        }
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          navigate('/login');
+          toast({
+            title: "Signed out",
+            description: "You've been signed out successfully."
+          });
+        }
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery detected');
+          toast({
+            title: "Password reset requested",
+            description: "Please enter a new password."
+          });
+        }
+        setIsLoading(false);
+      }
+    );
 
-  // Add sign in, sign up, sign out, and reset password functions
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Initial auth session check:", session ? "Session exists" : "No session");
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          console.log("User is already authenticated", session.user.email);
+          await fetchUserRole(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
+    return () => subscription.unsubscribe();
+  }, [navigate, toast]);
+
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -118,12 +178,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const currentOrigin = window.location.origin;
-      const { error } = await supabase.auth.signUp({
-        email,
+      console.log("Sign up with redirect to:", `${currentOrigin}/profile`);
+      
+      const { error } = await supabase.auth.signUp({ 
+        email, 
         password,
         options: {
-          emailRedirectTo: `${currentOrigin}/profile`,
-        },
+          emailRedirectTo: `${currentOrigin}/profile`
+        } 
       });
       if (error) throw error;
     } catch (error) {
@@ -136,12 +198,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (password: string) => {
     setIsLoading(true);
     try {
+      console.log("Updating password");
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) {
+        console.error("Password update error:", error);
         throw error;
       }
 
+      console.log("Password updated successfully");
       toast({
         title: "Password updated",
         description: "Your password has been updated successfully."
@@ -150,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error) {
+      console.error("Password reset exception:", error);
       toast({
         title: "Password Reset Error",
         description: error instanceof Error ? error.message : "Could not reset password",
@@ -173,46 +239,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // We'll add the auth state change listener in a useEffect hook in the component itself
-  // This is to ensure it's only run once when the component mounts
-  
-  // import { useEffect } from 'react';
-  // useEffect(() => {
-  //   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-  //     setSession(session);
-  //     setUser(session?.user ?? null);
-  //     
-  //     if (session?.user) {
-  //       setTimeout(() => {
-  //         fetchUserRole(session.user.id);
-  //       }, 0);
-  //     } else {
-  //       setUserRole(null);
-  //     }
-  //   });
-  //
-  //   const initializeAuth = async () => {
-  //     const { data: { session } } = await supabase.auth.getSession();
-  //     setSession(session);
-  //     setUser(session?.user ?? null);
-  //     if (session?.user) {
-  //       await fetchUserRole(session.user.id);
-  //     }
-  //     setIsLoading(false);
-  //   };
-  //
-  //   initializeAuth();
-  //   return () => subscription.unsubscribe();
-  // }, [navigate, toast]);
-
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      signIn,
-      signUp,
-      signOut,
-      resetPassword,
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      signIn, 
+      signUp, 
+      signOut, 
+      resetPassword, 
       isLoading,
       userRole,
       hasRole

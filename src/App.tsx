@@ -1,10 +1,10 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
@@ -17,8 +17,6 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Education from "./pages/Education";
-import CourseDetail from "./pages/CourseDetail";
-import CourseCategory from "./pages/CourseCategory";
 import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Dashboard from "./pages/admin/Dashboard";
@@ -35,7 +33,6 @@ import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -66,8 +63,6 @@ function App() {
                 
                 {/* Public Routes - Accessible without authentication */}
                 <Route path="/education" element={<Education />} />
-                <Route path="/education/course/:id" element={<CourseDetail />} />
-                <Route path="/education/category/:categoryId" element={<CourseCategory />} />
                 <Route path="/workshops" element={<Workshops />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/terms" element={<Terms />} />
