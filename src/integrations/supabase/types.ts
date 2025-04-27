@@ -658,6 +658,7 @@ export type Database = {
           id: string
           instructions: string
           merchant_code: string | null
+          merchant_code_label: string | null
           payment_method: string
           updated_at: string | null
         }
@@ -666,6 +667,7 @@ export type Database = {
           id?: string
           instructions: string
           merchant_code?: string | null
+          merchant_code_label?: string | null
           payment_method: string
           updated_at?: string | null
         }
@@ -674,6 +676,7 @@ export type Database = {
           id?: string
           instructions?: string
           merchant_code?: string | null
+          merchant_code_label?: string | null
           payment_method?: string
           updated_at?: string | null
         }
