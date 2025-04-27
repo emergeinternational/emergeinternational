@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ import { Course, CourseCategory, CourseLevel, CourseHostingType } from '@/servic
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { submitScrapedCourse } from '@/services/scraping/courseScraperCore';
 
 const CourseUploadForm = () => {
   const [isLoading, setIsLoading] = useState(false);

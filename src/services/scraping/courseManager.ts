@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ScrapedCourse, generateCourseHash } from "../courseTypes";
+import { ScrapedCourse, Course, generateCourseHash } from "../courseTypes";
 import { canUpdateCourse } from "./courseScraperValidation";
 
 // Get all pending scraped courses with duplicate information
@@ -38,16 +38,22 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
       return null;
     }
     
+    const typedScrapedCourse = scrapedCourse as ScrapedCourse;
+    
     // If it's flagged as a duplicate with high confidence, update existing course
-    if (scrapedCourse.is_duplicate && scrapedCourse.duplicate_confidence && scrapedCourse.duplicate_confidence >= 90 && scrapedCourse.duplicate_of) {
+    if (typedScrapedCourse.is_duplicate && 
+        typedScrapedCourse.duplicate_confidence && 
+        typedScrapedCourse.duplicate_confidence >= 90 && 
+        typedScrapedCourse.duplicate_of) {
+      
       // Update the existing course if needed
-      if (await canUpdateCourse(scrapedCourse.duplicate_of)) {
+      if (await canUpdateCourse(typedScrapedCourse.duplicate_of)) {
         const { error: updateError } = await supabase
           .from("courses")
           .update({
             updated_at: new Date().toISOString()
           })
-          .eq("id", scrapedCourse.duplicate_of);
+          .eq("id", typedScrapedCourse.duplicate_of);
           
         if (updateError) {
           console.error("Error updating existing course:", updateError);
@@ -63,27 +69,29 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
         })
         .eq("id", id);
         
-      return scrapedCourse.duplicate_of;
+      return typedScrapedCourse.duplicate_of;
     }
     
     // Create a new course from the scraped data
+    const courseData: Partial<Course> = {
+      title: typedScrapedCourse.title,
+      summary: typedScrapedCourse.summary,
+      category: typedScrapedCourse.category,
+      level: typedScrapedCourse.level,
+      video_embed_url: typedScrapedCourse.video_embed_url,
+      external_link: typedScrapedCourse.external_link,
+      image_url: typedScrapedCourse.image_url,
+      hosting_type: typedScrapedCourse.hosting_type,
+      is_published: true,
+      source_platform: typedScrapedCourse.scraper_source,
+      source_url: typedScrapedCourse.external_link || typedScrapedCourse.video_embed_url,
+      hash_identifier: typedScrapedCourse.hash_identifier || 
+        generateCourseHash(typedScrapedCourse.title, typedScrapedCourse.scraper_source)
+    };
+
     const { data: newCourse, error: insertError } = await supabase
       .from("courses")
-      .insert({
-        title: scrapedCourse.title,
-        summary: scrapedCourse.summary,
-        category: scrapedCourse.category,
-        level: scrapedCourse.level,
-        video_embed_url: scrapedCourse.video_embed_url,
-        external_link: scrapedCourse.external_link,
-        image_url: scrapedCourse.image_url,
-        hosting_type: scrapedCourse.hosting_type,
-        is_published: true,
-        source_platform: scrapedCourse.scraper_source,
-        source_url: scrapedCourse.external_link || scrapedCourse.video_embed_url,
-        hash_identifier: scrapedCourse.hash_identifier || 
-          generateCourseHash(scrapedCourse.title, scrapedCourse.scraper_source)
-      })
+      .insert(courseData)
       .select()
       .single();
     

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { generateCourseHash } from "../courseTypes";
 import { calculateSimilarity } from "./courseScraperValidation";
@@ -17,7 +16,7 @@ export const checkDuplicateCourse = async (
     // First check by hash (most accurate)
     const { data: hashMatches, error: hashError } = await supabase
       .from("scraped_courses")
-      .select("id, title, scraper_source, hash_identifier")
+      .select("id, title, scraper_source")
       .eq("hash_identifier", courseHash)
       .limit(1);
     
