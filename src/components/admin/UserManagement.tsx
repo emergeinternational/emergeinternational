@@ -40,6 +40,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import UserFilters, { UserFilterState, DateRange } from "./UserFilters";
+import { useAuth } from "@/hooks/useAuth";
+import UserListHeader from "./users/UserListHeader";
+import UserStatusBadge from "./users/UserStatusBadge";
+import UserManagementActions from "./users/UserManagementActions";
 
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
@@ -78,6 +82,8 @@ const UserManagement = () => {
     fetchMethod: 'unknown',
   });
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+  const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   
   const filteredUsers = useMemo(() => {
     let result = [...users];
@@ -359,11 +365,50 @@ const UserManagement = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const deleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      if (error) throw error;
+      
+      toast({
+        title: "User deleted successfully",
+        description: "The user has been removed from the system.",
+      });
+      
+      // Refresh the users list
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error deleting user",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditUser = (user: UserWithRole) => {
+    // Placeholder for edit functionality
+    toast({
+      title: "Edit User",
+      description: `Editing user ${user.full_name} is not yet implemented.`,
+    });
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    // Placeholder for delete functionality
+    toast({
+      title: "Delete User",
+      description: `Deleting user with ID ${userId} is not yet implemented.`,
+    });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">User Management</h2>
-      </div>
+      <UserListHeader 
+        onAddUser={() => setOpenAddUserDialog(true)}
+        totalUsers={users.length}
+      />
       
       <UserFilters 
         filters={filters}
@@ -373,181 +418,59 @@ const UserManagement = () => {
         isLoading={loading}
         activeFilterCount={activeFilterCount}
       />
-      
-      <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-xs">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-medium">System Diagnostic</h3>
-          <Badge variant={diagnosticInfo.fetchMethod === 'unknown' ? 'destructive' : 'success'}>
-            {diagnosticInfo.fetchMethod === 'auth-api' ? 'Using Auth API' : 
-             diagnosticInfo.fetchMethod === 'profiles-table' ? 'Using Profiles Table' : 
-             'Data Source Unknown'}
-          </Badge>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <p className="text-slate-500">Auth Users</p>
-            <p className="font-medium">{diagnosticInfo.authUsersCount ?? 'Not available'}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Profiles</p>
-            <p className="font-medium">{diagnosticInfo.profilesCount ?? 'Not available'}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">User Roles</p>
-            <p className="font-medium">{diagnosticInfo.userRolesCount ?? 'Not available'}</p>
-          </div>
-        </div>
-        <div className="mt-2 text-slate-500">
-          Last refreshed: {diagnosticInfo.lastRefreshed ? formatDate(diagnosticInfo.lastRefreshed) : 'Never'}
-        </div>
-      </div>
-      
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>User</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Current Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
+
+      <div className="bg-white rounded-lg shadow">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
-                Loading users...
-              </TableCell>
+              <TableHead>User</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
-          ) : filteredUsers.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
-                {users.length > 0 ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <AlertTriangle className="h-8 w-8 text-amber-500" />
-                    <p>No users match your current filters</p>
-                    <Button variant="outline" size="sm" onClick={resetFilters}>
-                      Clear all filters
-                    </Button>
-                  </div>
-                ) : (
-                  'No users found in the system'
-                )}
-              </TableCell>
-            </TableRow>
-          ) : (
-            filteredUsers.map((user) => (
-              <TableRow key={user.id} className={user.is_new ? "bg-emerald-50" : undefined}>
-                <TableCell>
-                  <div className="flex items-center">
-                    <div>
-                      <div className="font-medium flex items-center">
-                        {user.full_name || 'Unnamed User'}
-                        {user.is_new && (
-                          <Badge variant="success" className="ml-2">New</Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {user.id.slice(0, 8)}...
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <div className={`flex items-center font-medium ${getRoleColor(user.role || 'user')}`}>
-                    {getRoleIcon(user.role || 'user')}
-                    {user.role || 'user'}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {user.is_verified ? (
-                    <Badge variant="verified">Verified</Badge>
-                  ) : (
-                    <Badge variant="pending">Unverified</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-sm">
-                  <div>{formatDate(user.created_at)}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          disabled={user.loading}
-                          className={user.loading ? "opacity-50 cursor-not-allowed" : ""}
-                        >
-                          {user.loading ? "Updating..." : "Change Role"}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Select Role</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuRadioGroup 
-                          value={user.role || 'user'}
-                          onValueChange={(value) => updateUserRole(user.id, value as UserRole)}
-                        >
-                          <DropdownMenuRadioItem value="admin">
-                            <Shield className="h-4 w-4 mr-2" /> Admin
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="editor">
-                            <UserCheck className="h-4 w-4 mr-2" /> Editor
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="viewer">
-                            <UserX className="h-4 w-4 mr-2" /> Viewer
-                          </DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="user">
-                            User
-                          </DropdownMenuRadioItem>
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this user? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  Loading users...
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-      
-      {!loading && filteredUsers.length > 0 && (
-        <div className="text-xs text-gray-500 mt-2">
-          Showing {filteredUsers.length} of {users.length} users
-          {filteredUsers.filter(u => u.is_new).length > 0 && (
-            <span className="ml-1">
-              including <span className="font-semibold text-emerald-600">{filteredUsers.filter(u => u.is_new).length} new</span> in the last hour
-            </span>
-          )}
-        </div>
-      )}
+            ) : filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  No users found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="font-medium">{user.full_name || 'Unnamed User'}</div>
+                    <div className="text-sm text-muted-foreground">ID: {user.id.slice(0, 8)}...</div>
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <UserStatusBadge 
+                      role={user.role || 'user'} 
+                      isVerified={user.is_verified}
+                    />
+                  </TableCell>
+                  <TableCell>{formatDate(user.created_at)}</TableCell>
+                  <TableCell>
+                    <UserManagementActions
+                      onEdit={() => handleEditUser(user)}
+                      onDelete={() => handleDeleteUser(user.id)}
+                      isCurrentUser={user.id === currentUser?.id}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
