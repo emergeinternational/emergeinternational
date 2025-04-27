@@ -94,6 +94,31 @@ export const trackCourseEngagement = async (courseId: string): Promise<boolean> 
 
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {
+    // First try to fetch from the new courses table if it exists
+    const { data: courseData, error: courseError } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (courseData) {
+      return {
+        id: courseData.id,
+        title: courseData.title,
+        summary: courseData.summary,
+        category: courseData.category || '',
+        level: courseData.level || '',
+        image_url: courseData.image_url,
+        video_embed_url: courseData.video_embed_url,
+        external_link: courseData.external_link,
+        hosting_type: courseData.hosting_type,
+        is_published: courseData.is_published,
+        created_at: courseData.created_at,
+        updated_at: courseData.updated_at
+      };
+    }
+
+    // Fallback to education_content if not found in courses
     const { data, error } = await supabase
       .from("education_content")
       .select("*")
@@ -117,7 +142,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       category_id: data.category_id,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      video_embed_url: data.video_embed_url
+      // These fields might not exist in education_content
+      video_embed_url: data.video_embed_url || undefined
     };
 
     return course;
@@ -129,6 +155,30 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 
 export const getAllCourses = async (): Promise<Course[]> => {
   try {
+    // First try to fetch from the new courses table if it exists
+    let { data: coursesData, error: coursesError } = await supabase
+      .from("courses")
+      .select("*");
+
+    if (coursesData && coursesData.length > 0) {
+      return coursesData.map(item => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary,
+        category: item.category || '',
+        level: item.level || '',
+        image_url: item.image_url,
+        video_embed_url: item.video_embed_url,
+        external_link: item.external_link,
+        hosting_type: item.hosting_type,
+        is_published: item.is_published,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        career_interests: []
+      }));
+    }
+
+    // Fallback to education_content
     const { data, error } = await supabase
       .from("education_content")
       .select("*");
@@ -160,6 +210,32 @@ export const getAllCourses = async (): Promise<Course[]> => {
 
 export const getPopularCourses = async (): Promise<Course[]> => {
   try {
+    // First try from courses table if it exists
+    let { data: coursesData, error: coursesError } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("is_published", true)
+      .limit(8);
+
+    if (coursesData && coursesData.length > 0) {
+      return coursesData.map(item => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary || "",
+        category: item.category || '',
+        level: item.level || '',
+        image_url: item.image_url,
+        video_embed_url: item.video_embed_url,
+        external_link: item.external_link,
+        hosting_type: item.hosting_type,
+        is_published: item.is_published,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        isPopular: true
+      }));
+    }
+
+    // Fallback to education_content
     const { data, error } = await supabase
       .from("education_content")
       .select("*")
@@ -249,6 +325,51 @@ export const getCourses = async (
   careerInterest?: string
 ): Promise<Course[]> => {
   try {
+    // First try the courses table if it exists
+    let courseQuery = supabase.from("courses").select("*");
+
+    if (level && level !== "all") {
+      courseQuery = courseQuery.eq("level", level);
+    }
+
+    if (featured) {
+      courseQuery = courseQuery.eq("is_published", true);
+    }
+
+    if (limit > 0) {
+      courseQuery = courseQuery.limit(limit);
+    }
+
+    let { data: coursesData, error: coursesError } = await courseQuery;
+    
+    if (coursesData && coursesData.length > 0) {
+      const coursesWithValidImages = coursesData.map(item => ({
+        id: item.id,
+        title: item.title,
+        summary: item.summary || "",
+        category: item.category || '',
+        level: item.level || '',
+        image_url: item.image_url,
+        video_embed_url: item.video_embed_url,
+        external_link: item.external_link,
+        hosting_type: item.hosting_type,
+        is_published: item.is_published,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        career_interests: [item.category]
+      }));
+
+      if (careerInterest && careerInterest !== "all") {
+        return coursesWithValidImages.filter(course => 
+          course.category === careerInterest || 
+          course.career_interests?.includes(careerInterest)
+        );
+      }
+
+      return coursesWithValidImages;
+    }
+
+    // Fallback to education_content
     let query = supabase.from("education_content").select("*");
 
     if (level && level !== "all") {
@@ -290,10 +411,7 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
-          career_interests: [],
-          video_embed_url: item.video_embed_url,
-          external_link: item.external_link,
-          hosting_type: item.hosting_type
+          career_interests: []
         };
       })
     );
