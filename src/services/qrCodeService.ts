@@ -14,7 +14,7 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    // Use explicitly typed query with error handling
+    // First, check if the QR code exists and is active
     const { data, error } = await supabase
       .from('event_registrations')
       .select('id, qr_code_active')
