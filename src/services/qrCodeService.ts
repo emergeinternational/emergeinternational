@@ -15,7 +15,7 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    // Use explicit typing for the query to avoid excessive type instantiation
+    // Avoid type parameter in select() to prevent excessive type instantiation
     const { data, error } = await supabase
       .from('event_registrations')
       .select('id, qr_code_active')
