@@ -3,15 +3,10 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/hooks/useCurrency";
+import { Event } from '@/hooks/useEvents';
 
 interface EventDetailsProps {
-  event: {
-    name: string;
-    description?: string;
-    date: string;
-    location?: string;
-    price?: number;
-  };
+  event: Event;
 }
 
 export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {

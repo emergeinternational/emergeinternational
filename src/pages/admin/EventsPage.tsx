@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +26,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Textarea } from "@/components/ui/textarea";
+import { Event } from "@/hooks/useEvents";
 
 const eventFormSchema = z.object({
   name: z.string().min(3, "Event name must be at least 3 characters"),
@@ -51,7 +51,7 @@ const EventsPage = () => {
         .order('date', { ascending: true });
 
       if (error) throw error;
-      return data;
+      return data as Event[];
     },
     refetchOnWindowFocus: false,
   });

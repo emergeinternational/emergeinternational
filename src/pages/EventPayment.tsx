@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader } from "lucide-react";
@@ -13,15 +12,7 @@ import { DiscountCodeInput } from "@/components/payment/DiscountCodeInput";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/hooks/useCurrency";
-
-interface TicketType {
-  id: string;
-  type: string;
-  price: number;
-  description?: string;
-  available_quantity: number;
-  benefits?: string[];
-}
+import { Event, TicketType } from "@/hooks/useEvents";
 
 const EventPayment = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -32,7 +23,7 @@ const EventPayment = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [event, setEvent] = useState<any>(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
@@ -65,13 +56,20 @@ const EventPayment = () => {
         
         if (ticketsError) throw ticketsError;
         
-        setEvent(eventData);
-        setTicketTypes(ticketsData);
+        // Transform the tickets data to match our TicketType interface
+        const formattedTickets: TicketType[] = ticketsData.map(ticket => ({
+          ...ticket,
+          type: ticket.type || ticket.name || 'Standard Ticket',
+          available_quantity: (ticket.quantity || 0) - (ticket.tickets_sold || 0)
+        }));
+        
+        setEvent(eventData as Event);
+        setTicketTypes(formattedTickets);
         
         // Select the first ticket by default if available
-        if (ticketsData.length > 0) {
-          setSelectedTicket(ticketsData[0]);
-          setFinalPrice(ticketsData[0].price);
+        if (formattedTickets.length > 0) {
+          setSelectedTicket(formattedTickets[0]);
+          setFinalPrice(formattedTickets[0].price);
         }
       } catch (error) {
         console.error('Error fetching event details:', error);
@@ -196,7 +194,7 @@ const EventPayment = () => {
       // Prepare payment details
       const paymentDetails = {
         amount: finalPrice,
-        description: `${event.name} - ${selectedTicket.type}`,
+        description: `${event?.name} - ${selectedTicket.type}`,
         eventId: eventId,
         ticketType: selectedTicket.id
       };
