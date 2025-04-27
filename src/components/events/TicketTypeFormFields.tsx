@@ -11,7 +11,8 @@ interface TicketTypeFormFieldsProps {
   isEditMode: boolean;
 }
 
-// Create a separate component for benefit fields to avoid React hooks issues
+const defaultBenefits = ["Event Access", "Networking", "Certificate"];
+
 const BenefitFields = ({ form, ticketIndex }: { form: any; ticketIndex: number }) => {
   const { 
     fields: benefitFields, 
@@ -75,20 +76,18 @@ const BenefitFields = ({ form, ticketIndex }: { form: any; ticketIndex: number }
 };
 
 const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEditMode }) => {
-  // Main field array for ticket types
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "ticket_types"
   });
   
-  // Function to create a new ticket type
   const addTicketType = useCallback(() => {
     append({ 
       name: "", 
       price: 0, 
       description: "", 
       quantity: 1,
-      benefits: []
+      benefits: [...defaultBenefits]
     });
   }, [append]);
 
@@ -186,7 +185,6 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
             )}
           />
           
-          {/* Benefits Section - Using the separate component */}
           <BenefitFields form={form} ticketIndex={index} />
         </div>
       ))}
