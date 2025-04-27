@@ -3,15 +3,7 @@ import React from 'react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from '@/hooks/useCurrency';
-
-interface TicketType {
-  id: string;
-  type: string;
-  price: number;
-  description?: string;
-  available_quantity: number;
-  benefits?: string[];
-}
+import { TicketType } from '@/hooks/useEvents';
 
 interface Currency {
   id: string;
@@ -71,7 +63,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
               className="flex-grow cursor-pointer"
             >
               <div className="flex justify-between">
-                <span className="font-medium">{ticket.type}</span>
+                <span className="font-medium">{ticket.name}</span>
                 <span className="font-bold">
                   {currency?.symbol} {convertPrice(ticket.price).toFixed(2)}
                 </span>
@@ -89,16 +81,6 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
               
               {ticket.available_quantity === 0 && (
                 <p className="text-xs text-red-600 mt-1">Sold out</p>
-              )}
-              
-              {ticket.benefits && ticket.benefits.length > 0 && (
-                <ul className="text-xs text-gray-600 mt-1 space-y-1">
-                  {ticket.benefits.map((benefit, idx) => (
-                    <li key={idx} className="flex items-center">
-                      <span className="mr-1">•</span> {benefit}
-                    </li>
-                  ))}
-                </ul>
               )}
             </Label>
           </div>

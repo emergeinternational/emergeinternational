@@ -6,29 +6,12 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { CurrencySelector } from '@/components/CurrencySelector';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
-// Mock events data - this would typically come from an API or prop
-const eventsList = [
-  {
-    id: '1',
-    name: 'Emerge Fashion Show',
-    date: '2025-05-15',
-    location: 'Addis Ababa Exhibition Center',
-    description: 'Annual fashion showcase featuring local designers',
-    price: 500
-  },
-  {
-    id: '2',
-    name: 'Design Workshop',
-    date: '2025-06-20',
-    location: 'Emerge Headquarters',
-    description: 'Workshop for aspiring fashion designers',
-    price: 300
-  }
-];
+import { useEvents } from '@/hooks/useEvents';
+import { CalendarDays, MapPin } from 'lucide-react';
 
 const Events = () => {
   const { selectedCurrency, convertPrice } = useCurrency();
+  const { data: events, isLoading, error } = useEvents();
 
   return (
     <MainLayout>
@@ -38,29 +21,85 @@ const Events = () => {
           <CurrencySelector />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {eventsList.map((event) => (
-            <Card key={event.id} className="overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-medium mb-2">{event.name}</h3>
-                <p className="text-gray-600 mb-4">{event.description}</p>
-                <div className="space-y-2 mb-4">
-                  <p><strong>Date:</strong> {event.date}</p>
-                  <p><strong>Location:</strong> {event.location}</p>
-                  <p className="text-lg font-semibold">
-                    <strong>Price:</strong> {selectedCurrency?.symbol} 
-                    {convertPrice(event.price).toFixed(2)}
-                  </p>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <div className="h-40 bg-gray-200 animate-pulse"></div>
+                <CardContent className="p-6">
+                  <div className="h-6 bg-gray-200 animate-pulse mb-3 w-3/4"></div>
+                  <div className="h-4 bg-gray-200 animate-pulse mb-4 w-full"></div>
+                  <div className="space-y-2 mb-4">
+                    <div className="h-4 bg-gray-200 animate-pulse w-1/2"></div>
+                    <div className="h-4 bg-gray-200 animate-pulse w-2/3"></div>
+                    <div className="h-5 bg-gray-200 animate-pulse w-1/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 bg-red-50 rounded-lg">
+            <p className="text-red-500">Error loading events. Please try again later.</p>
+          </div>
+        ) : events?.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-500">No upcoming events at the moment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {events?.map((event) => (
+              <Card key={event.id} className="overflow-hidden">
+                <div className="h-40 bg-emerge-cream flex items-center justify-center">
+                  {event.image_url ? (
+                    <img 
+                      src={event.image_url} 
+                      alt={event.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <h3 className="text-xl font-medium px-4 text-center">{event.name}</h3>
+                  )}
                 </div>
-                <div className="flex justify-end">
-                  <Link to={`/event-payment/${event.id}`}>
-                    <Button>Buy Tickets</Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardContent className="p-6">
+                  {event.image_url && <h3 className="text-xl font-medium mb-2">{event.name}</h3>}
+                  {event.description && (
+                    <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
+                  )}
+                  <div className="space-y-2 mb-4">
+                    <p className="flex items-center text-gray-600">
+                      <CalendarDays className="h-4 w-4 mr-2" />
+                      <span>
+                        {new Date(event.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </p>
+                    {event.location && (
+                      <p className="flex items-center text-gray-600">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        <span>{event.location}</span>
+                      </p>
+                    )}
+                    {event.ticket_types && event.ticket_types.length > 0 && (
+                      <p className="text-lg font-semibold mt-2">
+                        <span>From {selectedCurrency?.symbol} </span>
+                        {convertPrice(Math.min(...event.ticket_types.map(t => t.price))).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex justify-end">
+                    <Link to={`/event-payment/${event.id}`}>
+                      <Button>Buy Tickets</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </MainLayout>
   );

@@ -113,7 +113,7 @@ const App = () => {
                 } />
                 <Route path="/admin/events" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <Events />
+                    <EventsPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/donations" element={
