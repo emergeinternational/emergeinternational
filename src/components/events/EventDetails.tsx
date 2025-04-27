@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,21 @@ export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+
+  // Helper function to safely convert and format price
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined || price === null) {
+      return 'Free';
+    }
+    
+    try {
+      const converted = convertPrice(price);
+      return `${selectedCurrency?.symbol || ''} ${converted.toFixed(2)}`;
+    } catch (error) {
+      console.error('Error converting price:', error);
+      return `${selectedCurrency?.symbol || ''} ${price.toFixed(2)}`;
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -70,7 +86,7 @@ export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {
             <div>
               <p className="text-sm text-gray-500">Starting Price</p>
               <p className="font-bold text-lg">
-                {selectedCurrency?.symbol} {convertPrice(event.price).toFixed(2)}
+                {formatPrice(event.price)}
               </p>
             </div>
           )}
