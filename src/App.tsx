@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -34,12 +33,12 @@ import Events from "./pages/Events";
 import Profile from "./pages/Profile";
 import Certificates from "./pages/Certificates";
 import Dashboard from "./pages/admin/Dashboard";
-import Users from "./pages/admin/Users";
-import Talents from "./pages/admin/Talents";
+import Users from "./pages/admin/UsersPage";
 import Orders from "./pages/admin/Orders";
 import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
+import TalentsPage from "./pages/admin/TalentsPage";
 
 const queryClient = new QueryClient();
 
@@ -107,7 +106,7 @@ const App = () => {
                 } />
                 <Route path="/admin/talents" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <Talents />
+                    <TalentsPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/events" element={
