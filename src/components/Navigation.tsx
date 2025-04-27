@@ -50,6 +50,15 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
             </Link>
           ))}
           
+          {user && (
+            <Link
+              to="/my-premium-courses"
+              className="hover:text-emerge-gold transition-colors font-medium"
+            >
+              My Premium Courses
+            </Link>
+          )}
+          
           {/* Admin link - only visible to admin users */}
           {user && hasRole('admin') && (
             <Link
@@ -85,6 +94,16 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
                 {link.name}
               </Link>
             ))}
+            
+            {user && (
+              <Link
+                to="/my-premium-courses"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+              >
+                My Premium Courses
+              </Link>
+            )}
             
             {/* Admin link in mobile menu - only visible to admin users */}
             {user && hasRole('admin') && (

@@ -9,8 +9,31 @@ import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
 import PremiumCoursesListPage from "./pages/PremiumCoursesListPage";
+import MyPremiumCourses from "./pages/MyPremiumCourses";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
+import Login from "./pages/Login";
+import EmailLogin from "./pages/EmailLogin";
+import Home from "./pages/Home";
+import Education from "./pages/Education";
+import CourseDetail from "./pages/CourseDetail";
+import Workshops from "./pages/Workshops";
+import About from "./pages/About";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Contact from "./pages/Contact";
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Donations from "./pages/Donations";
+import Payment from "./pages/Payment";
+import Events from "./pages/Events";
+import Profile from "./pages/Profile";
+import Dashboard from "./pages/admin/Dashboard";
+import Users from "./pages/admin/Users";
+import Talents from "./pages/admin/Talents";
+import Orders from "./pages/admin/Orders";
+import Settings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -35,59 +58,60 @@ const App = () => {
               <Sonner />
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-                <Route path="/email-login" element={<PublicRoute><EmailLoginPage /></PublicRoute>} />
-                <Route path="/home" element={<HomePage />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
+                <Route path="/home" element={<Home />} />
                 
-                <Route path="/education" element={<EducationPage />} />
-                <Route path="/education/course/:id" element={<CourseDetailPage />} />
-                <Route path="/workshops" element={<WorkshopsPage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/education" element={<Education />} />
+                <Route path="/education/course/:id" element={<CourseDetail />} />
+                <Route path="/workshops" element={<Workshops />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/contact" element={<Contact />} />
                 
-                <Route path="/shop" element={<PrivateRoute><ShopPage /></PrivateRoute>} />
-                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetailPage /></PrivateRoute>} />
-                <Route path="/cart" element={<PrivateRoute><CartPage /></PrivateRoute>} />
-                <Route path="/donations" element={<PrivateRoute><DonationsPage /></PrivateRoute>} />
-                <Route path="/payment" element={<PrivateRoute><PaymentPage /></PrivateRoute>} />
-                <Route path="/events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />
-                <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+                <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
+                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
+                <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
+                <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
+                <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
+                <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
-                    <DashboardPage />
+                    <Dashboard />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/users" element={
                   <RoleBasedRoute allowedRoles={['admin']}>
-                    <UsersPage />
+                    <Users />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/talents" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <TalentsPage />
+                    <Talents />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/events" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <EventsPage />
+                    <Events />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/donations" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <DonationsPage />
+                    <Donations />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/orders" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <OrdersPage />
+                    <Orders />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/settings" element={
                   <RoleBasedRoute allowedRoles={['admin']}>
-                    <SettingsPage />
+                    <Settings />
                   </RoleBasedRoute>
                 } />
                 

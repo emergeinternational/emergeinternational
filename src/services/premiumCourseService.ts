@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -15,6 +16,15 @@ export interface PremiumCourse {
   has_active_students: boolean;
   is_published: boolean;
   created_by?: string;
+  created_at?: string;
+}
+
+export interface PremiumCourseEnrollment {
+  id: string;
+  course_id: string;
+  user_id: string;
+  created_at: string;
+  course?: PremiumCourse;
 }
 
 export async function uploadPremiumCourseImage(file: File): Promise<string | null> {
@@ -45,7 +55,7 @@ export async function uploadPremiumCourseImage(file: File): Promise<string | nul
 
 export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
   try {
-    const { data, error } = await supabase
+    const { data: courseData, error } = await supabase
       .from('premium_courses')
       .insert([{
         ...courseData,
@@ -53,7 +63,7 @@ export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' |
         student_capacity: courseData.student_capacity || 20,
         level: courseData.level || 'beginner'
       }])
-      .select()
+      .select('*')
       .single();
 
     if (error) {
@@ -61,7 +71,7 @@ export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' |
       return null;
     }
 
-    return data.id;
+    return courseData.id;
   } catch (error) {
     console.error('Error in createPremiumCourse:', error);
     return null;
@@ -84,6 +94,29 @@ export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
     return data as PremiumCourse[];
   } catch (error) {
     console.error('Error in listPublishedPremiumCourses:', error);
+    return [];
+  }
+}
+
+export async function getUserEnrolledCourses(): Promise<PremiumCourseEnrollment[]> {
+  try {
+    const { data, error } = await supabase
+      .from('premium_course_enrollments')
+      .select(`
+        *,
+        course:premium_courses(*)
+      `)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user enrolled courses:', error);
+      return [];
+    }
+
+    return data as PremiumCourseEnrollment[];
+  } catch (error) {
+    console.error('Error in getUserEnrolledCourses:', error);
     return [];
   }
 }
