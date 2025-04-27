@@ -31,29 +31,18 @@ export const CertificateActions = ({
         Details
       </Button>
       
-      {user.admin_approved ? (
-        <>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-green-600 border-green-300 hover:bg-green-50"
-            onClick={onGenerate}
-          >
-            <Award className="h-4 w-4 mr-1" />
-            Generate
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-500 border-red-300 hover:bg-red-50"
-            onClick={onRevoke}
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            Revoke
-          </Button>
-        </>
-      ) : hasMetRequirements && (
+      {/* Always show Generate button for testing */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-green-600 border-green-300 hover:bg-green-50"
+        onClick={onGenerate}
+      >
+        <Award className="h-4 w-4 mr-1" />
+        Generate
+      </Button>
+      
+      {!user.admin_approved && hasMetRequirements && (
         <Button
           variant="outline"
           size="sm"
@@ -62,6 +51,18 @@ export const CertificateActions = ({
         >
           <CheckCircle className="h-4 w-4 mr-1" />
           Approve
+        </Button>
+      )}
+      
+      {user.admin_approved && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-500 border-red-300 hover:bg-red-50"
+          onClick={onRevoke}
+        >
+          <XCircle className="h-4 w-4 mr-1" />
+          Revoke
         </Button>
       )}
     </div>
