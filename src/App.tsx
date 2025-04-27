@@ -65,9 +65,11 @@ const App = () => {
               <Toaster />
               <Sonner />
               <Routes>
-                <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/home" element={<Landing />} />
+                {/* Home routes */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/home" element={<Home />} />
                 
+                {/* Public routes */}
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
@@ -76,9 +78,14 @@ const App = () => {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/test-auth" element={<TestAuthPage />} />
+                <Route path="/talent-registration" element={<TalentRegistration />} />
+                <Route path="/submit" element={<MediaSubmission />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
                 
-                <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
-                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
+                {/* Protected routes */}
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/product/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
                 <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
                 <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
@@ -87,6 +94,7 @@ const App = () => {
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
+                {/* Admin routes */}
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
                     <Dashboard />
@@ -122,39 +130,24 @@ const App = () => {
                     <Settings />
                   </RoleBasedRoute>
                 } />
+                <Route path="/admin/courses" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <CoursesPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/premium-courses" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <PremiumCoursesPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/premium-enrollments" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <PremiumEnrollmentsPage />
+                  </RoleBasedRoute>
+                } />
                 
-                <Route path="/talent-registration" element={<TalentRegistration />} />
-                
-                <Route path="/submit" element={<MediaSubmission />} />
-                
-                <Route 
-                  path="/admin/courses" 
-                  element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <CoursesPage />
-                    </RoleBasedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/admin/premium-courses" 
-                  element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <PremiumCoursesPage />
-                    </RoleBasedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/admin/premium-enrollments" 
-                  element={
-                    <RoleBasedRoute allowedRoles={['admin']}>
-                      <PremiumEnrollmentsPage />
-                    </RoleBasedRoute>
-                  } 
-                />
-                
-                <Route path="*" element={<Navigate to="/home" replace />} />
+                {/* Fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </TooltipProvider>
           </CartProvider>

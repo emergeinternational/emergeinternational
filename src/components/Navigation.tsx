@@ -58,7 +58,9 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
           >
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          <Logo variant={logoVariant} />
+          <Link to="/">
+            <Logo variant={logoVariant} />
+          </Link>
         </div>
 
         <div className="hidden md:flex items-center space-x-6">
