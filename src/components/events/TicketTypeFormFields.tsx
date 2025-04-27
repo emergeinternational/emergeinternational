@@ -12,6 +12,66 @@ interface TicketTypeFormFieldsProps {
   isEditMode: boolean;
 }
 
+// Create a separate component for benefit fields to avoid React hooks issues
+const BenefitFields = ({ form, ticketIndex }: { form: any; ticketIndex: number }) => {
+  const { 
+    fields: benefitFields, 
+    append: appendBenefit, 
+    remove: removeBenefit 
+  } = useFieldArray({
+    control: form.control,
+    name: `ticket_types.${ticketIndex}.benefits`
+  });
+  
+  return (
+    <div className="mt-4">
+      <div className="flex justify-between items-center mb-2">
+        <FormLabel>Benefits</FormLabel>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => appendBenefit("")}
+        >
+          <Plus className="h-3 w-3 mr-1" /> Add Benefit
+        </Button>
+      </div>
+      
+      {benefitFields.length > 0 ? (
+        <div className="space-y-2">
+          {benefitFields.map((benefitField, benefitIndex) => (
+            <div key={benefitField.id} className="flex items-center gap-2">
+              <FormField
+                control={form.control}
+                name={`ticket_types.${ticketIndex}.benefits.${benefitIndex}`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <Input placeholder="e.g., VIP Access, Free Drinks, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeBenefit(benefitIndex)}
+                className="text-red-500"
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-sm">No benefits added yet</p>
+      )}
+    </div>
+  );
+};
+
 const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEditMode }) => {
   // Main field array for ticket types
   const { fields, append, remove } = useFieldArray({
@@ -29,67 +89,6 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
       benefits: []
     });
   }, [append]);
-  
-  // Render benefit fields for a specific ticket type index
-  const BenefitFields = ({ ticketIndex }: { ticketIndex: number }) => {
-    // Create field array for this specific ticket's benefits
-    const { 
-      fields: benefitFields, 
-      append: appendBenefit, 
-      remove: removeBenefit 
-    } = useFieldArray({
-      control: form.control,
-      name: `ticket_types.${ticketIndex}.benefits`
-    });
-    
-    return (
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <FormLabel>Benefits</FormLabel>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => appendBenefit("")}
-          >
-            <Plus className="h-3 w-3 mr-1" /> Add Benefit
-          </Button>
-        </div>
-        
-        {benefitFields.length > 0 ? (
-          <div className="space-y-2">
-            {benefitFields.map((benefitField, benefitIndex) => (
-              <div key={benefitField.id} className="flex items-center gap-2">
-                <FormField
-                  control={form.control}
-                  name={`ticket_types.${ticketIndex}.benefits.${benefitIndex}`}
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input placeholder="e.g., VIP Access, Free Drinks, etc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeBenefit(benefitIndex)}
-                  className="text-red-500"
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">No benefits added yet</p>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="border-t mt-6 pt-6">
@@ -185,8 +184,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
             )}
           />
           
-          {/* Benefits Section - Using a separate component to contain its own hooks */}
-          <BenefitFields ticketIndex={index} />
+          {/* Benefits Section - Using the separate component */}
+          <BenefitFields form={form} ticketIndex={index} />
         </div>
       ))}
 

@@ -17,7 +17,11 @@ const EventFormDialog: React.FC = () => {
     onSubmit,
     handleCreateEvent,
     handleEditEvent
-  } = useEventForm(() => refetch());
+  } = useEventForm(() => {
+    // Ensure we refetch after successful form submission
+    console.log("Refetching events after form submission");
+    refetch();
+  });
 
   return (
     <>

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Event, TicketType } from "@/hooks/useEvents";
 
@@ -42,6 +43,14 @@ export interface UpdateEventPayload {
   image_url?: string;
   currency_code?: string;
   max_tickets?: number;
+  ticket_types?: {
+    id?: string;
+    name: string;
+    price: number;
+    description?: string;
+    quantity: number;
+    benefits?: string[];
+  }[];
 }
 
 // Get all events with their ticket types
@@ -123,6 +132,7 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
         price: ticket.price,
         description: ticket.description,
         quantity: ticket.quantity,
+        benefits: ticket.benefits || [],
         event_id: eventData_.id
       }));
 
@@ -154,30 +164,106 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
 // Update an existing event
 export const updateEvent = async (eventId: string, eventData: UpdateEventPayload): Promise<Event> => {
   try {
-    // Create update object only with fields that are provided
-    const updateData: { [key: string]: any } = {};
-    Object.entries(eventData).forEach(([key, value]) => {
-      if (value !== undefined) {
-        updateData[key] = value;
-      }
-    });
-
+    // First, update the event itself (without ticket_types)
+    const eventUpdateData = { ...eventData };
+    delete eventUpdateData.ticket_types; // Remove ticket_types from event update data
+    
     // Update the event
-    const { data, error } = await supabase
+    const { data: updatedEvent, error: eventError } = await supabase
       .from('events')
-      .update(updateData)
+      .update(eventUpdateData)
       .eq('id', eventId)
+      .select()
+      .single();
+
+    if (eventError) {
+      console.error('Error updating event:', eventError);
+      throw eventError;
+    }
+
+    // If ticket types were provided, handle them separately
+    if (eventData.ticket_types && eventData.ticket_types.length > 0) {
+      // Get existing ticket types for this event
+      const { data: existingTickets, error: fetchError } = await supabase
+        .from('ticket_types')
+        .select('*')
+        .eq('event_id', eventId);
+
+      if (fetchError) throw fetchError;
+      
+      // Create a map of existing tickets by ID for easier lookup
+      const existingTicketsMap = new Map();
+      existingTickets?.forEach(ticket => {
+        existingTicketsMap.set(ticket.id, ticket);
+      });
+      
+      // Process ticket types
+      for (const ticket of eventData.ticket_types) {
+        if (ticket.id && existingTicketsMap.has(ticket.id)) {
+          // Update existing ticket
+          const ticketUpdateData = {
+            name: ticket.name,
+            price: ticket.price,
+            description: ticket.description,
+            quantity: ticket.quantity,
+            benefits: ticket.benefits || []
+          };
+          
+          const { error: updateTicketError } = await supabase
+            .from('ticket_types')
+            .update(ticketUpdateData)
+            .eq('id', ticket.id);
+            
+          if (updateTicketError) throw updateTicketError;
+          
+          // Remove from map to track which ones are processed
+          existingTicketsMap.delete(ticket.id);
+        } else {
+          // Insert new ticket
+          const { error: insertTicketError } = await supabase
+            .from('ticket_types')
+            .insert({
+              name: ticket.name,
+              price: ticket.price,
+              description: ticket.description,
+              quantity: ticket.quantity,
+              benefits: ticket.benefits || [],
+              event_id: eventId
+            });
+            
+          if (insertTicketError) throw insertTicketError;
+        }
+      }
+      
+      // Optional: delete any tickets that weren't included in the update
+      // Uncomment if you want to remove tickets not included in the update
+      /*
+      for (const [id, ticket] of existingTicketsMap.entries()) {
+        const { error: deleteError } = await supabase
+          .from('ticket_types')
+          .delete()
+          .eq('id', id);
+          
+        if (deleteError) throw deleteError;
+      }
+      */
+    }
+    
+    // Fetch the updated event with its ticket types
+    const { data: finalEvent, error: fetchFinalError } = await supabase
+      .from('events')
       .select(`
         *,
         ticket_types (*)
       `)
+      .eq('id', eventId)
       .single();
-
-    if (error) throw error;
-
+      
+    if (fetchFinalError) throw fetchFinalError;
+    
     return {
-      ...data,
-      ticket_types: data.ticket_types || []
+      ...finalEvent,
+      ticket_types: finalEvent.ticket_types || []
     } as Event;
   } catch (error) {
     console.error(`Error updating event ${eventId}:`, error);
