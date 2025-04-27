@@ -1,79 +1,73 @@
 
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ExternalLink, PlayCircle, AlertTriangle } from "lucide-react";
+import { Course } from "@/services/courseService";
 import { Link } from "react-router-dom";
-import { ChevronRight, AlertTriangle } from "lucide-react";
 
 interface CourseCardProps {
-  id: string | number;
-  name: string;
-  level: string;
-  description: string;
-  image: string;
-  duration?: string;
-  levelName: string;
-  sourceUrl?: string;
-  isUrlValid?: boolean;
+  course: Course;
 }
 
-const CourseCard = ({ 
-  id, 
-  name, 
-  level, 
-  description, 
-  image, 
-  duration, 
-  levelName,
-  sourceUrl,
-  isUrlValid 
-}: CourseCardProps) => {
-  
-  // Check if image URL is valid, if not, use a placeholder
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    e.currentTarget.onerror = null;
-    e.currentTarget.src = "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop";
-  };
-  
+export const CourseCard = ({ course }: CourseCardProps) => {
+  const isComingSoon = !course.is_published;
+
   return (
-    <Link 
-      to={`/education/course/${id}`} 
-      className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
-    >
-      <div className="aspect-video overflow-hidden">
-        <img 
-          src={image} 
-          alt={name} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={handleImageError}
-        />
-      </div>
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xs text-gray-500 uppercase">
-            {levelName}
-          </span>
-          {duration && (
-            <span className="text-xs text-emerge-gold">{duration}</span>
-          )}
-        </div>
-        <h3 className="font-medium text-lg mb-2">{name}</h3>
-        <p className="text-gray-600 text-sm flex-grow">
-          {description}
-        </p>
-        
-        {isUrlValid === false && (
-          <div className="mt-2 mb-3 py-2 px-3 bg-emerge-gold/10 text-sm flex items-center rounded">
-            <AlertTriangle size={14} className="text-emerge-gold mr-2 flex-shrink-0" />
-            <span className="text-gray-700">Course Coming Soon</span>
+    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <div className="aspect-video relative">
+        {course.image_url ? (
+          <img 
+            src={course.image_url} 
+            alt={course.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&auto=format&fit=crop";
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-emerge-cream flex items-center justify-center">
+            <PlayCircle className="h-12 w-12 text-emerge-gold opacity-50" />
           </div>
         )}
-        
-        <div className="mt-4">
-          <span className="text-emerge-gold group-hover:underline flex items-center">
-            Learn More <ChevronRight size={16} className="ml-1" />
-          </span>
-        </div>
       </div>
-    </Link>
+
+      <CardHeader className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <Badge variant="outline" className="capitalize">
+            {course.level}
+          </Badge>
+          <Badge variant="secondary" className="capitalize">
+            {course.category.replace('_', ' ')}
+          </Badge>
+        </div>
+        <h3 className="font-semibold text-lg">{course.title}</h3>
+        {course.summary && (
+          <p className="text-gray-600 text-sm line-clamp-2">{course.summary}</p>
+        )}
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0">
+        {isComingSoon ? (
+          <div className="flex items-center gap-2 text-emerge-gold">
+            <AlertTriangle size={16} />
+            <span className="text-sm font-medium">Coming Soon</span>
+          </div>
+        ) : (
+          <Button 
+            variant="outline" 
+            className="w-full"
+            asChild
+          >
+            <Link to={`/education/course/${course.id}`}>
+              View Course
+              {course.hosting_type === 'external' && (
+                <ExternalLink className="ml-2 h-4 w-4" />
+              )}
+            </Link>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 };
-
-export default CourseCard;

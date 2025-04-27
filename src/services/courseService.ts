@@ -1,24 +1,46 @@
 
-// This file re-exports functionality from the refactored service files
-// to maintain backward compatibility with existing imports
-export { 
-  getCourseById,
-  getPopularCourses,
-  getAllCourses,
-  getStaticCourses,
-  getCoursesWithProgress,
-  getCoursesForCategory,
-  getCourses,
-  trackCourseEngagement,
-  getEligibleUsers,
-  updateCertificateApproval
-} from './courseDataService';
+import { supabase } from "@/integrations/supabase/client";
 
-export {
-  getUserCourseProgress,
-  updateCourseProgress,
-  getCourseProgress,
-  calculateCourseCompletion
-} from './courseProgressService';
+export interface Course {
+  id: string;
+  title: string;
+  summary?: string;
+  image_url?: string;
+  video_embed_url?: string;
+  external_link?: string;
+  level: 'beginner' | 'intermediate' | 'expert';
+  category: 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
+  hosting_type: 'hosted' | 'embedded' | 'external';
+  is_published: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
-export type { Course, CourseProgress, Category, Review } from './courseTypes';
+export const getCourses = async (
+  level?: string, 
+  category?: string
+): Promise<Course[]> => {
+  try {
+    let query = supabase.from('courses').select('*');
+
+    if (level) {
+      query = query.eq('level', level);
+    }
+
+    if (category) {
+      query = query.eq('category', category);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching courses:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Unexpected error in getCourses:', error);
+    return [];
+  }
+};
