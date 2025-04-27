@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
-  merchant_code: z.string().min(1, 'Merchant code is required'),
+  merchant_code: z.string().optional(),
   instructions: z.string().min(1, 'Instructions are required'),
 });
 
@@ -21,7 +20,7 @@ interface PaymentInstruction {
   id: string;
   payment_method: string;
   instructions: string;
-  merchant_code: string;
+  merchant_code: string | null;
 }
 
 export function PaymentInstructionsManager() {
@@ -52,7 +51,7 @@ export function PaymentInstructionsManager() {
       instructions 
     }: { 
       payment_method: string; 
-      merchant_code: string; 
+      merchant_code?: string; 
       instructions: string; 
     }) => {
       const { error } = await supabase
@@ -82,7 +81,7 @@ export function PaymentInstructionsManager() {
   const startEditing = (instruction: PaymentInstruction) => {
     setEditingMethod(instruction.payment_method);
     form.reset({
-      merchant_code: instruction.merchant_code,
+      merchant_code: instruction.merchant_code || '',
       instructions: instruction.instructions,
     });
   };
@@ -140,7 +139,7 @@ export function PaymentInstructionsManager() {
                     <FormItem>
                       <FormLabel>Merchant Code</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} placeholder="Enter merchant code (optional)" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -179,9 +178,11 @@ export function PaymentInstructionsManager() {
             </Form>
           ) : (
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">
-                <strong>Merchant Code:</strong> {instruction.merchant_code}
-              </p>
+              {instruction.merchant_code && (
+                <p className="text-sm text-gray-500">
+                  <strong>Merchant Code:</strong> {instruction.merchant_code}
+                </p>
+              )}
               <div className="text-sm text-gray-500">
                 <strong>Instructions:</strong>
                 <pre className="mt-1 whitespace-pre-wrap font-sans">
