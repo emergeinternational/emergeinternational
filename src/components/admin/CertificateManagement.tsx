@@ -5,12 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Clock, X } from "lucide-react";
 import { extendedButtonVariants } from "@/components/ui/button";
 import { approveCertificate, rejectCertificate } from "@/services/certificateService";
-import { CertificateStatusFilter } from "./CertificateStatusFilter";
+import CertificateStatusFilter from "./CertificateStatusFilter";
 import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
 import { UserCourseDetails } from "./certificates/UserCourseDetails";
 import { CertificateRequirementsBanner } from "./certificates/CertificateRequirementsBanner";
 import { CertificateActions } from "./certificates/CertificateActions";
-import { RejectionDialog } from "./RejectionDialog";
+import RejectionDialog from "./RejectionDialog";
 
 export function CertificateManagement() {
   const { toast } = useToast();
@@ -132,10 +132,10 @@ export function CertificateManagement() {
         }}
       />
       
-      <CertificateRequirementsBanner />
+      <CertificateRequirementsBanner minCoursesRequired={5} minWorkshopsRequired={3} />
       
       {filteredUsers.length === 0 ? (
-        <EmptyEligibleUsers status={statusFilter} />
+        <EmptyEligibleUsers type={statusFilter} />
       ) : (
         <div className="space-y-4">
           {filteredUsers.map((user) => {
@@ -147,7 +147,7 @@ export function CertificateManagement() {
                 key={`${user.id}-${course.id}`} 
                 className="border rounded-lg p-4 bg-white shadow-sm"
               >
-                <UserCourseDetails user={user} course={course} />
+                <UserCourseDetails user={user} course={course} certification={course.certification} />
                 
                 {statusFilter === "pending" && (
                   <div className="mt-4 flex justify-end gap-3">
@@ -183,9 +183,9 @@ export function CertificateManagement() {
                 
                 {statusFilter === "approved" && (
                   <CertificateActions 
-                    userId={user.id}
-                    courseId={course.id}
-                    approvedAt={course.certification?.approved_at}
+                    user={user.id}
+                    course={course.id}
+                    approvedDate={course.certification?.approved_at}
                   />
                 )}
                 
@@ -194,7 +194,7 @@ export function CertificateManagement() {
                     <p className="text-sm font-medium">Rejection reason:</p>
                     <p className="text-sm text-gray-600">{course.certification?.reason || "No reason provided"}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Rejected on {new Date(course.certification?.rejected_at).toLocaleDateString()}
+                      Rejected on {new Date(course.certification?.rejected_at || Date.now()).toLocaleDateString()}
                     </p>
                   </div>
                 )}

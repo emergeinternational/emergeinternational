@@ -39,8 +39,8 @@ import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
 import TalentsPage from "./pages/admin/TalentsPage";
-import EventPayment from "./pages/EventPayment";
 import EventsPage from "./pages/admin/EventsPage";
+import EventPayment from "./pages/EventPayment";
 
 const queryClient = new QueryClient();
 
