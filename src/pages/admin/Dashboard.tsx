@@ -17,6 +17,19 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Mock data for demo purposes
+const mockEvents = [
+  { id: 1, title: "Workshop: Web Development Basics", date: "2025-05-10", attendees: 25 },
+  { id: 2, title: "Tech Conference", date: "2025-05-15", attendees: 120 },
+  { id: 3, title: "Design Principles Workshop", date: "2025-05-22", attendees: 45 }
+];
+
+const mockPayments = [
+  { id: 1, user: "jane.doe@example.com", amount: "ETB 1,200", date: "2025-04-20", status: "completed" },
+  { id: 2, user: "john.smith@example.com", amount: "ETB 750", date: "2025-04-22", status: "pending" },
+  { id: 3, user: "alice.wonder@example.com", amount: "ETB 2,500", date: "2025-04-23", status: "completed" }
+];
+
 const Dashboard = () => {
   const { hasRole } = useAuth();
   
@@ -26,31 +39,31 @@ const Dashboard = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard 
-          title="Total Users" 
+          label="Total Users" 
           value="1,234"
-          change="+12%"
-          description="From last month"
+          trend="+12%"
+          trendLabel="From last month"
           icon={<Users className="h-5 w-5 text-blue-600" />}
         />
         <StatsCard 
-          title="Total Orders" 
+          label="Total Orders" 
           value="256"
-          change="+5%"
-          description="From last month"
+          trend="+5%"
+          trendLabel="From last month"
           icon={<ShoppingCart className="h-5 w-5 text-green-600" />}
         />
         <StatsCard 
-          title="Total Events" 
+          label="Total Events" 
           value="32"
-          change="-3%"
-          description="From last month"
+          trend="-3%"
+          trendLabel="From last month"
           icon={<Calendar className="h-5 w-5 text-purple-600" />}
         />
         <StatsCard 
-          title="Total Donations" 
+          label="Total Donations" 
           value="ETB 45,000"
-          change="+22%"
-          description="From last month"
+          trend="+22%"
+          trendLabel="From last month"
           icon={<Heart className="h-5 w-5 text-red-600" />}
         />
       </div>
@@ -90,7 +103,7 @@ const Dashboard = () => {
         </div>
         
         <div className="lg:col-span-2">
-          <EventsSection />
+          <EventsSection events={mockEvents} />
         </div>
       </div>
       
@@ -104,7 +117,7 @@ const Dashboard = () => {
         
         <div>
           <h2 className="text-lg font-medium mb-4">Recent Payments</h2>
-          <PaymentsTable />
+          <PaymentsTable payments={mockPayments} onActivate={() => {}} />
         </div>
       </div>
     </AdminLayout>
