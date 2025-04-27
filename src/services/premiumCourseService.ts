@@ -15,6 +15,7 @@ export interface PremiumCourse {
   student_capacity: number;
   has_active_students: boolean;
   is_published: boolean;
+  created_by?: string;
 }
 
 export async function uploadPremiumCourseImage(file: File): Promise<string | null> {
@@ -52,7 +53,7 @@ export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' |
         created_by: (await supabase.auth.getUser()).data.user?.id,
         student_capacity: courseData.student_capacity || 20,
         level: courseData.level || 'beginner'
-      })
+      } as any)
       .select()
       .single();
 
@@ -105,6 +106,27 @@ export async function enrollInPremiumCourse(courseId: string): Promise<boolean> 
     return true;
   } catch (error) {
     console.error('Error in enrollInPremiumCourse:', error);
+    return false;
+  }
+}
+
+export async function isUserEnrolled(courseId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('premium_course_enrollments')
+      .select('id')
+      .eq('course_id', courseId)
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking enrollment:', error);
+      return false;
+    }
+
+    return !!data;
+  } catch (error) {
+    console.error('Error in isUserEnrolled:', error);
     return false;
   }
 }

@@ -8,34 +8,7 @@ import { AuthProvider, useAuth } from "./hooks/useAuth";
 import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
-
-// Import all page components
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import EmailLogin from "./pages/EmailLogin";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Education from "./pages/Education";
-import CourseDetail from "./pages/CourseDetail";
-import Donations from "./pages/Donations";
-import Payment from "./pages/Payment";
-import Dashboard from "./pages/admin/Dashboard";
-import UsersPage from "./pages/admin/UsersPage";
-import Events from "./pages/Events";
-import Profile from "./pages/Profile";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import About from "./pages/About";
-import Workshops from "./pages/Workshops";
-import Contact from "./pages/Contact";
-import EventsPage from "./pages/admin/EventsPage";
-import DonationsPage from "./pages/admin/DonationsPage";
-import OrdersPage from "./pages/admin/OrdersPage";
-import SettingsPage from "./pages/admin/SettingsPage";
-import TalentsPage from "./pages/admin/TalentsPage";
-import CoursesPage from "./pages/admin/CoursesPage";
-import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
+import PremiumCoursesListPage from "./pages/PremiumCoursesListPage";
 
 const queryClient = new QueryClient();
 
@@ -133,7 +106,7 @@ const App = () => {
                   path="/admin/premium-courses" 
                   element={
                     <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <PremiumCoursesPage />
+                      <PremiumCoursesListPage />
                     </RoleBasedRoute>
                   } 
                 />
