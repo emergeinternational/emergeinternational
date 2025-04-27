@@ -378,8 +378,10 @@ export const getCourses = async (
       }));
 
       if (careerInterest && careerInterest !== "all") {
-        // Ensure careerInterest is one of the allowed values
-        const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) ? careerInterest : "all";
+        // Fix: Cast careerInterest to ValidCareerInterest type explicitly before checking inclusion
+        const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) 
+          ? careerInterest as ValidCareerInterest 
+          : "all";
         
         if (safeCareerInterest !== "all") {
           return coursesWithValidImages.filter(course => 
@@ -444,8 +446,10 @@ export const getCourses = async (
     );
 
     if (careerInterest && careerInterest !== "all") {
-      // Ensure careerInterest is one of the allowed values
-      const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) ? careerInterest : "all";
+      // Fix: Cast careerInterest to ValidCareerInterest type explicitly before checking inclusion
+      const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) 
+        ? careerInterest as ValidCareerInterest 
+        : "all";
       
       if (safeCareerInterest !== "all") {
         return coursesWithValidImages.filter(course => 
