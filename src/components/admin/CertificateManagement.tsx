@@ -84,7 +84,7 @@ const CertificateManagement = () => {
       if (success) {
         toast({
           title: "Certificate Approved",
-          description: `Certificate for ${selectedUser.profiles.full_name || selectedUser.profiles.email} has been approved.`,
+          description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been approved.`,
         });
         await fetchEligibleUsers();
       } else {
@@ -112,7 +112,7 @@ const CertificateManagement = () => {
       if (success) {
         toast({
           title: "Certificate Revoked",
-          description: `Certificate for ${selectedUser.profiles.full_name || selectedUser.profiles.email} has been revoked.`,
+          description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been revoked.`,
         });
         await fetchEligibleUsers();
       } else {
@@ -148,7 +148,7 @@ const CertificateManagement = () => {
       if (result.success) {
         toast({
           title: "Certificate Generated",
-          description: `Certificate has been successfully generated for ${selectedUser.profiles.full_name || selectedUser.profiles.email}.`,
+          description: `Certificate has been successfully generated for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"}.`,
         });
         await fetchEligibleUsers();
       } else {
@@ -190,7 +190,11 @@ const CertificateManagement = () => {
   };
 
   const hasMetRequirements = (user: any) => {
-    return user.online_courses_completed >= 5 && user.workshops_completed >= 3;
+    if (!user) return false;
+    // Add null check for online_courses_completed and workshops_completed
+    const onlineCoursesCompleted = user.online_courses_completed || 0;
+    const workshopsCompleted = user.workshops_completed || 0;
+    return onlineCoursesCompleted >= 5 && workshopsCompleted >= 3;
   };
 
   return (
@@ -263,21 +267,21 @@ const CertificateManagement = () => {
                   <TableRow key={user.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{user.profiles.full_name || "Unnamed User"}</p>
-                        <p className="text-sm text-gray-500">{user.profiles.email}</p>
+                        <p className="font-medium">{user.profiles?.full_name || "Unnamed User"}</p>
+                        <p className="text-sm text-gray-500">{user.profiles?.email || "No email"}</p>
                         <p className="text-xs text-gray-400">Eligible since: {formatDate(user.created_at)}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className={`h-2 w-2 rounded-full ${user.online_courses_completed >= 5 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
-                        <span>{user.online_courses_completed} online courses</span>
+                        <div className={`h-2 w-2 rounded-full ${(user.online_courses_completed || 0) >= 5 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.online_courses_completed || 0} online courses</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className={`h-2 w-2 rounded-full ${user.workshops_completed >= 3 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
-                        <span>{user.workshops_completed} workshops</span>
+                        <div className={`h-2 w-2 rounded-full ${(user.workshops_completed || 0) >= 3 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.workshops_completed || 0} workshops</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -379,7 +383,7 @@ const CertificateManagement = () => {
           <DialogHeader>
             <DialogTitle>Approve Certificate</DialogTitle>
             <DialogDescription>
-              Are you sure you want to approve a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}?
+              Are you sure you want to approve a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}?
               This will allow the user to download their certificate immediately.
             </DialogDescription>
           </DialogHeader>
@@ -389,11 +393,11 @@ const CertificateManagement = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <p className="font-medium">Online Courses:</p>
-                  <p>{selectedUser.online_courses_completed} completed</p>
+                  <p>{selectedUser.online_courses_completed || 0} completed</p>
                 </div>
                 <div>
                   <p className="font-medium">Workshops:</p>
-                  <p>{selectedUser.workshops_completed} completed</p>
+                  <p>{selectedUser.workshops_completed || 0} completed</p>
                 </div>
               </div>
             </div>
@@ -431,7 +435,7 @@ const CertificateManagement = () => {
           <DialogHeader>
             <DialogTitle>Generate Certificate</DialogTitle>
             <DialogDescription>
-              Generate a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}.
+              Generate a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}.
               This will create a downloadable certificate for the user.
             </DialogDescription>
           </DialogHeader>
@@ -441,7 +445,7 @@ const CertificateManagement = () => {
               <div className="space-y-4">
                 <div>
                   <p className="font-medium">User:</p>
-                  <p>{selectedUser.profiles.full_name || selectedUser.profiles.email}</p>
+                  <p>{selectedUser.profiles?.full_name || selectedUser.profiles?.email || "Unnamed User"}</p>
                 </div>
                 <div>
                   <p className="font-medium">Course:</p>
@@ -490,7 +494,7 @@ const CertificateManagement = () => {
           <DialogHeader>
             <DialogTitle>Revoke Certificate</DialogTitle>
             <DialogDescription>
-              Are you sure you want to revoke the certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}?
+              Are you sure you want to revoke the certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}?
               The user will no longer be able to download their certificate.
             </DialogDescription>
           </DialogHeader>
@@ -526,7 +530,7 @@ const CertificateManagement = () => {
           <DialogHeader>
             <DialogTitle>User Course & Workshop Details</DialogTitle>
             <DialogDescription>
-              Detailed information about course completion and workshop attendance for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}.
+              Detailed information about course completion and workshop attendance for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}.
             </DialogDescription>
           </DialogHeader>
           
@@ -538,7 +542,7 @@ const CertificateManagement = () => {
                     <BookOpen className="h-4 w-4 mr-2 text-emerge-gold" />
                     Online Course Progress
                   </h3>
-                  <p className="text-lg font-bold mt-1">{selectedUser.online_courses_completed} courses</p>
+                  <p className="text-lg font-bold mt-1">{selectedUser.online_courses_completed || 0} courses</p>
                   <p className="text-xs text-gray-500">Minimum required: 5</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded border">
@@ -546,7 +550,7 @@ const CertificateManagement = () => {
                     <AlertTriangle className="h-4 w-4 mr-2 text-emerge-gold" />
                     Workshop Attendance
                   </h3>
-                  <p className="text-lg font-bold mt-1">{selectedUser.workshops_completed} workshops</p>
+                  <p className="text-lg font-bold mt-1">{selectedUser.workshops_completed || 0} workshops</p>
                   <p className="text-xs text-gray-500">Minimum required: 3</p>
                 </div>
               </div>
@@ -645,7 +649,7 @@ const CertificateManagement = () => {
           )}
           
           <DialogFooter>
-            {!selectedUser?.admin_approved && hasMetRequirements(selectedUser) && (
+            {selectedUser && !selectedUser.admin_approved && hasMetRequirements(selectedUser) && (
               <Button 
                 onClick={() => {
                   setShowDetailsDialog(false);
@@ -657,7 +661,7 @@ const CertificateManagement = () => {
               </Button>
             )}
             
-            {selectedUser?.admin_approved && (
+            {selectedUser && selectedUser.admin_approved && (
               <Button 
                 onClick={() => {
                   setShowDetailsDialog(false);
