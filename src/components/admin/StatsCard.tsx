@@ -1,18 +1,25 @@
 
-import React from 'react';
+import { ArrowDown, ArrowUp } from "lucide-react";
 
-export interface StatsCardProps {
-  title: string;
+interface StatsCardProps {
+  label: string;
   value: string;
   change: string;
 }
 
-const StatsCard = ({ title, value, change }: StatsCardProps) => {
+const StatsCard = ({ label, value, change }: StatsCardProps) => {
+  const isPositive = change.startsWith('+');
+  
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-      <p className="mt-2 text-3xl font-semibold">{value}</p>
-      <p className="mt-1 text-xs text-gray-500">{change}</p>
+    <div className="bg-white p-5 rounded-lg shadow-sm">
+      <p className="text-gray-500 text-sm mb-1">{label}</p>
+      <div className="flex justify-between items-end">
+        <p className="text-2xl font-semibold">{value}</p>
+        <p className={`text-sm flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+          {isPositive ? <ArrowUp className="w-4 h-4 mr-1" /> : <ArrowDown className="w-4 h-4 mr-1" />}
+          {change}
+        </p>
+      </div>
     </div>
   );
 };
