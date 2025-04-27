@@ -88,7 +88,7 @@ export const generateCertificate = async (
 
 export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
-    type GetUserCertificatesResponse = {
+    interface GetUserCertificatesResponse {
       id: string;
       user_id: string;
       course_title: string;
@@ -98,7 +98,7 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
       last_downloaded_at: string | null;
       created_at: string;
       updated_at: string;
-    }[];
+    }
 
     const { data, error } = await supabase
       .rpc<GetUserCertificatesResponse>('get_user_certificates', { p_user_id: userId });
@@ -108,7 +108,7 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
       return [];
     }
 
-    return data || [];
+    return (data as any) || [];
   } catch (error) {
     console.error("Unexpected error in getUserCertificates:", error);
     return [];
@@ -125,7 +125,7 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
       return { success: false, error: error?.message || "Certificate not found" };
     }
 
-    // Update the downloaded timestamp using RPC to maintain security
+    // Update the downloaded timestamp using RPC
     await supabase.rpc('update_certificate_download_timestamp', {
       p_certificate_id: certificateId
     });
