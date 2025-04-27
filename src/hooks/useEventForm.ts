@@ -108,7 +108,7 @@ export const useEventForm = (onSuccess?: () => void) => {
       if (isEditMode && currentEvent) {
         // Ensure we're passing the correct ticket types with proper IDs
         const ticketTypes = values.ticket_types.map(ticket => {
-          // Make sure we're not passing numeric IDs as strings
+          // Create a clean ticket data object
           const ticketData: any = {
             name: ticket.name,
             price: ticket.price,
@@ -118,7 +118,8 @@ export const useEventForm = (onSuccess?: () => void) => {
           };
           
           // Only include ID if it's a valid UUID
-          if (ticket.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticket.id)) {
+          if (ticket.id && typeof ticket.id === 'string' && 
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticket.id)) {
             ticketData.id = ticket.id;
           }
           

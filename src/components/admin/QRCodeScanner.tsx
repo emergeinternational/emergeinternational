@@ -1,21 +1,20 @@
 
 import React, { useState } from 'react';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Scanner, IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { validateQRCode } from '@/services/qrCodeService';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QrCode } from 'lucide-react';
 
-interface ScannerComponentProps {
-  onResult?: (result: string | null) => void;
-  onError?: (error: Error) => void;
-}
-
 export const QRCodeScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleScan = async (result: string) => {
+  const handleScan = async (detectedCodes: IDetectedBarcode[]) => {
+    // Extract the value from the first detected code if available
+    if (!detectedCodes || detectedCodes.length === 0) return;
+    
+    const result = detectedCodes[0].rawValue;
     if (!result) return;
     
     try {
