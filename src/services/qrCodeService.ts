@@ -7,13 +7,16 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    const { data: registration, error } = await supabase
+    // Using a more explicit type approach to avoid excessive type instantiation
+    const { data, error } = await supabase
       .from('event_registrations')
       .select('*')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .eq('qr_code_active', true)
       .maybeSingle();
+
+    const registration = data as { id: string } | null;
 
     if (error || !registration) {
       return false;
