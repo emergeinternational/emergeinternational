@@ -25,7 +25,7 @@ export const fetchCurrencies = async (): Promise<Currency[]> => {
     }
 
     // Type cast the returned data to our Currency interface
-    return (data || []) as Currency[];
+    return (data || []) as unknown as Currency[];
   } catch (error) {
     console.error("Unexpected error in fetchCurrencies:", error);
     return [];

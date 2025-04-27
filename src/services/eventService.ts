@@ -71,10 +71,20 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
     }
 
     // Combine events with their tickets
-    const eventsWithTickets: EventWithTickets[] = events.map(event => ({
-      ...(event as unknown as Event),
-      tickets: (tickets || []).filter(ticket => ticket.event_id === event.id) as TicketType[]
-    }));
+    const eventsWithTickets: EventWithTickets[] = events.map(event => {
+      // Cast the event to the Event interface
+      const typedEvent = event as unknown as Event;
+      // For TypeScript, we need to explicitly filter tickets by event_id
+      const eventTickets = (tickets || []).filter(ticket => {
+        const typedTicket = ticket as unknown as TicketType;
+        return typedTicket.event_id === typedEvent.id;
+      });
+      
+      return {
+        ...typedEvent,
+        tickets: eventTickets as unknown as TicketType[]
+      };
+    });
 
     return eventsWithTickets;
   } catch (error) {
@@ -111,7 +121,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventWithTicke
     // Return event with tickets
     return {
       ...(event as unknown as Event),
-      tickets: (tickets || []) as TicketType[]
+      tickets: (tickets || []) as unknown as TicketType[]
     };
   } catch (error) {
     console.error("Error in fetchEventDetails:", error);

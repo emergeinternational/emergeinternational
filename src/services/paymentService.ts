@@ -23,7 +23,7 @@ export const fetchPaymentMethods = async (): Promise<PaymentMethod[]> => {
       throw error;
     }
 
-    return (data || []) as PaymentMethod[];
+    return (data || []) as unknown as PaymentMethod[];
   } catch (error) {
     console.error("Unexpected error in fetchPaymentMethods:", error);
     return [];
@@ -77,7 +77,7 @@ export const uploadPaymentProof = async (
 export const verifyDiscountCode = async (
   code: string,
   eventId: string
-): Promise<{ valid: boolean; discountPercent?: number; discountAmount?: number }> => {
+): Promise<{ valid: boolean; discountPercent?: number; discountAmount?: number; codeId?: string }> => {
   try {
     const { data, error } = await supabase
       .from('discount_codes')
@@ -107,6 +107,7 @@ export const verifyDiscountCode = async (
 
     return {
       valid: true,
+      codeId: data.id,
       discountPercent: data.discount_percent || undefined,
       discountAmount: data.discount_amount || undefined
     };
