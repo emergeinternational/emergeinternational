@@ -1,89 +1,37 @@
 
-import { useState, useEffect } from "react";
 import MainLayout from "@/layouts/MainLayout";
-import { useToast } from "@/hooks/use-toast";
-import { EventWithTickets, fetchEvents } from "@/services/eventService";
-import { Currency, fetchCurrencies } from "@/services/currencyService";
-import { CurrencySelector } from "@/components/events/CurrencySelector";
 import { EventCard } from "@/components/events/EventCard";
+import { EventsLoading } from "@/components/events/EventsLoading";
+import { EventsError } from "@/components/events/EventsError";
+import { useEvents } from "@/hooks/useEvents";
+import { CurrencySelector } from "@/components/events/CurrencySelector";
+import { useCurrencies } from "@/hooks/useCurrencies";
 
 const Events = () => {
-  const [events, setEvents] = useState<EventWithTickets[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currencies, setCurrencies] = useState<Currency[]>([]);
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(null);
-  const { toast } = useToast();
+  const { data: events, isLoading, error } = useEvents();
+  const { data: currencies, selectedCurrency, handleCurrencyChange } = useCurrencies();
 
-  // Fetch events
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        setLoading(true);
-        const eventsData = await fetchEvents();
-        setEvents(eventsData);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        toast({
-          title: "Error loading events",
-          description: "Could not load events. Please try again later.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadEvents();
-  }, [toast]);
-
-  // Fetch currencies
-  useEffect(() => {
-    const loadCurrencies = async () => {
-      try {
-        const currencyData = await fetchCurrencies();
-        setCurrencies(currencyData);
-        
-        // Set default currency to ETB
-        const defaultCurrency = currencyData.find(c => c.code === "ETB") || currencyData[0];
-        setSelectedCurrency(defaultCurrency);
-      } catch (error) {
-        console.error("Error fetching currencies:", error);
-      }
-    };
-    
-    loadCurrencies();
-  }, []);
-
-  const handleCurrencyChange = (currency: Currency) => {
-    setSelectedCurrency(currency);
-  };
-
-  if (loading || !selectedCurrency) {
+  if (isLoading || !selectedCurrency) {
     return (
       <MainLayout>
         <div className="emerge-container py-12">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-semibold text-emerge-darkBg">Upcoming Events</h1>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-gray-200 h-32 rounded-t-lg"></div>
-                <div className="p-4 border border-t-0 rounded-b-lg space-y-3">
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  </div>
-                  <div className="flex justify-between pt-4">
-                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <EventsLoading />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="emerge-container py-12">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-semibold text-emerge-darkBg">Upcoming Events</h1>
           </div>
+          <EventsError error={error} />
         </div>
       </MainLayout>
     );
@@ -106,7 +54,7 @@ const Events = () => {
         </div>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.length > 0 ? (
+          {events && events.length > 0 ? (
             events.map((event) => (
               <EventCard
                 key={event.id}
