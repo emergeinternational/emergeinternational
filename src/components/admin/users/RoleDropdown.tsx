@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserRole, UserWithRole } from '@/types/user';
+import { UserWithRole, UserRole } from '@/types/user';
 
 interface RoleDropdownProps {
   user: UserWithRole;
@@ -18,7 +18,7 @@ interface RoleDropdownProps {
 const RoleDropdown = ({ user, onRoleChange, disabled = false }: RoleDropdownProps) => {
   return (
     <Select
-      value={user.role}
+      defaultValue={user.role}
       onValueChange={(value: UserRole) => onRoleChange(user.id, value)}
       disabled={disabled}
     >
