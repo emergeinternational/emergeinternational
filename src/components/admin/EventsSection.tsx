@@ -35,7 +35,8 @@ interface EventsSectionProps {
   events: Event[];
 }
 
-const EventsSection = ({ events }: EventsSectionProps) => {
+// Changed to named export instead of default export
+export const EventsSection = ({ events }: EventsSectionProps) => {
   const { hasRole } = useAuth();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -222,4 +223,5 @@ const EventsSection = ({ events }: EventsSectionProps) => {
   );
 };
 
+// Add this for backward compatibility
 export default EventsSection;
