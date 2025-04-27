@@ -36,6 +36,7 @@ import Users from "./pages/admin/Users";
 import Talents from "./pages/admin/Talents";
 import Orders from "./pages/admin/Orders";
 import Settings from "./pages/admin/Settings";
+import Landing from "./pages/Landing";
 
 const queryClient = new QueryClient();
 
@@ -60,9 +61,7 @@ const App = () => {
               <Sonner />
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-                <Route path="/home" element={<Home />} />
+                <Route path="/home" element={<Landing />} />
                 
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
