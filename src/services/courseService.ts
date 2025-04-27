@@ -38,3 +38,18 @@ export {
 
 export type { Course, CourseProgress, Category, Review } from './courseTypes';
 
+// Also export certificate-related types and functions
+export {
+  generateCertificate,
+  getUserCertificates,
+  downloadCertificate,
+  getCertificateSettings,
+  updateCertificateSettings,
+  userMeetsRequirements
+} from './certificate/index';
+
+export type {
+  CertificateSettings,
+  UserCertificate,
+  CertificateEligibility
+} from './certificate/index';
