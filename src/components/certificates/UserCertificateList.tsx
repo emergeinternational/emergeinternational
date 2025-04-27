@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { getUserCertificates, downloadCertificate } from "@/services/certificateService";
+import { getUserCertificates, downloadCertificate } from "@/services/certificate";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { 
