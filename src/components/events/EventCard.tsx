@@ -1,4 +1,3 @@
-
 import { format } from "date-fns";
 import { Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -17,10 +16,10 @@ export const EventCard = ({ event, selectedCurrency, currencies }: EventCardProp
   const navigate = useNavigate();
   const hasTickets = event.tickets && event.tickets.length > 0;
   
-  // Get the lowest price from available tickets
+  // Get the lowest price from available tickets with fallback to 0
   const lowestPrice = hasTickets
     ? Math.min(...event.tickets.map(ticket => ticket.price))
-    : 0; // Changed from event.price to 0 as fallback
+    : 0;
   
   // Convert price to selected currency
   const convertPrice = (price: number): number => {
@@ -36,9 +35,13 @@ export const EventCard = ({ event, selectedCurrency, currencies }: EventCardProp
   const formattedPrice = formatCurrency(price, selectedCurrency.code, currencies);
   const eventDate = new Date(event.date);
   
-  // Determine total available tickets
+  // Calculate total available tickets with validation
   const totalAvailable = hasTickets ? 
-    event.tickets.reduce((sum, ticket) => sum + Math.max(0, ticket.available_quantity - ticket.sold_quantity), 0) : 
+    event.tickets.reduce((sum, ticket) => {
+      const available = ticket.available_quantity || 0;
+      const sold = ticket.sold_quantity || 0;
+      return sum + Math.max(0, available - sold);
+    }, 0) : 
     (event.capacity || 0);
   
   const handleViewDetails = () => {
@@ -49,7 +52,9 @@ export const EventCard = ({ event, selectedCurrency, currencies }: EventCardProp
     <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
       <CardHeader className="flex flex-row items-center gap-4 pb-2">
         <Calendar size={24} className="text-emerge-gold" />
-        <CardTitle className="text-xl line-clamp-2">{event.name}</CardTitle>
+        <CardTitle className="text-xl line-clamp-2">
+          {event.name || "Untitled Event"}
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
@@ -63,7 +68,7 @@ export const EventCard = ({ event, selectedCurrency, currencies }: EventCardProp
               {event.end_time ? ` - ${format(new Date(`2000-01-01T${event.end_time}`), "h:mm a")}` : ""}
             </p>
             <p>
-              <strong>Location:</strong> {event.location}
+              <strong>Location:</strong> {event.location || "Location TBA"}
             </p>
             {event.organizer && (
               <p>

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PaymentMethod {
@@ -48,10 +47,8 @@ export const uploadPaymentProof = async (
   file: File
 ): Promise<string | null> => {
   try {
-    // Generate a unique file path for the payment proof
     const filePath = `payment_proofs/${registrationId}/${file.name}`;
     
-    // Upload the file to Supabase storage
     const { data, error } = await supabase.storage
       .from('uploads')
       .upload(filePath, file, {
@@ -64,12 +61,10 @@ export const uploadPaymentProof = async (
       throw error;
     }
 
-    // Get the public URL for the uploaded file
     const { data: { publicUrl } } = supabase.storage
       .from('uploads')
       .getPublicUrl(data.path);
 
-    // Update the registration record with the payment proof URL
     const { error: updateError } = await supabase
       .from('event_registrations')
       .update({ payment_proof_url: publicUrl })
@@ -108,12 +103,10 @@ export const verifyDiscountCode = async (
     const validFrom = new Date(data.valid_from);
     const validUntil = data.valid_until ? new Date(data.valid_until) : null;
 
-    // Check if the code is within its valid date range
     if (now < validFrom || (validUntil && now > validUntil)) {
       return { valid: false };
     }
 
-    // Check if the code has reached its maximum usage
     if (data.max_uses && data.current_uses >= data.max_uses) {
       return { valid: false };
     }
@@ -132,12 +125,10 @@ export const verifyDiscountCode = async (
 
 export const useDiscountCode = async (codeId: string): Promise<boolean> => {
   try {
-    // Use a custom RPC function to increment the usage count of the discount code
-    // Since we need to use an RPC function and not a direct database call,
-    // we need to make sure the function name matches what's defined in Supabase
-    
-    // Update to use correct function name from Supabase config
-    const { error } = await supabase.rpc('increment_discount_code_usage', { code_id: codeId });
+    const { error } = await supabase
+      .from('discount_codes')
+      .update({ current_uses: supabase.raw('current_uses + 1') })
+      .eq('id', codeId);
     
     if (error) {
       console.error("Error incrementing discount code usage:", error);
