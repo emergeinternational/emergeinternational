@@ -104,6 +104,30 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({ form }) => {
         />
         <FormField
           control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Starting Price (ETB)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="0"
+                  placeholder="Starting price for tickets" 
+                  {...field}
+                  onChange={e => {
+                    const value = e.target.value;
+                    field.onChange(value === '' ? undefined : parseFloat(value));
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
           name="max_tickets"
           render={({ field }) => (
             <FormItem>
@@ -124,8 +148,6 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({ form }) => {
             </FormItem>
           )}
         />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="image_url"
