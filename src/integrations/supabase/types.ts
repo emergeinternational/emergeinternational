@@ -9,33 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      audit_logs: {
-        Row: {
-          action: string
-          admin_id: string
-          details: Json | null
-          id: string
-          timestamp: string
-          user_id: string | null
-        }
-        Insert: {
-          action: string
-          admin_id: string
-          details?: Json | null
-          id?: string
-          timestamp?: string
-          user_id?: string | null
-        }
-        Update: {
-          action?: string
-          admin_id?: string
-          details?: Json | null
-          id?: string
-          timestamp?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       automation_logs: {
         Row: {
           created_at: string | null
@@ -199,92 +172,6 @@ export type Database = {
           video_embed_url?: string | null
         }
         Relationships: []
-      }
-      currencies: {
-        Row: {
-          code: string
-          created_at: string
-          exchange_rate: number
-          id: string
-          is_active: boolean
-          name: string
-          symbol: string
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          exchange_rate?: number
-          id?: string
-          is_active?: boolean
-          name: string
-          symbol: string
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          exchange_rate?: number
-          id?: string
-          is_active?: boolean
-          name?: string
-          symbol?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      discount_codes: {
-        Row: {
-          code: string
-          created_at: string
-          current_uses: number
-          discount_amount: number | null
-          discount_percent: number | null
-          event_id: string
-          id: string
-          is_active: boolean
-          max_uses: number | null
-          updated_at: string
-          valid_from: string
-          valid_until: string | null
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          current_uses?: number
-          discount_amount?: number | null
-          discount_percent?: number | null
-          event_id: string
-          id?: string
-          is_active?: boolean
-          max_uses?: number | null
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          current_uses?: number
-          discount_amount?: number | null
-          discount_percent?: number | null
-          event_id?: string
-          id?: string
-          is_active?: boolean
-          max_uses?: number | null
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "discount_codes_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       donations: {
         Row: {
@@ -460,12 +347,8 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
-          currency_code: string | null
           event_id: string
-          exchange_rate: number | null
           id: string
-          original_amount: number | null
-          payment_method_id: string | null
           payment_proof_url: string | null
           payment_status: string
           ticket_type: string
@@ -475,12 +358,8 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
-          currency_code?: string | null
           event_id: string
-          exchange_rate?: number | null
           id?: string
-          original_amount?: number | null
-          payment_method_id?: string | null
           payment_proof_url?: string | null
           payment_status?: string
           ticket_type: string
@@ -490,12 +369,8 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
-          currency_code?: string | null
           event_id?: string
-          exchange_rate?: number | null
           id?: string
-          original_amount?: number | null
-          payment_method_id?: string | null
           payment_proof_url?: string | null
           payment_status?: string
           ticket_type?: string
@@ -510,20 +385,12 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "event_registrations_payment_method_id_fkey"
-            columns: ["payment_method_id"]
-            isOneToOne: false
-            referencedRelation: "payment_methods"
-            referencedColumns: ["id"]
-          },
         ]
       }
       events: {
         Row: {
           capacity: number | null
           created_at: string | null
-          currency_code: string
           date: string
           description: string | null
           id: string
@@ -535,7 +402,6 @@ export type Database = {
         Insert: {
           capacity?: number | null
           created_at?: string | null
-          currency_code?: string
           date: string
           description?: string | null
           id?: string
@@ -547,7 +413,6 @@ export type Database = {
         Update: {
           capacity?: number | null
           created_at?: string | null
-          currency_code?: string
           date?: string
           description?: string | null
           id?: string
@@ -633,42 +498,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      payment_methods: {
-        Row: {
-          countries: string[] | null
-          created_at: string
-          description: string | null
-          id: string
-          instructions: string | null
-          is_active: boolean
-          name: string
-          requires_verification: boolean
-          updated_at: string
-        }
-        Insert: {
-          countries?: string[] | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name: string
-          requires_verification?: boolean
-          updated_at?: string
-        }
-        Update: {
-          countries?: string[] | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name?: string
-          requires_verification?: boolean
-          updated_at?: string
-        }
-        Relationships: []
       }
       premium_course_enrollments: {
         Row: {
@@ -771,7 +600,6 @@ export type Database = {
           full_name: string | null
           id: string
           industry: string | null
-          is_active: boolean | null
           language: string | null
           linkedin_url: string | null
           phone_number: string | null
@@ -794,7 +622,6 @@ export type Database = {
           full_name?: string | null
           id: string
           industry?: string | null
-          is_active?: boolean | null
           language?: string | null
           linkedin_url?: string | null
           phone_number?: string | null
@@ -817,7 +644,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           industry?: string | null
-          is_active?: boolean | null
           language?: string | null
           linkedin_url?: string | null
           phone_number?: string | null
@@ -1014,53 +840,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ticket_types: {
-        Row: {
-          available_quantity: number
-          benefits: string[] | null
-          created_at: string
-          description: string | null
-          event_id: string
-          id: string
-          price: number
-          sold_quantity: number
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          available_quantity?: number
-          benefits?: string[] | null
-          created_at?: string
-          description?: string | null
-          event_id: string
-          id?: string
-          price: number
-          sold_quantity?: number
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          available_quantity?: number
-          benefits?: string[] | null
-          created_at?: string
-          description?: string | null
-          event_id?: string
-          id?: string
-          price?: number
-          sold_quantity?: number
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_types_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_certificates: {
         Row: {
           certificate_file: string | null
@@ -1211,7 +990,6 @@ export type Database = {
           full_name: string | null
           id: string
           industry: string | null
-          is_active: boolean | null
           language: string | null
           linkedin_url: string | null
           phone_number: string | null
@@ -1242,14 +1020,6 @@ export type Database = {
       has_role: {
         Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
-      }
-      log_user_action: {
-        Args: {
-          action_type: string
-          target_user_id: string
-          action_details: Json
-        }
-        Returns: string
       }
     }
     Enums: {

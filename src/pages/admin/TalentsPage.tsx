@@ -1,6 +1,6 @@
 
 import AdminLayout from "../../layouts/AdminLayout";
-import TalentManagement from "../../components/admin/TalentManagement";
+import EmergingTalentList from "../../components/admin/EmergingTalentList";
 import { Toaster } from "@/components/ui/toaster";
 
 const TalentsPage = () => {
@@ -15,7 +15,7 @@ const TalentsPage = () => {
         </div>
         
         <div className="bg-white p-6 rounded-lg shadow">
-          <TalentManagement />
+          <EmergingTalentList />
         </div>
       </div>
       <Toaster />

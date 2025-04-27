@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -30,17 +31,15 @@ import Cart from "./pages/Cart";
 import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Events from "./pages/Events";
-import EventDetail from "./pages/EventDetail";
 import Profile from "./pages/Profile";
 import Certificates from "./pages/Certificates";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
+import Talents from "./pages/admin/Talents";
 import Orders from "./pages/admin/Orders";
 import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
-import TalentsPage from "./pages/admin/TalentsPage";
-import EventsPage from "./pages/admin/EventsPage";
 
 const queryClient = new QueryClient();
 
@@ -66,9 +65,11 @@ const App = () => {
               <Toaster />
               <Sonner />
               <Routes>
+                {/* Home routes - make sure Landing is the default route */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/home" element={<Home />} />
                 
+                {/* Public routes */}
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
@@ -84,8 +85,8 @@ const App = () => {
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/product/:id" element={<ProductDetail />} />
                 <Route path="/events" element={<Events />} />
-                <Route path="/events/:id" element={<EventDetail />} />
                 
+                {/* Protected routes */}
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
                 <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
                 <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
@@ -93,6 +94,7 @@ const App = () => {
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
+                {/* Admin routes */}
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
                     <Dashboard />
@@ -105,12 +107,12 @@ const App = () => {
                 } />
                 <Route path="/admin/talents" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <TalentsPage />
+                    <Talents />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/events" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <EventsPage />
+                    <Events />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/donations" element={
@@ -144,6 +146,7 @@ const App = () => {
                   </RoleBasedRoute>
                 } />
                 
+                {/* Fallback route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </TooltipProvider>
