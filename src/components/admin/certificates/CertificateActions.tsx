@@ -31,7 +31,7 @@ export const CertificateActions = ({
         Details
       </Button>
       
-      {/* Always show Generate button for testing */}
+      {/* Always show Generate button for testing - no conditions */}
       <Button
         variant="outline"
         size="sm"

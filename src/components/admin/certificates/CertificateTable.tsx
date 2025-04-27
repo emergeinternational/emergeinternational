@@ -63,28 +63,24 @@ export const CertificateTable: React.FC<CertificateTableProps> = ({
     );
   }
 
-  // Add a test button at the top of the table that will always be visible
-  const TestGenerateButton = ({ user }: { user: any }) => (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => onGenerate(user)}
-      className="bg-yellow-100 border-yellow-300 hover:bg-yellow-200 mb-4"
-    >
-      <Award className="h-4 w-4 mr-2 text-yellow-600" />
-      Test Generate Certificate for {user?.profiles?.full_name || "User"}
-    </Button>
-  );
-
+  // Global test button - always visible at the top
   return (
-    <>
+    <div className="space-y-4">
       {eligibleUsers.length > 0 && (
-        <div className="p-4 border-b">
+        <div className="p-4 border rounded-md bg-yellow-50">
           <h3 className="text-lg font-medium mb-2">Test Certificate Generation</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Use the button below to test certificate generation for the first user:
+          <p className="text-sm text-gray-600 mb-4">
+            Click the button below to test certificate generation for the first eligible user:
           </p>
-          {eligibleUsers[0] && <TestGenerateButton user={eligibleUsers[0]} />}
+          {eligibleUsers[0] && (
+            <Button
+              onClick={() => onGenerate(eligibleUsers[0])}
+              className="bg-emerge-gold hover:bg-emerge-gold/90"
+            >
+              <Award className="h-4 w-4 mr-2" />
+              Test Generate Certificate for {eligibleUsers[0]?.profiles?.full_name || "User"}
+            </Button>
+          )}
         </div>
       )}
       
@@ -158,7 +154,7 @@ export const CertificateTable: React.FC<CertificateTableProps> = ({
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap gap-2">
                   <CertificateActions
                     user={user}
                     hasMetRequirements={hasMetRequirements(user)}
@@ -175,8 +171,19 @@ export const CertificateTable: React.FC<CertificateTableProps> = ({
                     disabled={actionLoading}
                     className="border-yellow-300 hover:bg-yellow-50"
                   >
-                    <Award className="h-4 w-4 mr-2 text-yellow-600" />
+                    <Award className="h-4 w-4 mr-1 text-yellow-600" />
                     Manual Issue
+                  </Button>
+                  
+                  {/* Extra direct Generate button for troubleshooting */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onGenerate(user)}
+                    className="bg-green-100 border-green-300 hover:bg-green-200"
+                  >
+                    <Award className="h-4 w-4 mr-1 text-green-600" />
+                    Generate (Direct)
                   </Button>
                 </div>
               </TableCell>
@@ -184,6 +191,6 @@ export const CertificateTable: React.FC<CertificateTableProps> = ({
           ))}
         </TableBody>
       </Table>
-    </>
+    </div>
   );
 };

@@ -50,20 +50,20 @@ export const CertificateDetailsDialog: React.FC<CertificateDetailsDialogProps> =
           />
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:justify-between sm:flex-row">
           {/* Always show Generate Certificate button for testing */}
-          <Button onClick={onGenerate} className="bg-emerge-gold hover:bg-emerge-gold/90">
+          <Button onClick={onGenerate} className="bg-emerge-gold hover:bg-emerge-gold/90 w-full sm:w-auto">
             <Award className="h-4 w-4 mr-2" />
             Generate Certificate
           </Button>
 
           {user && !user.admin_approved && hasMetRequirements(user) && (
-            <Button onClick={onApprove} className="bg-emerge-gold hover:bg-emerge-gold/90 ml-2">
+            <Button onClick={onApprove} className="bg-emerge-gold hover:bg-emerge-gold/90 w-full sm:w-auto">
               Approve Certificate
             </Button>
           )}
 
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Close
           </Button>
         </DialogFooter>
