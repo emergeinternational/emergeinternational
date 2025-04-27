@@ -31,7 +31,7 @@ export const updateCertificateApproval = async (
       .from("certificate_eligibility")
       .update({ 
         admin_approved: isApproved,
-        status: isApproved ? 'approved' : 'denied' // Using 'denied' to match the type definition
+        status: isApproved ? 'approved' : 'denied' // Using 'denied' to match the database
       })
       .eq("user_id", userId);
 
@@ -56,5 +56,25 @@ export const userMeetsRequirements = async (user: any): Promise<boolean> => {
   } catch (error) {
     console.error("Error checking if user meets requirements:", error);
     return false;
+  }
+};
+
+export const getUsersByStatus = async (status: 'pending' | 'approved' | 'denied'): Promise<CertificateEligibility[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("certificate_eligibility")
+      .select(`
+        *,
+        profiles:profiles(full_name, email)
+      `)
+      .eq('status', status)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    return data as CertificateEligibility[];
+  } catch (error) {
+    console.error(`Error fetching users with status ${status}:`, error);
+    return [];
   }
 };
