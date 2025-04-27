@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useFieldArray } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
@@ -17,16 +18,19 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
     name: "ticket_types"
   });
 
-  // Pre-compute all the benefits field arrays outside of the map function
-  // This keeps the hooks at the top level
-  const benefitsFieldArrays = useMemo(() => {
-    return fields.map((_, index) => {
-      return useFieldArray({
+  // Instead of using useMemo with fields as a dependency (which can cause hooks count mismatches),
+  // we'll use a more stable approach where each benefit field array is created directly within the render
+  const benefitsFieldArrays = fields.map((_, index) => {
+    // We need to use a stable key that doesn't change between renders
+    return {
+      ...useFieldArray({
         control: form.control,
         name: `ticket_types.${index}.benefits`
-      });
-    });
-  }, [fields, form.control]);
+      }),
+      // Add a stable key to the object
+      fieldId: fields[index].id
+    };
+  });
 
   return (
     <div className="border-t mt-6 pt-6">
@@ -49,8 +53,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
       </div>
 
       {fields.map((field, index) => {
-        // Get the pre-computed field array for this index
-        const benefitsArray = benefitsFieldArrays[index];
+        // Find the corresponding benefits field array using the field id
+        const benefitsArray = benefitsFieldArrays.find(b => b.fieldId === field.id);
         
         return (
           <div key={field.id} className="border rounded-md p-4 mb-4">
@@ -140,13 +144,13 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => benefitsArray.append("")}
+                  onClick={() => benefitsArray?.append("")}
                 >
                   <Plus className="h-3 w-3 mr-1" /> Add Benefit
                 </Button>
               </div>
               
-              {benefitsArray.fields.length > 0 ? (
+              {benefitsArray && benefitsArray.fields.length > 0 ? (
                 <div className="space-y-2">
                   {benefitsArray.fields.map((benefitField, benefitIndex) => (
                     <div key={benefitField.id} className="flex items-center gap-2">
