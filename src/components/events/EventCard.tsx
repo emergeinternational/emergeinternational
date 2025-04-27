@@ -20,7 +20,7 @@ export const EventCard = ({ event, selectedCurrency, currencies }: EventCardProp
   // Get the lowest price from available tickets
   const lowestPrice = hasTickets
     ? Math.min(...event.tickets.map(ticket => ticket.price))
-    : event.price || 0;
+    : 0; // Changed from event.price to 0 as fallback
   
   // Convert price to selected currency
   const convertPrice = (price: number): number => {

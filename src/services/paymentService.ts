@@ -132,6 +132,11 @@ export const verifyDiscountCode = async (
 
 export const useDiscountCode = async (codeId: string): Promise<boolean> => {
   try {
+    // Use a custom RPC function to increment the usage count of the discount code
+    // Since we need to use an RPC function and not a direct database call,
+    // we need to make sure the function name matches what's defined in Supabase
+    
+    // Update to use correct function name from Supabase config
     const { error } = await supabase.rpc('increment_discount_code_usage', { code_id: codeId });
     
     if (error) {
