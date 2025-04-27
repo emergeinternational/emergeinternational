@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
@@ -6,34 +5,29 @@ import EventsSection from '@/components/admin/EventsSection';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import EventRegistrations from '@/components/admin/EventRegistrations';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Event } from "@/hooks/useEvents";
 import { useEventForm } from '@/hooks/useEventForm';
-import EventForm from '@/components/events/EventForm';
 import { useEventsAdmin } from "@/hooks/useEvents";
+import { EventForm } from '@/components/events/EventForm';
 import { PaymentInstructionsManager } from '@/components/admin/PaymentInstructionsManager';
+import { QRCodeScanner } from '@/components/admin/QRCodeScanner';
 
 const EventsPage = () => {
-  const [activeTab, setActiveTab] = useState('registrations'); // Set default tab to registrations
+  const [activeTab, setActiveTab] = useState('registrations');
   const { refetch } = useEventsAdmin();
   
-  const {
-    form,
-    isDialogOpen,
-    setIsDialogOpen,
-    isEditMode,
-    currentEvent,
-    isSubmitting,
-    onSubmit,
-    handleCreateEvent,
-    handleEditEvent
-  } = useEventForm(() => refetch());
+  const eventFormProps = useEventForm(() => refetch());
 
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Event Management</h1>
         
-        <Tabs defaultValue="registrations" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs 
+          defaultValue="registrations" 
+          value={activeTab} 
+          onValueChange={setActiveTab} 
+          className="space-y-4"
+        >
           <TabsList className="mb-4 w-full justify-start">
             <TabsTrigger value="registrations" className="text-base font-medium">
               Registrations & Payments
@@ -46,6 +40,9 @@ const EventsPage = () => {
             </TabsTrigger>
             <TabsTrigger value="payment" className="text-base font-medium">
               Payment Settings
+            </TabsTrigger>
+            <TabsTrigger value="qr-scanner" className="text-base font-medium">
+              Entry Scanner
             </TabsTrigger>
           </TabsList>
           
@@ -88,17 +85,13 @@ const EventsPage = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          
+          <TabsContent value="qr-scanner" className="space-y-4">
+            <QRCodeScanner />
+          </TabsContent>
         </Tabs>
 
-        <EventForm 
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          form={form}
-          isEditMode={isEditMode}
-          onSubmit={onSubmit}
-          isSubmitting={isSubmitting}
-          currentEvent={currentEvent}
-        />
+        <EventForm {...eventFormProps} />
       </div>
     </AdminLayout>
   );
