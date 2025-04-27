@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -11,11 +12,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -35,82 +36,72 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+} from "@/components/ui/form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   createPremiumCourse,
-  getPremiumCourses,
-  updatePremiumCourse,
-  deletePremiumCourse,
-  getCourseCategories
+  listPublishedPremiumCourses,
+  PremiumCourse,
+  uploadPremiumCourseImage
 } from "@/services/premiumCourseService";
-import { PremiumCourse } from "@/types";
 import MainLayout from '@/layouts/MainLayout';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
   }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
+  summary: z.string().min(10, {
+    message: "Summary must be at least 10 characters.",
   }),
-  price: z.number().min(1, {
-    message: "Price must be greater than 0.",
-  }),
-  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
-  categoryId: z.string().min(1, {
-    message: "Category must be selected.",
-  }),
-  imageUrl: z.string().url({ message: "Invalid URL" }),
-  videoUrl: z.string().url({ message: "Invalid URL" }),
+  category: z.enum(['model', 'designer', 'photographer', 'videographer', 'musical_artist', 'fine_artist', 'event_planner']),
+  level: z.enum(['beginner', 'intermediate', 'expert']),
+  hosting_type: z.enum(['hosted', 'embedded', 'external']),
+  image_url: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  student_capacity: z.number().min(1).default(20)
 });
 
-const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
-  switch (status) {
-    case 'pending':
-      return 'outline';
-    case 'approved':
-      return 'secondary';
-    default:
-      return 'default';
-  }
+const getStatusBadgeVariant = (isPublished: boolean): "default" | "secondary" | "destructive" | "outline" => {
+  return isPublished ? "secondary" : "outline";
 };
 
 const PremiumCoursesPage = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [courseIdToEdit, setCourseIdToEdit] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const { data: courses, isLoading, isError } = useQuery({
     queryKey: ['premiumCourses'],
-    queryFn: getPremiumCourses,
-  });
-
-  const { data: categories, isLoading: isCategoriesLoading, isError: isCategoriesError } = useQuery({
-    queryKey: ['courseCategories'],
-    queryFn: getCourseCategories,
+    queryFn: listPublishedPremiumCourses,
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      description: "",
-      price: 0,
-      status: 'pending',
-      categoryId: "",
-      imageUrl: "",
-      videoUrl: "",
+      summary: "",
+      category: "model",
+      level: "beginner",
+      hosting_type: "hosted",
+      image_url: "",
+      start_date: "",
+      end_date: "",
+      student_capacity: 20
     },
   });
 
@@ -120,46 +111,118 @@ const PremiumCoursesPage = () => {
       if (courseToEdit) {
         form.reset({
           title: courseToEdit.title,
-          description: courseToEdit.description,
-          price: courseToEdit.price,
-          status: courseToEdit.status,
-          categoryId: courseToEdit.categoryId,
-          imageUrl: courseToEdit.imageUrl,
-          videoUrl: courseToEdit.videoUrl,
+          summary: courseToEdit.summary || "",
+          category: courseToEdit.category,
+          level: courseToEdit.level,
+          hosting_type: courseToEdit.hosting_type,
+          start_date: courseToEdit.start_date || "",
+          end_date: courseToEdit.end_date || "",
+          student_capacity: courseToEdit.student_capacity
         });
       }
     }
   }, [courseIdToEdit, courses, form]);
 
-  const { mutate: createCourse } = useMutation(createPremiumCourse, {
+  const createCourseMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      let imagePath = null;
+      if (selectedImage) {
+        imagePath = await uploadPremiumCourseImage(selectedImage);
+      }
+      
+      await createPremiumCourse({
+        ...data,
+        image_path: imagePath,
+        is_published: true
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['premiumCourses']);
+      queryClient.invalidateQueries({ queryKey: ['premiumCourses'] });
       setIsDialogOpen(false);
       form.reset();
+      setSelectedImage(null);
+      toast({
+        title: "Success",
+        description: "Course created successfully"
+      });
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create course",
+        variant: "destructive"
+      });
+    }
   });
 
-  const { mutate: updateCourse } = useMutation(updatePremiumCourse, {
+  const updateCourseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: z.infer<typeof formSchema> }) => {
+      let imagePath = null;
+      if (selectedImage) {
+        imagePath = await uploadPremiumCourseImage(selectedImage);
+      }
+      
+      const { error } = await supabase
+        .from('premium_courses')
+        .update({
+          ...data,
+          image_path: imagePath || undefined,
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries(['premiumCourses']);
+      queryClient.invalidateQueries({ queryKey: ['premiumCourses'] });
       setIsDialogOpen(false);
       setIsEditing(false);
       setCourseIdToEdit(null);
       form.reset();
+      setSelectedImage(null);
+      toast({
+        title: "Success",
+        description: "Course updated successfully"
+      });
     },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update course",
+        variant: "destructive"
+      });
+    }
   });
 
-  const { mutate: removeCourse } = useMutation(deletePremiumCourse, {
-    onSuccess: () => {
-      queryClient.invalidateQueries(['premiumCourses']);
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('premium_courses')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['premiumCourses'] });
+      toast({
+        title: "Success",
+        description: "Course deleted successfully"
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete course",
+        variant: "destructive"
+      });
+    }
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isEditing && courseIdToEdit) {
-      updateCourse({ id: courseIdToEdit, ...values });
+      updateCourseMutation.mutate({ id: courseIdToEdit, data: values });
     } else {
-      createCourse({ ...values, price: Number(values.price) });
+      createCourseMutation.mutate(values);
     }
   };
 
@@ -168,20 +231,22 @@ const PremiumCoursesPage = () => {
     setIsEditing(false);
     setCourseIdToEdit(null);
     form.reset();
+    setSelectedImage(null);
   };
 
   const handleEditCourse = (courseId: string) => {
     setIsDialogOpen(true);
     setIsEditing(true);
     setCourseIdToEdit(courseId);
+    setSelectedImage(null);
   };
 
   const handleDeleteCourse = (courseId: string) => {
-    removeCourse(courseId);
+    deleteCourseMutation.mutate(courseId);
   };
 
-  if (isLoading || isCategoriesLoading) return <div>Loading...</div>;
-  if (isError || isCategoriesError) return <div>Error fetching data</div>;
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error fetching data</div>;
 
   return (
     <MainLayout>
@@ -199,25 +264,25 @@ const PremiumCoursesPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[200px]">Title</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Summary</TableHead>
+                <TableHead>Level</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses?.map((course) => (
+              {courses && courses.map((course) => (
                 <TableRow key={course.id}>
                   <TableCell className="font-medium">{course.title}</TableCell>
-                  <TableCell>{course.description}</TableCell>
-                  <TableCell>{course.price}</TableCell>
+                  <TableCell>{course.summary || "No summary"}</TableCell>
+                  <TableCell>{course.level}</TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(course.status)}>
-                      {course.status}
+                    <Badge variant={getStatusBadgeVariant(course.is_published)}>
+                      {course.is_published ? "Published" : "Draft"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{categories?.find(cat => cat.id === course.categoryId)?.name}</TableCell>
+                  <TableCell>{course.category}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
@@ -257,7 +322,7 @@ const PremiumCoursesPage = () => {
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={6} className="text-center">
-                  {courses?.length} courses total
+                  {courses ? courses.length : 0} courses total
                 </TableCell>
               </TableRow>
             </TableFooter>
@@ -286,12 +351,12 @@ const PremiumCoursesPage = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="description"
+                  name="summary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Summary</FormLabel>
                       <FormControl>
-                        <Input placeholder="Course Description" {...field} />
+                        <Input placeholder="Course Summary" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -299,47 +364,7 @@ const PremiumCoursesPage = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Price</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Course Price"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="categoryId"
+                  name="category"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
@@ -350,9 +375,13 @@ const PremiumCoursesPage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories?.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                          ))}
+                          <SelectItem value="model">Model</SelectItem>
+                          <SelectItem value="designer">Designer</SelectItem>
+                          <SelectItem value="photographer">Photographer</SelectItem>
+                          <SelectItem value="videographer">Videographer</SelectItem>
+                          <SelectItem value="musical_artist">Musical Artist</SelectItem>
+                          <SelectItem value="fine_artist">Fine Artist</SelectItem>
+                          <SelectItem value="event_planner">Event Planner</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -361,12 +390,74 @@ const PremiumCoursesPage = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="imageUrl"
+                  name="level"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Image URL</FormLabel>
+                      <FormLabel>Level</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="expert">Expert</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="hosting_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hosting Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a hosting type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="hosted">Hosted</SelectItem>
+                          <SelectItem value="embedded">Embedded</SelectItem>
+                          <SelectItem value="external">External</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormItem>
+                  <FormLabel>Image</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setSelectedImage(e.target.files[0]);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
                       <FormControl>
-                        <Input placeholder="Image URL" {...field} />
+                        <Input
+                          type="date"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -374,12 +465,32 @@ const PremiumCoursesPage = () => {
                 />
                 <FormField
                   control={form.control}
-                  name="videoUrl"
+                  name="end_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Video URL</FormLabel>
+                      <FormLabel>End Date</FormLabel>
                       <FormControl>
-                        <Input placeholder="Video URL" {...field} />
+                        <Input
+                          type="date"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="student_capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Student Capacity</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 20)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -387,7 +498,13 @@ const PremiumCoursesPage = () => {
                 />
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <Button type="submit">{isEditing ? "Update" : "Create"}</Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
+                  >
+                    {createCourseMutation.isPending || updateCourseMutation.isPending ? 
+                      "Processing..." : isEditing ? "Update" : "Create"}
+                  </Button>
                 </AlertDialogFooter>
               </form>
             </Form>
