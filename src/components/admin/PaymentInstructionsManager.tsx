@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   merchant_code: z.string().optional(),
+  merchant_code_label: z.string().optional().default('Merchant Code'),
   instructions: z.string().min(1, 'Instructions are required'),
 });
 
@@ -22,6 +22,7 @@ interface PaymentInstruction {
   payment_method: string;
   instructions: string;
   merchant_code: string | null;
+  merchant_code_label?: string;
 }
 
 export function PaymentInstructionsManager() {
@@ -31,6 +32,9 @@ export function PaymentInstructionsManager() {
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      merchant_code_label: 'Merchant Code'
+    }
   });
 
   const { data: instructions, isLoading } = useQuery({
@@ -49,15 +53,21 @@ export function PaymentInstructionsManager() {
     mutationFn: async ({ 
       payment_method, 
       merchant_code, 
+      merchant_code_label,
       instructions 
     }: { 
       payment_method: string; 
       merchant_code?: string; 
+      merchant_code_label?: string;
       instructions: string; 
     }) => {
       const { error } = await supabase
         .from('payment_instructions')
-        .update({ merchant_code, instructions })
+        .update({ 
+          merchant_code, 
+          merchant_code_label, 
+          instructions 
+        })
         .eq('payment_method', payment_method);
       
       if (error) throw error;
@@ -83,6 +93,7 @@ export function PaymentInstructionsManager() {
     setEditingMethod(instruction.payment_method);
     form.reset({
       merchant_code: instruction.merchant_code || '',
+      merchant_code_label: instruction.merchant_code_label || 'Merchant Code',
       instructions: instruction.instructions,
     });
   };
@@ -90,10 +101,10 @@ export function PaymentInstructionsManager() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!editingMethod) return;
     
-    // Make sure instructions is always provided as non-optional
     await updateMutation.mutate({
       payment_method: editingMethod,
       merchant_code: values.merchant_code,
+      merchant_code_label: values.merchant_code_label,
       instructions: values.instructions
     });
   };
@@ -137,12 +148,29 @@ export function PaymentInstructionsManager() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
+                  name="merchant_code_label"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Merchant Code Label</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="Enter custom merchant code label" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="merchant_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Merchant Code</FormLabel>
+                      <FormLabel>{form.getValues('merchant_code_label')}</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ''} placeholder="Enter merchant code (optional)" />
+                        <Input {...field} placeholder="Enter merchant code (optional)" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -183,7 +211,7 @@ export function PaymentInstructionsManager() {
             <div className="space-y-2">
               {instruction.merchant_code && (
                 <p className="text-sm text-gray-500">
-                  <strong>Merchant Code:</strong> {instruction.merchant_code}
+                  <strong>{instruction.merchant_code_label || 'Merchant Code'}:</strong> {instruction.merchant_code}
                 </p>
               )}
               <div className="text-sm text-gray-500">
