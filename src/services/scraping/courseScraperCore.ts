@@ -75,7 +75,7 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
       return [];
     }
     
-    return (data as ScrapedCourse[]) || [];
+    return data as ScrapedCourse[];
   } catch (error) {
     console.error("Error in getPendingScrapedCourses:", error);
     return [];

@@ -53,7 +53,8 @@ export const submitScrapedCourse = async (
         ...course,
         is_approved: false,
         is_reviewed: false,
-        level: course.level || 'beginner'
+        level: course.level || 'beginner',
+        hash_identifier: course.hash_identifier
       })
       .select()
       .single();
