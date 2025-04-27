@@ -142,7 +142,7 @@ const PremiumCoursesPage = () => {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{course.title}</h3>
                           {course.end_date && (
-                            <Badge variant={isCourseExpired(course) ? "secondary" : "pending"} className="ml-2">
+                            <Badge variant={isCourseExpired(course) ? "secondary" : "outline"} className="ml-2">
                               {isCourseExpired(course) 
                                 ? "Expired" 
                                 : `${getDaysUntilExpiration(course)} days remaining`}

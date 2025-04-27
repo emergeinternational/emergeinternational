@@ -40,6 +40,7 @@ import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
 import TalentsPage from "./pages/admin/TalentsPage";
 import EventPayment from "./pages/EventPayment";
+import EventsPage from "./pages/admin/EventsPage";
 
 const queryClient = new QueryClient();
 
@@ -65,11 +66,9 @@ const App = () => {
               <Toaster />
               <Sonner />
               <Routes>
-                {/* Home routes - make sure Landing is the default route */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/home" element={<Home />} />
                 
-                {/* Public routes */}
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
@@ -88,14 +87,12 @@ const App = () => {
                 <Route path="/event-payment/:eventId" element={<EventPayment />} />
                 <Route path="/payment" element={<Payment />} />
                 
-                {/* Protected routes */}
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
                 <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
-                {/* Admin routes */}
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
                     <Dashboard />
@@ -147,7 +144,6 @@ const App = () => {
                   </RoleBasedRoute>
                 } />
                 
-                {/* Fallback route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </TooltipProvider>

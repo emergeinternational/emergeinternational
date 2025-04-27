@@ -1,35 +1,225 @@
 
-// This file is read-only, so we can't directly modify it.
-// Instead, let's create a custom variant file to fix the type issues
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { Check, Clock, X } from "lucide-react";
+import { extendedButtonVariants } from "@/components/ui/button";
+import { approveCertificate, rejectCertificate } from "@/services/certificateService";
+import { CertificateStatusFilter } from "./CertificateStatusFilter";
+import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
+import { UserCourseDetails } from "./certificates/UserCourseDetails";
+import { CertificateRequirementsBanner } from "./certificates/CertificateRequirementsBanner";
+import { CertificateActions } from "./certificates/CertificateActions";
+import { RejectionDialog } from "./RejectionDialog";
 
-import { buttonVariants } from "@/components/ui/button";
-import { cva } from "class-variance-authority";
+export function CertificateManagement() {
+  const { toast } = useToast();
+  const { hasRole } = useAuth();
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [isLoading, setIsLoading] = useState(false);
 
-// Extend the button variants to include 'success'
-export const extendedButtonVariants = cva(
-  buttonVariants().base || "",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-green-600 text-white hover:bg-green-700",
-        pending: "bg-yellow-500 text-white hover:bg-yellow-600",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
+  const dummyUsers = [
+    {
+      id: "1",
+      name: "Aster Aweke",
+      email: "aster@example.com",
+      courses: [
+        {
+          id: "course1",
+          title: "Introduction to Fashion Design",
+          progress: 100,
+          certification: { status: "pending", requested_at: "2023-05-15" },
+        },
+      ],
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    {
+      id: "2",
+      name: "Teddy Afro",
+      email: "teddy@example.com",
+      courses: [
+        {
+          id: "course2",
+          title: "Advanced Pattern Making",
+          progress: 90,
+          certification: { status: "approved", requested_at: "2023-05-10", approved_at: "2023-05-12" },
+        },
+      ],
     },
+    {
+      id: "3",
+      name: "Gigi Hadid",
+      email: "gigi@example.com",
+      courses: [
+        {
+          id: "course3",
+          title: "Fashion Photography Basics",
+          progress: 100,
+          certification: { status: "rejected", requested_at: "2023-05-08", rejected_at: "2023-05-11", reason: "Incomplete final project submission" },
+        },
+      ],
+    },
+  ];
+
+  // Filter users based on certification status
+  const filteredUsers = dummyUsers.filter((user) => {
+    return user.courses.some((course) => course.certification?.status === statusFilter);
+  });
+
+  const handleApprove = async (userId: string, courseId: string) => {
+    setIsLoading(true);
+    try {
+      await approveCertificate(userId, courseId);
+      toast({
+        title: "Certificate Approved",
+        description: "User has been notified and certificate has been generated.",
+      });
+      // In a real app, we'd refetch the data here
+    } catch (error) {
+      console.error("Error approving certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve certificate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async (userId: string, courseId: string, reason: string) => {
+    setIsLoading(true);
+    try {
+      await rejectCertificate(userId, courseId, reason);
+      setShowRejectionDialog(false);
+      toast({
+        title: "Certificate Rejected",
+        description: "User has been notified about the rejection.",
+      });
+      // In a real app, we'd refetch the data here
+    } catch (error) {
+      console.error("Error rejecting certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject certificate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!hasRole(["admin", "editor"])) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">You don't have permission to access this page.</p>
+      </div>
+    );
   }
-);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-semibold">Certificate Management</h2>
+      
+      <CertificateStatusFilter
+        activeFilter={statusFilter}
+        onChange={setStatusFilter}
+        counts={{
+          pending: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'pending')).length,
+          approved: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'approved')).length,
+          rejected: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'rejected')).length,
+        }}
+      />
+      
+      <CertificateRequirementsBanner />
+      
+      {filteredUsers.length === 0 ? (
+        <EmptyEligibleUsers status={statusFilter} />
+      ) : (
+        <div className="space-y-4">
+          {filteredUsers.map((user) => {
+            const course = user.courses.find((c) => c.certification?.status === statusFilter);
+            if (!course) return null;
+            
+            return (
+              <div 
+                key={`${user.id}-${course.id}`} 
+                className="border rounded-lg p-4 bg-white shadow-sm"
+              >
+                <UserCourseDetails user={user} course={course} />
+                
+                {statusFilter === "pending" && (
+                  <div className="mt-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowRejectionDialog(true);
+                      }}
+                      className={extendedButtonVariants({ 
+                        variant: "outline", 
+                        size: "sm",
+                        className: "gap-1"
+                      })}
+                      disabled={isLoading}
+                    >
+                      <X size={16} />
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => handleApprove(user.id, course.id)}
+                      className={extendedButtonVariants({ 
+                        variant: "success", 
+                        size: "sm",
+                        className: "gap-1" 
+                      })}
+                      disabled={isLoading}
+                    >
+                      <Check size={16} />
+                      Approve
+                    </button>
+                  </div>
+                )}
+                
+                {statusFilter === "approved" && (
+                  <CertificateActions 
+                    userId={user.id}
+                    courseId={course.id}
+                    approvedAt={course.certification?.approved_at}
+                  />
+                )}
+                
+                {statusFilter === "rejected" && (
+                  <div className="mt-4 border-t pt-3">
+                    <p className="text-sm font-medium">Rejection reason:</p>
+                    <p className="text-sm text-gray-600">{course.certification?.reason || "No reason provided"}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Rejected on {new Date(course.certification?.rejected_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Rejection dialog */}
+      {showRejectionDialog && selectedUser && (
+        <RejectionDialog
+          open={showRejectionDialog}
+          onOpenChange={setShowRejectionDialog}
+          onConfirm={(reason) => {
+            const course = selectedUser.courses.find((c) => c.certification?.status === statusFilter);
+            if (course) {
+              handleReject(selectedUser.id, course.id, reason);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add default export for CertificateManagement
+export default CertificateManagement;
