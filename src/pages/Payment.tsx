@@ -1,24 +1,24 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Camera, Upload, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import Logo from "../components/Logo";
 import { QRCodeSVG } from "qrcode.react";
 import { saveEventRegistration, updatePaymentProof } from "@/services/workshopService";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useDiscountCode } from '@/hooks/useDiscountCode';
 import { usePaymentProof } from '@/hooks/usePaymentProof';
+import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
+import { PaymentInstructions } from "@/components/payment/PaymentInstructions";
+import { ScreenshotUploader } from "@/components/payment/ScreenshotUploader";
+import { CardPaymentForm } from "@/components/payment/CardPaymentForm";
+import { DiscountCodeInput } from "@/components/payment/DiscountCodeInput";
 
 const Payment = () => {
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
   const [screenshot, setScreenshot] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [paymentComplete, setPaymentComplete] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,17 +34,6 @@ const Payment = () => {
   const [discountCode, setDiscountCode] = useState('');
   const { validateDiscountCode, isValidating } = useDiscountCode(paymentDetails.eventId);
   const { uploadPaymentProof, isUploading } = usePaymentProof();
-
-  const handleDiscountCodeSubmit = async () => {
-    if (!discountCode.trim()) return;
-    
-    const discountAmount = await validateDiscountCode(discountCode);
-    if (discountAmount > 0) {
-      // Update the payment amount with the discount
-      // Note: This assumes paymentDetails is properly typed with amount
-      paymentDetails.amount -= discountAmount;
-    }
-  };
 
   useEffect(() => {
     // Create the registration when the component mounts
@@ -105,7 +94,6 @@ const Payment = () => {
     
     // Upload to Supabase Storage
     if (registrationId) {
-      setUploading(true);
       try {
         const paymentProofUrl = await uploadPaymentProof(file);
         
@@ -119,13 +107,19 @@ const Payment = () => {
           });
         }
       } finally {
-        setUploading(false);
       }
     }
   };
 
-  const handleUploadScreenshot = () => {
-    fileInputRef.current?.click();
+  const handleDiscountCodeSubmit = async () => {
+    if (!discountCode.trim()) return;
+    
+    const discountAmount = await validateDiscountCode(discountCode);
+    if (discountAmount > 0) {
+      // Update the payment amount with the discount
+      // Note: This assumes paymentDetails is properly typed with amount
+      paymentDetails.amount -= discountAmount;
+    }
   };
 
   const handleConfirmPurchase = async () => {
@@ -186,60 +180,20 @@ const Payment = () => {
 
         <h1 className="text-3xl font-semibold mb-6">Confirm Your Payment</h1>
 
-        <div className="flex mb-8">
-          <button 
-            onClick={() => setPaymentMethod("telebirr")}
-            className={`flex-1 py-3 text-center ${
-              paymentMethod === "telebirr" 
-                ? "bg-emerge-cream text-black border-b-2 border-emerge-gold" 
-                : "bg-white text-gray-500"
-            }`}
-          >
-            TeleBirr
-          </button>
-          <button 
-            onClick={() => setPaymentMethod("cbebirr")}
-            className={`flex-1 py-3 text-center ${
-              paymentMethod === "cbebirr" 
-                ? "bg-emerge-cream text-black border-b-2 border-emerge-gold" 
-                : "bg-white text-gray-500"
-            }`}
-          >
-            CBEBirr
-          </button>
-          <button 
-            onClick={() => setPaymentMethod("card")}
-            className={`flex-1 py-3 text-center ${
-              paymentMethod === "card" 
-                ? "bg-emerge-cream text-black border-b-2 border-emerge-gold" 
-                : "bg-white text-gray-500"
-            }`}
-          >
-            Card
-          </button>
-        </div>
+        <PaymentMethodSelector 
+          paymentMethod={paymentMethod}
+          onMethodChange={setPaymentMethod}
+        />
 
         <div className="text-center mb-8">
           <h2 className="text-4xl font-bold mb-2">ETB {paymentDetails.amount}</h2>
           
-          {/* Add discount code section */}
-          <div className="mb-4">
-            <div className="flex gap-2 justify-center">
-              <Input
-                type="text"
-                placeholder="Enter discount code"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value)}
-                className="max-w-[200px]"
-              />
-              <Button 
-                onClick={handleDiscountCodeSubmit}
-                disabled={isValidating || !discountCode.trim()}
-              >
-                {isValidating ? "Validating..." : "Apply"}
-              </Button>
-            </div>
-          </div>
+          <DiscountCodeInput
+            discountCode={discountCode}
+            onDiscountCodeChange={setDiscountCode}
+            onApplyDiscount={handleDiscountCodeSubmit}
+            isValidating={isValidating}
+          />
 
           <p className="text-gray-600">
             {paymentDetails.description}<br />
@@ -250,44 +204,12 @@ const Payment = () => {
         </div>
 
         {(paymentMethod === "telebirr" || paymentMethod === "cbebirr") ? (
-          <div className="space-y-6">
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileUpload}
+          <>
+            <ScreenshotUploader
+              screenshot={screenshot}
+              onFileUpload={handleFileUpload}
+              uploading={isUploading}
             />
-            
-            <div className="border border-gray-300 p-4 rounded">
-              {screenshot ? (
-                <div className="relative">
-                  <img 
-                    src={screenshot} 
-                    alt="Payment confirmation" 
-                    className="w-full h-48 object-cover rounded"
-                  />
-                  <button 
-                    onClick={handleUploadScreenshot}
-                    className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
-                    disabled={uploading}
-                  >
-                    <Upload size={20} />
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={handleUploadScreenshot}
-                  className="w-full border-2 border-dashed border-gray-300 py-12 rounded flex flex-col items-center justify-center space-y-2 hover:border-emerge-gold transition-colors"
-                  disabled={uploading}
-                >
-                  <Camera size={32} className="text-gray-400" />
-                  <span className="text-gray-600">
-                    {uploading ? "Uploading..." : "Upload Payment Screenshot"}
-                  </span>
-                </button>
-              )}
-            </div>
 
             <div className="border border-gray-300 p-4 rounded flex flex-col items-center space-y-4">
               <QRCodeSVG
@@ -300,75 +222,29 @@ const Payment = () => {
               <p className="text-sm text-gray-600">Scan QR Code to Pay</p>
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-6">
-              <h3 className="font-medium text-yellow-800 mb-2">Payment Instructions</h3>
-              {paymentMethod === "telebirr" && (
-                <ol className="list-decimal text-sm text-yellow-700 pl-5 space-y-1">
-                  <li>Open your TeleBirr app</li>
-                  <li>Select "Pay Merchant"</li>
-                  <li>Scan the QR code above or enter merchant code: <strong>EID0001</strong></li>
-                  <li>Enter the exact amount: <strong>ETB {paymentDetails.amount}</strong></li>
-                  <li>Complete payment and take a screenshot of the confirmation</li>
-                  <li>Upload the screenshot above</li>
-                </ol>
-              )}
-              {paymentMethod === "cbebirr" && (
-                <ol className="list-decimal text-sm text-yellow-700 pl-5 space-y-1">
-                  <li>Open your CBE Birr app</li>
-                  <li>Select "Pay to Merchant"</li>
-                  <li>Enter merchant code: <strong>0919876543</strong></li>
-                  <li>Enter the exact amount: <strong>ETB {paymentDetails.amount}</strong></li>
-                  <li>Complete payment and take a screenshot of the confirmation</li>
-                  <li>Upload the screenshot above</li>
-                </ol>
-              )}
-            </div>
+            <PaymentInstructions 
+              paymentMethod={paymentMethod}
+              amount={paymentDetails.amount}
+            />
 
             <button 
               onClick={handleConfirmPurchase}
               className="w-full bg-black text-white py-4 rounded font-semibold disabled:bg-gray-400"
-              disabled={uploading}
+              disabled={isUploading}
             >
-              {uploading ? "UPLOADING..." : "CONFIRM PURCHASE"}
+              {isUploading ? "UPLOADING..." : "CONFIRM PURCHASE"}
             </button>
-          </div>
+          </>
         ) : (
-          <div className="space-y-6">
-            <div className="border p-4 rounded-md bg-white shadow-sm">
-              <h3 className="font-medium mb-2">Credit/Debit Card</h3>
-              <div className="space-y-4">
-                <input 
-                  type="text" 
-                  placeholder="Card Number" 
-                  className="emerge-input" 
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <input 
-                    type="text" 
-                    placeholder="MM/YY" 
-                    className="emerge-input" 
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="CVC" 
-                    className="emerge-input" 
-                  />
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Cardholder Name" 
-                  className="emerge-input" 
-                />
-              </div>
-            </div>
-
+          <>
+            <CardPaymentForm />
             <button 
               onClick={handleConfirmPurchase}
               className="w-full bg-black text-white py-4 rounded font-semibold"
             >
               PAY ETB {paymentDetails.amount}
             </button>
-          </div>
+          </>
         )}
       </div>
     </div>
