@@ -40,7 +40,6 @@ import Orders from "./pages/admin/Orders";
 import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
-import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
@@ -66,12 +65,9 @@ const App = () => {
               <Toaster />
               <Sonner />
               <Routes>
-                {/* Landing and Home Routes */}
                 <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/home" element={<Home />} />
-                <Route path="/index" element={<Index />} />
+                <Route path="/home" element={<Landing />} />
                 
-                {/* Public Routes */}
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
@@ -80,21 +76,17 @@ const App = () => {
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/test-auth" element={<TestAuthPage />} />
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
                 
-                {/* Protected Routes */}
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/shop/product/:id" element={<ProductDetail />} />
+                <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
+                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
-                <Route path="/donations" element={<Donations />} />
+                <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
                 <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
-                <Route path="/events" element={<Events />} />
+                <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
-                {/* Admin Routes */}
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
                     <Dashboard />
@@ -131,11 +123,10 @@ const App = () => {
                   </RoleBasedRoute>
                 } />
                 
-                {/* Registration Routes */}
                 <Route path="/talent-registration" element={<TalentRegistration />} />
+                
                 <Route path="/submit" element={<MediaSubmission />} />
                 
-                {/* Course Management Routes */}
                 <Route 
                   path="/admin/courses" 
                   element={
