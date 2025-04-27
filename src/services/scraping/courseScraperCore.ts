@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
 import { logScraperActivity } from "./courseScraperHelpers";
@@ -65,7 +64,7 @@ export const submitScrapedCourse = async (
   }
 };
 
-// Get all pending scraped courses
+// Get all pending scraped courses with duplicate information
 export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
   try {
     const { data, error } = await supabase
@@ -79,7 +78,7 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
       return [];
     }
     
-    return data;
+    return data || [];
   } catch (error) {
     console.error("Error in getPendingScrapedCourses:", error);
     return [];
@@ -100,15 +99,14 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
       return null;
     }
     
-    // If it's flagged as a duplicate with high confidence, we might want to handle differently
-    if (scrapedCourse.is_duplicate && scrapedCourse.duplicate_confidence >= 90 && scrapedCourse.duplicate_of) {
-      // Update the existing course if needed instead of creating a new one
+    // If it's flagged as a duplicate with high confidence, update existing course
+    if (scrapedCourse.is_duplicate && scrapedCourse.duplicate_confidence && scrapedCourse.duplicate_confidence >= 90 && scrapedCourse.duplicate_of) {
+      // Update the existing course if needed
       if (await canUpdateCourse(scrapedCourse.duplicate_of)) {
         const { error: updateError } = await supabase
           .from("courses")
           .update({
             updated_at: new Date().toISOString()
-            // We could update other fields if needed
           })
           .eq("id", scrapedCourse.duplicate_of);
           
