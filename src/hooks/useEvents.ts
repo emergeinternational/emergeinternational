@@ -1,9 +1,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getEvents, getEventById } from "@/services/eventService";
-import { Event, TicketType } from "@/services/events/types";
+import type { Event, TicketType } from "@/services/events/types";
 
-export { Event, TicketType };
+// Export types properly with 'export type'
+export type { Event, TicketType };
 
 export const useEvents = () => {
   return useQuery({

@@ -18,7 +18,16 @@ export const generateQRCode = async (registrationId: string) => {
   }
 };
 
-export const validateQRCode = async (qrCode: string) => {
+interface ValidateQRCodeResult {
+  valid: boolean;
+  message: string;
+  registrationId?: string;
+  userId?: string;
+  eventId?: string;
+  ticketType?: string;
+}
+
+export const validateQRCode = async (qrCode: string): Promise<ValidateQRCodeResult> => {
   try {
     // Check if QR code exists and is active
     const { data, error } = await supabase

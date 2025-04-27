@@ -1,3 +1,3 @@
 
-// Re-export from events service for backward compatibility
+// Re-export everything from the events module
 export * from './events';
