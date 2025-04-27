@@ -54,7 +54,7 @@ export const checkDuplicateCourse = async (
     // First check by hash (most accurate)
     const { data: hashMatches, error: hashError } = await supabase
       .from("courses")
-      .select("id, title, source_platform")
+      .select("id, title")
       .eq("hash_identifier", courseHash)
       .limit(1);
     
@@ -72,7 +72,7 @@ export const checkDuplicateCourse = async (
     if (source_url) {
       const { data: urlMatches, error: urlError } = await supabase
         .from("courses")
-        .select("id, title, source_url")
+        .select("id, title")
         .eq("source_url", source_url)
         .limit(1);
       
@@ -107,7 +107,6 @@ export const checkDuplicateCourse = async (
       
       const similarity = calculateSimilarity(title, closestMatch.title);
       
-      // If very high similarity and same source platform
       if (similarity > 0.8 && closestMatch.source_platform === source_platform) {
         return {
           isDuplicate: true,
@@ -116,7 +115,6 @@ export const checkDuplicateCourse = async (
         };
       }
       
-      // If high similarity but different source
       if (similarity > 0.9) {
         return {
           isDuplicate: true,

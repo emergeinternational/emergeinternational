@@ -10,7 +10,6 @@ export interface Course {
   category: CourseCategory;
   level: CourseLevel;
   duration?: string;
-  instructor?: string;
   link?: string;
   slug?: string;
   rating?: number;
@@ -44,9 +43,10 @@ export interface ScrapedCourse extends Omit<Course, 'id'> {
   is_reviewed: boolean;
   is_approved: boolean;
   review_notes?: string;
-  duplicate_of?: string;
   is_duplicate?: boolean;
+  duplicate_of?: string;
   duplicate_confidence?: number;
+  hash_identifier: string;
 }
 
 export interface CourseProgress {

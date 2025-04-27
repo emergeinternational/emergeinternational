@@ -19,9 +19,6 @@ export const submitScrapedCourse = async (
     const hashIdentifier = course.hash_identifier || 
       generateCourseHash(course.title, course.scraper_source);
     
-    // If it's a duplicate with high confidence, mark as duplicate but still add to queue
-    const isDuplicateHighConfidence = isDuplicate && confidence >= 80;
-    
     const { data, error } = await supabase
       .from("scraped_courses")
       .insert({
@@ -47,7 +44,7 @@ export const submitScrapedCourse = async (
       await logScraperActivity(
         course.scraper_source,
         "duplicate_detected",
-        isDuplicateHighConfidence ? "warning" : "info",
+        confidence >= 90 ? "warning" : "success",
         { 
           scrapedCourseId: data.id, 
           existingCourseId,
@@ -78,7 +75,7 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
       return [];
     }
     
-    return data || [];
+    return (data as ScrapedCourse[]) || [];
   } catch (error) {
     console.error("Error in getPendingScrapedCourses:", error);
     return [];
