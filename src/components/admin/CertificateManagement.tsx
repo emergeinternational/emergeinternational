@@ -1,26 +1,13 @@
-
 import { useState, useEffect } from "react";
 import {
   getEligibleUsers,
   updateCertificateApproval,
   generateCertificate,
   getCertificateSettings,
-  userMeetsRequirements
 } from "../../services/certificateService";
 import { useToast } from "@/hooks/use-toast";
 import CertificateSettings from "./CertificateSettings";
-import { 
-  Loader2, 
-  CheckCircle, 
-  XCircle, 
-  Award, 
-  BookOpen, 
-  AlertTriangle,
-  Eye,
-  Link as ExternalLink,
-  Download,
-  Settings
-} from "lucide-react";
+import { Award, Loader2 } from "lucide-react";
 import { 
   Table, 
   TableBody, 
@@ -39,12 +26,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { CertificateRequirementsBanner } from "./certificates/CertificateRequirementsBanner";
+import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
+import { UserCourseDetails } from "./certificates/UserCourseDetails";
+import { CertificateActions } from "./certificates/CertificateActions";
+import CertificateStatusFilter from "./CertificateStatusFilter";
 
 const CertificateManagement = () => {
   const { toast } = useToast();
@@ -154,8 +140,6 @@ const CertificateManagement = () => {
     
     setGeneratingCertificate(true);
     try {
-      // For this example, we're using a fixed course title
-      // In a real application, you might want to select the specific course
       const courseTitle = "Fashion Design & Model Development";
       
       const result = await generateCertificate(
@@ -214,7 +198,6 @@ const CertificateManagement = () => {
 
   const hasMetRequirements = (user: any) => {
     if (!user) return false;
-    // Add null check for online_courses_completed and workshops_completed
     const onlineCoursesCompleted = user.online_courses_completed || 0;
     const workshopsCompleted = user.workshops_completed || 0;
     return onlineCoursesCompleted >= certificateRequirements.min_courses_required && 
@@ -248,26 +231,16 @@ const CertificateManagement = () => {
         </div>
       </div>
 
-      <div className="bg-emerge-cream p-4 rounded border border-amber-200">
-        <h3 className="font-medium flex items-center">
-          <AlertTriangle className="h-4 w-4 mr-2 text-amber-600" />
-          Certificate Requirements
-        </h3>
-        <ul className="mt-2 text-sm space-y-1">
-          <li>• Minimum of {certificateRequirements.min_courses_required} online courses completed</li>
-          <li>• Minimum of {certificateRequirements.min_workshops_required} workshops attended</li>
-          <li>• Manual admin verification required for all certificates</li>
-        </ul>
-      </div>
+      <CertificateRequirementsBanner
+        minCoursesRequired={certificateRequirements.min_courses_required}
+        minWorkshopsRequired={certificateRequirements.min_workshops_required}
+      />
 
       {!loading && eligibleUsers.length === 0 ? (
-        <div className="bg-emerge-cream p-8 text-center rounded-md">
-          <BookOpen className="h-12 w-12 mx-auto mb-2 text-emerge-gold/60" />
-          <h3 className="text-lg font-medium mb-1">No Eligible Users Found</h3>
-          <p className="text-gray-600">
-            Users need to complete at least {certificateRequirements.min_courses_required} online courses and {certificateRequirements.min_workshops_required} workshops to be eligible.
-          </p>
-        </div>
+        <EmptyEligibleUsers
+          minCoursesRequired={certificateRequirements.min_courses_required}
+          minWorkshopsRequired={certificateRequirements.min_workshops_required}
+        />
       ) : (
         <div className="bg-white rounded-md border overflow-hidden">
           <Table>
@@ -564,117 +537,10 @@ const CertificateManagement = () => {
           </DialogHeader>
           
           {selectedUser && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 rounded border">
-                  <h3 className="font-medium flex items-center">
-                    <BookOpen className="h-4 w-4 mr-2 text-emerge-gold" />
-                    Online Course Progress
-                  </h3>
-                  <p className="text-lg font-bold mt-1">{selectedUser.online_courses_completed || 0} courses</p>
-                  <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_courses_required}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded border">
-                  <h3 className="font-medium flex items-center">
-                    <AlertTriangle className="h-4 w-4 mr-2 text-emerge-gold" />
-                    Workshop Attendance
-                  </h3>
-                  <p className="text-lg font-bold mt-1">{selectedUser.workshops_completed || 0} workshops</p>
-                  <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_workshops_required}</p>
-                </div>
-              </div>
-              
-              <Accordion type="single" collapsible className="w-full">
-                {getUserCourseDetails(selectedUser).embeddedCoursesWatched.length > 0 && (
-                  <AccordionItem value="embedded-courses">
-                    <AccordionTrigger>
-                      <span className="flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                        Embedded Courses Watched
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course Title</TableHead>
-                            <TableHead>Watch Percentage</TableHead>
-                            <TableHead>Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getUserCourseDetails(selectedUser).embeddedCoursesWatched.map((course, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{course.title}</TableCell>
-                              <TableCell>{course.watchPercent}%</TableCell>
-                              <TableCell>{formatDate(course.date)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                )}
-                  
-                {getUserCourseDetails(selectedUser).externalCoursesVisited.length > 0 && (
-                  <AccordionItem value="external-courses">
-                    <AccordionTrigger>
-                      <span className="flex items-center">
-                        <ExternalLink className="h-4 w-4 mr-2 text-blue-600" />
-                        External Courses Visited
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course Title</TableHead>
-                            <TableHead>Visit Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getUserCourseDetails(selectedUser).externalCoursesVisited.map((course, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{course.title}</TableCell>
-                              <TableCell>{formatDate(course.visitDate)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                )}
-                  
-                {getUserCourseDetails(selectedUser).workshopsAttended.length > 0 && (
-                  <AccordionItem value="workshops">
-                    <AccordionTrigger>
-                      <span className="flex items-center">
-                        <Award className="h-4 w-4 mr-2 text-emerge-gold" />
-                        Workshops Attended
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Workshop Title</TableHead>
-                            <TableHead>Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getUserCourseDetails(selectedUser).workshopsAttended.map((workshop, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{workshop.title}</TableCell>
-                              <TableCell>{formatDate(workshop.date)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                )}
-              </Accordion>
-            </div>
+            <UserCourseDetails
+              user={selectedUser}
+              certificateRequirements={certificateRequirements}
+            />
           )}
           
           <DialogFooter>
