@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -95,7 +96,7 @@ export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
     const { data, error } = await supabase
       .from('premium_courses')
       .select('*')
-      .eq('is_published', true)  // Only fetch published courses
+      .eq('is_published', true)
       .order('created_at', { ascending: false });
 
     if (error) {

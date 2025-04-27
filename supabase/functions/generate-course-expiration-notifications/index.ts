@@ -14,13 +14,13 @@ const corsHeaders = {
 
 const handler = async (_req: Request): Promise<Response> => {
   try {
-    // Generate records for 7-day reminders
-    const { error: sevenDayError } = await supabase.rpc(
+    // Generate notifications by calling the database function
+    const { data, error } = await supabase.rpc(
       'check_course_expiration_notifications'
     );
 
-    if (sevenDayError) {
-      throw new Error(`Error generating notifications: ${sevenDayError.message}`);
+    if (error) {
+      throw new Error(`Error generating notifications: ${error.message}`);
     }
 
     // After generating notifications, trigger the send-course-expiration-emails function
