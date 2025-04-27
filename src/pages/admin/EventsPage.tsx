@@ -15,7 +15,6 @@ import { createEvent, updateEvent } from "@/services/eventService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-// Update the schema to include ticket types
 const eventFormSchema = z.object({
   name: z.string().min(3, "Event name is required"),
   date: z.string().min(3, "Event date is required"),
@@ -50,7 +49,6 @@ const EventsPage = () => {
   const queryClient = useQueryClient();
   const { refetch: refetchEvents } = useEventsAdmin();
   
-  // Initialize form with react-hook-form and zod validation
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
@@ -68,7 +66,6 @@ const EventsPage = () => {
     }
   });
 
-  // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: createEvent,
     onSuccess: () => {
@@ -90,7 +87,6 @@ const EventsPage = () => {
     }
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => updateEvent(id, data),
     onSuccess: () => {
@@ -112,7 +108,6 @@ const EventsPage = () => {
     }
   });
 
-  // Function to handle form submission
   const onSubmit = async (values: EventFormValues) => {
     setIsSubmitting(true);
     try {
@@ -130,7 +125,13 @@ const EventsPage = () => {
             image_url: values.image_url,
             currency_code: values.currency_code,
             is_featured: values.is_featured,
-            ticket_types: values.ticket_types
+            ticket_types: values.ticket_types.map(ticket => ({
+              name: ticket.name,
+              price: ticket.price,
+              description: ticket.description,
+              quantity: ticket.quantity,
+              benefits: ticket.benefits
+            }))
           }
         });
       } else {
@@ -145,7 +146,13 @@ const EventsPage = () => {
           image_url: values.image_url,
           currency_code: values.currency_code,
           is_featured: values.is_featured,
-          ticket_types: values.ticket_types
+          ticket_types: values.ticket_types.map(ticket => ({
+            name: ticket.name,
+            price: ticket.price,
+            description: ticket.description,
+            quantity: ticket.quantity,
+            benefits: ticket.benefits
+          }))
         });
       }
     } catch (error) {
@@ -155,7 +162,6 @@ const EventsPage = () => {
     }
   };
 
-  // Function to open form for creating a new event
   const handleCreateEvent = () => {
     form.reset({
       name: '',
@@ -175,7 +181,6 @@ const EventsPage = () => {
     setIsDialogOpen(true);
   };
 
-  // Function to open form for editing an existing event
   const handleEditEvent = (event: Event) => {
     form.reset({
       name: event.name,
