@@ -67,7 +67,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
                 className="flex-grow cursor-pointer"
               >
                 <div className="flex justify-between">
-                  <span className="font-medium">{ticket.type || ticket.name}</span>
+                  <span className="font-medium">{ticket.name}</span>
                   <span className="font-bold">
                     {currency?.symbol} {convertPrice(ticket.price).toFixed(2)}
                   </span>

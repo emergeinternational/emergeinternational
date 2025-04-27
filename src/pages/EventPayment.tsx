@@ -59,7 +59,6 @@ const EventPayment = () => {
         // Transform the tickets data to match our TicketType interface
         const formattedTickets: TicketType[] = ticketsData.map(ticket => ({
           ...ticket,
-          type: ticket.type || ticket.name || 'Standard Ticket',
           available_quantity: (ticket.quantity || 0) - (ticket.tickets_sold || 0)
         }));
         
@@ -194,7 +193,7 @@ const EventPayment = () => {
       // Prepare payment details
       const paymentDetails = {
         amount: finalPrice,
-        description: `${event?.name} - ${selectedTicket.type}`,
+        description: `${event?.name} - ${selectedTicket.name}`,
         eventId: eventId,
         ticketType: selectedTicket.id
       };

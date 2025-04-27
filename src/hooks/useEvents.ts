@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getEvents } from "@/services/eventService";
 
 export interface TicketType {
   id: string;
@@ -37,23 +37,6 @@ export interface Event {
 export const useEvents = () => {
   return useQuery({
     queryKey: ['events'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          ticket_types (*)
-        `)
-        .order('date', { ascending: true });
-
-      if (error) throw error;
-
-      const eventsWithTickets = data.map(event => ({
-        ...event,
-        ticket_types: event.ticket_types || []
-      }));
-
-      return eventsWithTickets as Event[];
-    }
+    queryFn: getEvents
   });
 };
