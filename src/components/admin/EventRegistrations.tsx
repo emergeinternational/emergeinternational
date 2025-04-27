@@ -18,46 +18,7 @@ import { Check, X, Eye, QrCode, Download, RefreshCw } from "lucide-react";
 import QRCode from 'qrcode.react';
 import { useEventsAdmin } from "@/hooks/useEvents";
 import { Event } from "@/hooks/useEvents";
-
-interface EventRegistration {
-  id: string;
-  event_id: string;
-  user_id: string;
-  ticket_type: string;
-  amount: number;
-  payment_status: 'pending' | 'approved' | 'rejected';
-  payment_proof_url?: string | null;
-  created_at: string;
-  updated_at: string;
-  qr_code?: string | null;
-  qr_code_active?: boolean;
-  profiles?: {
-    full_name: string | null;
-    email: string | null;
-    phone_number: string | null;
-  };
-  events?: {
-    name: string;
-    date: string;
-    location: string | null;
-  };
-}
-
-interface RegistrationResponse {
-  id: string;
-  event_id: string;
-  user_id: string;
-  ticket_type: string;
-  amount: number;
-  payment_status: string;
-  payment_proof_url: string | null;
-  created_at: string;
-  updated_at: string;
-  profiles: any;
-  events: any;
-  qr_code?: string | null;
-  qr_code_active?: boolean;
-}
+import { EventRegistration, updateRegistrationStatus, toggleQrCodeStatus } from '@/services/workshopService';
 
 const fetchEventRegistrations = async (): Promise<EventRegistration[]> => {
   const { data, error } = await supabase
@@ -65,7 +26,7 @@ const fetchEventRegistrations = async (): Promise<EventRegistration[]> => {
 
   if (error) throw error;
   
-  const registrations: EventRegistration[] = (data || []).map((item: RegistrationResponse) => ({
+  const registrations: EventRegistration[] = (data || []).map((item: any) => ({
     id: item.id,
     event_id: item.event_id,
     user_id: item.user_id,
@@ -82,49 +43,6 @@ const fetchEventRegistrations = async (): Promise<EventRegistration[]> => {
   }));
 
   return registrations;
-};
-
-const updateRegistrationStatus = async (
-  id: string, 
-  status: 'approved' | 'rejected'
-): Promise<void> => {
-  if (status === 'approved') {
-    const qrCode = `EVENT-${id}-${Date.now()}`;
-    
-    const { error } = await supabase
-      .from('event_registrations')
-      .update({
-        payment_status: status,
-        qr_code: qrCode,
-        qr_code_active: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-    
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from('event_registrations')
-      .update({
-        payment_status: status,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
-};
-
-const toggleQrCodeStatus = async (id: string, active: boolean): Promise<void> => {
-  const { error } = await supabase
-    .from('event_registrations')
-    .update({
-      qr_code_active: active,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', id);
-  
-  if (error) throw error;
 };
 
 export const EventRegistrations = () => {

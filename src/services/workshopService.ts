@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Workshop {
@@ -22,6 +23,8 @@ export interface EventRegistration {
   payment_status: 'pending' | 'approved' | 'rejected';
   payment_proof_url?: string | null;
   created_at: string;
+  qr_code?: string | null;
+  qr_code_active?: boolean;
   profiles?: {
     full_name: string | null;
     email: string | null;
@@ -119,17 +122,30 @@ export const updateRegistrationStatus = async (
   status: 'approved' | 'rejected'
 ): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('event_registrations')
-      .update({
-        payment_status: status,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', registrationId);
-
-    if (error) {
-      console.error("Error updating registration status:", error);
-      throw error;
+    if (status === 'approved') {
+      const qrCode = `EVENT-${registrationId}-${Date.now()}`;
+      
+      const { error } = await supabase
+        .from('event_registrations')
+        .update({
+          payment_status: status,
+          qr_code: qrCode,
+          qr_code_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', registrationId);
+      
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('event_registrations')
+        .update({
+          payment_status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', registrationId);
+      
+      if (error) throw error;
     }
   } catch (error) {
     console.error("Error in updateRegistrationStatus:", error);
@@ -156,6 +172,26 @@ export const updatePaymentProof = async (
     }
   } catch (error) {
     console.error("Error in updatePaymentProof:", error);
+    throw error;
+  }
+};
+
+export const toggleQrCodeStatus = async (
+  registrationId: string,
+  active: boolean
+): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('event_registrations')
+      .update({
+        qr_code_active: active,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', registrationId);
+    
+    if (error) throw error;
+  } catch (error) {
+    console.error("Error in toggleQrCodeStatus:", error);
     throw error;
   }
 };

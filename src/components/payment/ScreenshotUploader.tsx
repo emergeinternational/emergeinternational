@@ -54,6 +54,10 @@ export const ScreenshotUploader = ({ screenshot, onFileUpload, uploading }: Scre
           </button>
         )}
       </div>
+      <p className="text-sm text-gray-500 text-center">
+        Please upload a screenshot of your payment confirmation. 
+        An administrator will review and approve your payment.
+      </p>
     </div>
   );
 };

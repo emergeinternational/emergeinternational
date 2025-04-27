@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
@@ -44,7 +43,6 @@ const Payment = () => {
   const { uploadPaymentProof, isUploading } = usePaymentProof();
 
   useEffect(() => {
-    // Create the registration when the component mounts
     const createRegistration = async () => {
       if (!user) {
         toast({
@@ -93,20 +91,17 @@ const Payment = () => {
       return;
     }
     
-    // Show the preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setScreenshot(reader.result as string);
     };
     reader.readAsDataURL(file);
     
-    // Upload to Supabase Storage
     if (registrationId) {
       try {
         const paymentProofUrl = await uploadPaymentProof(file);
         
         if (paymentProofUrl) {
-          // Update the registration with the payment proof URL
           await updatePaymentProof(registrationId, paymentProofUrl);
           
           toast({
@@ -161,6 +156,9 @@ const Payment = () => {
             Thank you for your registration. Your payment proof has been submitted and will be reviewed by our team.
           </p>
           <p className="text-sm text-gray-500">
+            Once approved, you will receive a QR code ticket that can be scanned at the event entrance.
+          </p>
+          <p className="text-sm text-gray-500">
             You will be redirected to the events page in a moment...
           </p>
         </div>
@@ -200,9 +198,9 @@ const Payment = () => {
           
           <p className="text-gray-600">
             {paymentDetails.description}<br />
-            {paymentMethod === "telebirr" && "Expected within 8 hours"}
-            {paymentMethod === "cbebirr" && "Pay with CBEBirr"}
-            {paymentMethod === "card" && "Secure card payment"}
+            {paymentMethod === "telebirr" && "Payment requires admin verification"}
+            {paymentMethod === "cbebirr" && "Payment requires admin verification"}
+            {paymentMethod === "card" && "Payment requires admin verification"}
           </p>
         </div>
 
@@ -214,7 +212,7 @@ const Payment = () => {
               uploading={isUploading}
             />
 
-            <div className="border border-gray-300 p-4 rounded flex flex-col items-center space-y-4">
+            <div className="border border-gray-300 p-4 rounded flex flex-col items-center space-y-4 mt-6">
               <QRCodeSVG
                 value={getQRValue()}
                 size={200}
@@ -232,7 +230,7 @@ const Payment = () => {
 
             <button 
               onClick={handleConfirmPurchase}
-              className="w-full bg-black text-white py-4 rounded font-semibold disabled:bg-gray-400"
+              className="w-full bg-black text-white py-4 rounded font-semibold disabled:bg-gray-400 mt-6"
               disabled={isUploading || !screenshot}
             >
               {isUploading ? "UPLOADING..." : "CONFIRM PURCHASE"}
@@ -243,12 +241,20 @@ const Payment = () => {
             <CardPaymentForm />
             <button 
               onClick={handleConfirmPurchase}
-              className="w-full bg-black text-white py-4 rounded font-semibold"
+              className="w-full bg-black text-white py-4 rounded font-semibold mt-6"
             >
               PAY ETB {paymentDetails.amount}
             </button>
           </>
         )}
+
+        <div className="mt-6 p-4 bg-yellow-50 rounded-md border border-yellow-200">
+          <h3 className="font-medium text-yellow-800 mb-2">Important Note</h3>
+          <p className="text-sm text-yellow-700">
+            After submitting your payment, an administrator will review and approve it. 
+            Once approved, your ticket QR code will be activated for event entry.
+          </p>
+        </div>
       </div>
     </div>
   );
