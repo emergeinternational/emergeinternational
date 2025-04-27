@@ -15,9 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 export default function PremiumCourseUploadForm() {
@@ -27,8 +24,8 @@ export default function PremiumCourseUploadForm() {
   const [level, setLevel] = useState<CourseLevel>('beginner');
   const [hostingType, setHostingType] = useState<CourseHostingType>('hosted');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<any>(undefined);
+  const [endDate, setEndDate] = useState<any>(undefined);
   const [studentCapacity, setStudentCapacity] = useState('20');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -207,72 +204,31 @@ export default function PremiumCourseUploadForm() {
             </FormItem>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <FormItem>
               <FormLabel>Start Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      {startDate ? (
-                        new Date(startDate).toLocaleDateString()
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <DatePicker
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    disabled={endDate ? (date) => date > endDate : false}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <Input
+                  type="date"
+                  value={startDate ? startDate.split('T')[0] : ''}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
+          </div>
 
+          <div>
             <FormItem>
               <FormLabel>End Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      {endDate ? (
-                        new Date(endDate).toLocaleDateString()
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <DatePicker
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    disabled={startDate ? (date) => date < startDate : false}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <Input
+                  type="date"
+                  value={endDate ? endDate.split('T')[0] : ''}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate} // Prevent end date before start date
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           </div>
