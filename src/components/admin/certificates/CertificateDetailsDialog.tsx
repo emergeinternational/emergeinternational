@@ -51,16 +51,15 @@ export const CertificateDetailsDialog: React.FC<CertificateDetailsDialogProps> =
         )}
 
         <DialogFooter>
-          {user && !user.admin_approved && hasMetRequirements(user) && (
-            <Button onClick={onApprove} className="bg-emerge-gold hover:bg-emerge-gold/90">
-              Approve Certificate
-            </Button>
-          )}
+          {/* Always show Generate Certificate button for testing */}
+          <Button onClick={onGenerate} className="bg-emerge-gold hover:bg-emerge-gold/90">
+            <Award className="h-4 w-4 mr-2" />
+            Generate Certificate
+          </Button>
 
-          {user && user.admin_approved && (
-            <Button onClick={onGenerate} className="bg-emerge-gold hover:bg-emerge-gold/90">
-              <Award className="h-4 w-4 mr-2" />
-              Generate Certificate
+          {user && !user.admin_approved && hasMetRequirements(user) && (
+            <Button onClick={onApprove} className="bg-emerge-gold hover:bg-emerge-gold/90 ml-2">
+              Approve Certificate
             </Button>
           )}
 

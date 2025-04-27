@@ -65,7 +65,7 @@ export const CertificateGenerationDialog: React.FC<CertificateGenerationDialogPr
           </Button>
           <Button
             onClick={onGenerate}
-            disabled={loading || !user?.admin_approved}
+            disabled={loading}
             className="bg-emerge-gold hover:bg-emerge-gold/90"
           >
             {loading ? (
