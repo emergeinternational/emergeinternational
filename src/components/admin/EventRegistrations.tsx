@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger 
+  Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -40,19 +39,51 @@ interface EventRegistration {
   };
 }
 
+interface RegistrationResponse {
+  id: string;
+  event_id: string;
+  user_id: string;
+  ticket_type: string;
+  amount: number;
+  payment_status: string;
+  payment_proof_url: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles: any;
+  events: any;
+  qr_code?: string | null;
+  qr_code_active?: boolean;
+}
+
 const fetchEventRegistrations = async (): Promise<EventRegistration[]> => {
   const { data, error } = await supabase
     .rpc('get_event_registrations');
 
   if (error) throw error;
-  return data || [];
+  
+  const registrations: EventRegistration[] = (data || []).map((item: RegistrationResponse) => ({
+    id: item.id,
+    event_id: item.event_id,
+    user_id: item.user_id,
+    ticket_type: item.ticket_type,
+    amount: item.amount,
+    payment_status: item.payment_status as 'pending' | 'approved' | 'rejected',
+    payment_proof_url: item.payment_proof_url,
+    created_at: item.created_at,
+    updated_at: item.updated_at || item.created_at,
+    qr_code: item.qr_code,
+    qr_code_active: item.qr_code_active,
+    profiles: item.profiles,
+    events: item.events
+  }));
+
+  return registrations;
 };
 
 const updateRegistrationStatus = async (
   id: string, 
   status: 'approved' | 'rejected'
 ): Promise<void> => {
-  // If approving, generate QR code
   if (status === 'approved') {
     const qrCode = `EVENT-${id}-${Date.now()}`;
     
@@ -68,7 +99,6 @@ const updateRegistrationStatus = async (
     
     if (error) throw error;
   } else {
-    // Just update status
     const { error } = await supabase
       .from('event_registrations')
       .update({
@@ -311,7 +341,6 @@ export const EventRegistrations = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Proof Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -371,7 +400,6 @@ export const EventRegistrations = () => {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Dialog */}
       <Dialog open={isQrCodeDialogOpen} onOpenChange={setIsQrCodeDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

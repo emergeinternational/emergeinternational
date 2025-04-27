@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
-import { EventsSection } from '@/components/admin/EventsSection';
+import EventsSection from '@/components/admin/EventsSection';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import EventRegistrations from '@/components/admin/EventRegistrations';
 
