@@ -22,7 +22,7 @@ const PremiumEnrollmentsPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [courseTitle, setCourseTitle] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | ''>('');
+  const [activeFilter, setActiveFilter] = useState<'active' | 'inactive' | 'all'>('all');
 
   const pageSize = 20;
 
@@ -34,7 +34,7 @@ const PremiumEnrollmentsPage = () => {
         page,
         pageSize,
         courseTitle,
-        activeFilter: activeFilter || undefined
+        activeFilter: activeFilter === 'all' ? undefined : activeFilter
       });
       setEnrollments(enrollments);
       setTotalCount(totalCount);
@@ -100,13 +100,13 @@ const PremiumEnrollmentsPage = () => {
           
           <Select 
             value={activeFilter} 
-            onValueChange={(value: 'active' | 'inactive' | '') => setActiveFilter(value)}
+            onValueChange={(value: 'active' | 'inactive' | 'all') => setActiveFilter(value)}
           >
             <SelectTrigger className="w-1/4">
               <SelectValue placeholder="Activity Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Enrollments</SelectItem>
+              <SelectItem value="all">All Enrollments</SelectItem>
               <SelectItem value="active">Active Enrollments</SelectItem>
               <SelectItem value="inactive">Inactive Enrollments</SelectItem>
             </SelectContent>
