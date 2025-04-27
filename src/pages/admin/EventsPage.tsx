@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
@@ -10,6 +9,7 @@ import { Event } from "@/hooks/useEvents";
 import { useEventForm } from '@/hooks/useEventForm';
 import EventForm from '@/components/events/EventForm';
 import { useEventsAdmin } from "@/hooks/useEvents";
+import { PaymentInstructionsManager } from '@/components/admin/PaymentInstructionsManager';
 
 const EventsPage = () => {
   const [activeTab, setActiveTab] = useState('management');
@@ -37,6 +37,7 @@ const EventsPage = () => {
             <TabsTrigger value="management">Event Management</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
             <TabsTrigger value="discounts">Discount Codes</TabsTrigger>
+            <TabsTrigger value="payment">Payment Settings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="management" className="space-y-4">
@@ -56,6 +57,17 @@ const EventsPage = () => {
           
           <TabsContent value="discounts" className="space-y-4">
             <DiscountCodeManager />
+          </TabsContent>
+          
+          <TabsContent value="payment" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Instructions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PaymentInstructionsManager />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

@@ -652,6 +652,33 @@ export type Database = {
           },
         ]
       }
+      payment_instructions: {
+        Row: {
+          created_at: string | null
+          id: string
+          instructions: string
+          merchant_code: string | null
+          payment_method: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instructions: string
+          merchant_code?: string | null
+          payment_method: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instructions?: string
+          merchant_code?: string | null
+          payment_method?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           countries: string[] | null
