@@ -1,3 +1,4 @@
+
 // This file re-exports functionality from the refactored service files
 // to maintain backward compatibility with existing imports
 export { 
@@ -25,20 +26,26 @@ export {
   approveScrapedCourse,
   rejectScrapedCourse,
   getScrapedCoursesBySource,
-  getDuplicateStats
+  getDuplicateStats,
+  triggerManualScrape
 } from './scraping/courseScraperCore';
 
 export {
   canUpdateCourse,
-  checkDuplicateCourse
+  calculateSimilarity
 } from './scraping/courseScraperValidation';
+
+export {
+  checkDuplicateCourse,
+  handleDuplicateDetection
+} from './scraping/duplicateDetection';
 
 export {
   logScraperActivity,
   createVerifiedCourse
 } from './scraping/courseScraperHelpers';
 
-export type { Course, CourseProgress, Category, Review } from './courseTypes';
+export type { Course, CourseProgress, Category, Review, ScrapedCourse } from './courseTypes';
 
 // Also export certificate-related types and functions
 export {

@@ -1,5 +1,5 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
@@ -38,98 +38,6 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
   } catch (error) {
     console.error("Error in canUpdateCourse:", error);
     return false;
-  }
-};
-
-// Function to check if a course already exists in the database
-export const checkDuplicateCourse = async (
-  title: string, 
-  source_platform: string,
-  source_url?: string
-): Promise<{ isDuplicate: boolean; existingCourseId?: string; confidence: number }> => {
-  try {
-    // Generate hash for the course being checked
-    const courseHash = generateCourseHash(title, source_platform);
-    
-    // First check by hash (most accurate)
-    const { data: hashMatches, error: hashError } = await supabase
-      .from("scraped_courses")
-      .select("id, title, scraper_source, hash_identifier")
-      .eq("hash_identifier", courseHash)
-      .limit(1);
-    
-    if (hashError) {
-      console.error("Error checking course by hash:", hashError);
-    } else if (hashMatches && hashMatches.length > 0) {
-      return { 
-        isDuplicate: true, 
-        existingCourseId: hashMatches[0].id,
-        confidence: 100 // Perfect match
-      };
-    }
-    
-    // If no hash match, check by source URL if available
-    if (source_url) {
-      const { data: urlMatches, error: urlError } = await supabase
-        .from("scraped_courses")
-        .select("id, title, scraper_source")
-        .or(`external_link.eq.${source_url},video_embed_url.eq.${source_url}`)
-        .limit(1);
-      
-      if (urlError) {
-        console.error("Error checking course by URL:", urlError);
-      } else if (urlMatches && urlMatches.length > 0) {
-        return { 
-          isDuplicate: true, 
-          existingCourseId: urlMatches[0].id,
-          confidence: 95 // Very high confidence
-        };
-      }
-    }
-    
-    // If still no match, check by title similarity
-    const { data: titleMatches, error: titleError } = await supabase
-      .from("scraped_courses")
-      .select("id, title, scraper_source")
-      .ilike("title", `%${title.substring(0, Math.min(title.length, 10))}%`) // Look for partial title match
-      .limit(5);
-    
-    if (titleError) {
-      console.error("Error checking course by title:", titleError);
-    } else if (titleMatches && titleMatches.length > 0) {
-      // Find the closest match by comparing titles
-      const closestMatch = titleMatches.reduce((closest, current) => {
-        const closestSimilarity = calculateSimilarity(title, closest.title);
-        const currentSimilarity = calculateSimilarity(title, current.title);
-        return currentSimilarity > closestSimilarity ? current : closest;
-      }, titleMatches[0]);
-      
-      const similarity = calculateSimilarity(title, closestMatch.title);
-      
-      // If high confidence match with same source platform
-      if (similarity > 0.8 && closestMatch.scraper_source === source_platform) {
-        return {
-          isDuplicate: true,
-          existingCourseId: closestMatch.id,
-          confidence: Math.round(similarity * 90) // Scale to 0-90 range
-        };
-      }
-      
-      // If very high confidence match regardless of source
-      if (similarity > 0.9) {
-        return {
-          isDuplicate: true,
-          existingCourseId: closestMatch.id,
-          confidence: Math.round(similarity * 80) // Scale to 0-80 range
-        };
-      }
-    }
-    
-    // No duplicate found
-    return { isDuplicate: false, confidence: 0 };
-  } catch (error) {
-    console.error("Error checking for duplicate course:", error);
-    return { isDuplicate: false, confidence: 0 };
   }
 };
 
