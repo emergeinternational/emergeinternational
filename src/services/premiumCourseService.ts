@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -48,12 +47,12 @@ export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' |
   try {
     const { data, error } = await supabase
       .from('premium_courses')
-      .insert({
+      .insert([{
         ...courseData,
         created_by: (await supabase.auth.getUser()).data.user?.id,
         student_capacity: courseData.student_capacity || 20,
         level: courseData.level || 'beginner'
-      } as any)
+      }])
       .select()
       .single();
 
@@ -82,7 +81,7 @@ export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
       return [];
     }
 
-    return data || [];
+    return data as PremiumCourse[];
   } catch (error) {
     console.error('Error in listPublishedPremiumCourses:', error);
     return [];
@@ -93,10 +92,10 @@ export async function enrollInPremiumCourse(courseId: string): Promise<boolean> 
   try {
     const { error } = await supabase
       .from('premium_course_enrollments')
-      .insert({
+      .insert([{
         course_id: courseId,
         user_id: (await supabase.auth.getUser()).data.user?.id
-      });
+      }]);
 
     if (error) {
       console.error('Error enrolling in course:', error);

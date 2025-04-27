@@ -9,6 +9,8 @@ import RoleBasedRoute from "./components/auth/RoleBasedRoute";
 import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
 import PremiumCoursesListPage from "./pages/PremiumCoursesListPage";
+import CoursesPage from "./pages/admin/CoursesPage";
+import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 
 const queryClient = new QueryClient();
 
@@ -33,29 +35,29 @@ const App = () => {
               <Sonner />
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-                <Route path="/home" element={<Landing />} />
+                <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+                <Route path="/email-login" element={<PublicRoute><EmailLoginPage /></PublicRoute>} />
+                <Route path="/home" element={<HomePage />} />
                 
-                <Route path="/education" element={<Education />} />
-                <Route path="/education/course/:id" element={<CourseDetail />} />
-                <Route path="/workshops" element={<Workshops />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/contact" element={<Contact />} />
+                <Route path="/education" element={<EducationPage />} />
+                <Route path="/education/course/:id" element={<CourseDetailPage />} />
+                <Route path="/workshops" element={<WorkshopsPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/contact" element={<ContactPage />} />
                 
-                <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
-                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
-                <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
-                <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
-                <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
-                <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
-                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/shop" element={<PrivateRoute><ShopPage /></PrivateRoute>} />
+                <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetailPage /></PrivateRoute>} />
+                <Route path="/cart" element={<PrivateRoute><CartPage /></PrivateRoute>} />
+                <Route path="/donations" element={<PrivateRoute><DonationsPage /></PrivateRoute>} />
+                <Route path="/payment" element={<PrivateRoute><PaymentPage /></PrivateRoute>} />
+                <Route path="/events" element={<PrivateRoute><EventsPage /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
                 
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
-                    <Dashboard />
+                    <DashboardPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/users" element={
@@ -106,7 +108,7 @@ const App = () => {
                   path="/admin/premium-courses" 
                   element={
                     <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <PremiumCoursesListPage />
+                      <PremiumCoursesPage />
                     </RoleBasedRoute>
                   } 
                 />
