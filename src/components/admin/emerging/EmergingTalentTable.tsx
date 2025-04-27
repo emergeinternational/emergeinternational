@@ -1,22 +1,7 @@
 
 import { Table, TableHeader, TableRow, TableHead, TableBody } from "@/components/ui/table";
 import { EmergingTalentRow } from "./EmergingTalentRow";
-
-interface EmergingTalent {
-  id: string;
-  full_name: string;
-  email: string;
-  phone_number: string | null;
-  age: number | null;
-  category: string;
-  gender: string;
-  instagram: string | null;
-  telegram: string | null;
-  talent_description: string | null;
-  measurements: Record<string, string> | null;
-  portfolio_url: string | null;
-  created_at: string;
-}
+import { EmergingTalent } from "@/hooks/useEmergingTalents";
 
 interface EmergingTalentTableProps {
   submissions: EmergingTalent[];
