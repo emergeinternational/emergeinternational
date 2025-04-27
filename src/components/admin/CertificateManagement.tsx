@@ -1,5 +1,10 @@
+
 import { useState, useEffect } from "react";
-import { getEligibleUsers, updateCertificateApproval } from "../../services/courseService";
+import {
+  getEligibleUsers,
+  updateCertificateApproval,
+  generateCertificate
+} from "../../services/certificateService";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Loader2, 
@@ -9,7 +14,8 @@ import {
   BookOpen, 
   AlertTriangle,
   Eye,
-  Link as ExternalLink
+  Link as ExternalLink,
+  Download
 } from "lucide-react";
 import { 
   Table, 
@@ -44,7 +50,9 @@ const CertificateManagement = () => {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showRevocationDialog, setShowRevocationDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [generatingCertificate, setGeneratingCertificate] = useState(false);
 
   useEffect(() => {
     fetchEligibleUsers();
@@ -72,7 +80,7 @@ const CertificateManagement = () => {
     
     setActionLoading(true);
     try {
-      const success = await updateCertificateApproval(selectedUser.id, true);
+      const success = await updateCertificateApproval(selectedUser.user_id, true);
       if (success) {
         toast({
           title: "Certificate Approved",
@@ -100,7 +108,7 @@ const CertificateManagement = () => {
     
     setActionLoading(true);
     try {
-      const success = await updateCertificateApproval(selectedUser.id, false);
+      const success = await updateCertificateApproval(selectedUser.user_id, false);
       if (success) {
         toast({
           title: "Certificate Revoked",
@@ -120,6 +128,42 @@ const CertificateManagement = () => {
     } finally {
       setActionLoading(false);
       setShowRevocationDialog(false);
+    }
+  };
+
+  const handleGenerateCertificate = async () => {
+    if (!selectedUser) return;
+    
+    setGeneratingCertificate(true);
+    try {
+      // For this example, we're using a fixed course title
+      // In a real application, you might want to select the specific course
+      const courseTitle = "Fashion Design & Model Development";
+      
+      const result = await generateCertificate(
+        selectedUser.user_id,
+        courseTitle
+      );
+      
+      if (result.success) {
+        toast({
+          title: "Certificate Generated",
+          description: `Certificate has been successfully generated for ${selectedUser.profiles.full_name || selectedUser.profiles.email}.`,
+        });
+        await fetchEligibleUsers();
+      } else {
+        throw new Error(result.error || "Failed to generate certificate");
+      }
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate certificate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingCertificate(false);
+      setShowGenerateDialog(false);
     }
   };
 
@@ -278,18 +322,33 @@ const CertificateManagement = () => {
                         </Button>
                         
                         {user.admin_approved ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-500 border-red-300 hover:bg-red-50"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowRevocationDialog(true);
-                            }}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Revoke
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-300 hover:bg-green-50"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowGenerateDialog(true);
+                              }}
+                            >
+                              <Award className="h-4 w-4 mr-1" />
+                              Generate
+                            </Button>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-500 border-red-300 hover:bg-red-50"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowRevocationDialog(true);
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Revoke
+                            </Button>
+                          </>
                         ) : hasMetRequirements(user) && (
                           <Button
                             variant="outline"
@@ -360,6 +419,65 @@ const CertificateManagement = () => {
                 </>
               ) : (
                 "Approve Certificate"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Certificate Dialog */}
+      <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Certificate</DialogTitle>
+            <DialogDescription>
+              Generate a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email}.
+              This will create a downloadable certificate for the user.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="my-4 p-4 bg-gray-50 rounded border">
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium">User:</p>
+                  <p>{selectedUser.profiles.full_name || selectedUser.profiles.email}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Course:</p>
+                  <p>Fashion Design & Model Development</p>
+                </div>
+                <div>
+                  <p className="font-medium">Certificate Format:</p>
+                  <p>PDF - Professional Design with Signature</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowGenerateDialog(false)}
+              disabled={generatingCertificate}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateCertificate}
+              disabled={generatingCertificate || !selectedUser?.admin_approved}
+              className="bg-emerge-gold hover:bg-emerge-gold/90"
+            >
+              {generatingCertificate ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Award className="h-4 w-4 mr-2" />
+                  Generate Certificate
+                </>
               )}
             </Button>
           </DialogFooter>
@@ -536,6 +654,19 @@ const CertificateManagement = () => {
                 className="bg-emerge-gold hover:bg-emerge-gold/90"
               >
                 Approve Certificate
+              </Button>
+            )}
+            
+            {selectedUser?.admin_approved && (
+              <Button 
+                onClick={() => {
+                  setShowDetailsDialog(false);
+                  setShowGenerateDialog(true);
+                }}
+                className="bg-emerge-gold hover:bg-emerge-gold/90"
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Generate Certificate
               </Button>
             )}
             

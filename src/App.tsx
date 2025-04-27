@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -31,6 +32,7 @@ import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Events from "./pages/Events";
 import Profile from "./pages/Profile";
+import Certificates from "./pages/Certificates";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Talents from "./pages/admin/Talents";
@@ -78,6 +80,7 @@ const App = () => {
                 <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
                 <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
                 
                 <Route path="/admin" element={
