@@ -7,14 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils/date";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Award, CheckCircle, ExternalLink } from "lucide-react";
+import { Award, CheckCircle, ExternalLink, BookOpen, AlertTriangle } from "lucide-react";
 
 interface UserCourseDetailsProps {
   user: any;

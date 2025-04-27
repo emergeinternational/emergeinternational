@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   getEligibleUsers,
@@ -7,7 +8,7 @@ import {
 } from "../../services/certificateService";
 import { useToast } from "@/hooks/use-toast";
 import CertificateSettings from "./CertificateSettings";
-import { Award, Loader2 } from "lucide-react";
+import { Award, Loader2, CheckCircle, AlertTriangle, Eye, XCircle } from "lucide-react";
 import { 
   Table, 
   TableBody, 
