@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -70,7 +69,7 @@ const UserList = ({
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <UserStatusBadge 
-                  role={user.role || 'user'} 
+                  role={user.role} 
                   isActive={user.is_active}
                 />
               </TableCell>
@@ -84,7 +83,7 @@ const UserList = ({
                   onRoleChange={(role) => onRoleChange(user.id, role)}
                   isCurrentUser={user.id === currentUserId}
                   currentRole={user.role}
-                  isActive={user.is_active}
+                  isActive={user.is_active || false}
                 />
               </TableCell>
             </TableRow>
