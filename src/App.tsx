@@ -35,6 +35,7 @@ import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
+import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 
 const queryClient = new QueryClient();
 
@@ -48,7 +49,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return !user ? <>{children}</> : <Navigate to="/" replace />;
 };
 
-function App() {
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -128,6 +129,15 @@ function App() {
                   } 
                 />
                 
+                <Route 
+                  path="/admin/premium-courses" 
+                  element={
+                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                      <PremiumCoursesPage />
+                    </RoleBasedRoute>
+                  } 
+                />
+                
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>
             </TooltipProvider>
@@ -136,6 +146,6 @@ function App() {
       </Router>
     </QueryClientProvider>
   );
-}
+};
 
 export default App;

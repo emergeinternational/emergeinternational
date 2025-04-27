@@ -1,0 +1,110 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
+
+export interface PremiumCourse {
+  id: string;
+  title: string;
+  summary?: string;
+  category: CourseCategory;
+  level: CourseLevel;
+  hosting_type: CourseHostingType;
+  image_path?: string;
+  start_date?: string;
+  end_date?: string;
+  student_capacity: number;
+  has_active_students: boolean;
+  is_published: boolean;
+}
+
+export async function uploadPremiumCourseImage(file: File): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('premium_course_images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('premium_course_images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadPremiumCourseImage:', error);
+    return null;
+  }
+}
+
+export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('premium_courses')
+      .insert({
+        ...courseData,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        student_capacity: courseData.student_capacity || 20,
+        level: courseData.level || 'beginner'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating premium course:', error);
+      return null;
+    }
+
+    return data.id;
+  } catch (error) {
+    console.error('Error in createPremiumCourse:', error);
+    return null;
+  }
+}
+
+export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
+  try {
+    const { data, error } = await supabase
+      .from('premium_courses')
+      .select('*')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching premium courses:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in listPublishedPremiumCourses:', error);
+    return [];
+  }
+}
+
+export async function enrollInPremiumCourse(courseId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('premium_course_enrollments')
+      .insert({
+        course_id: courseId,
+        user_id: (await supabase.auth.getUser()).data.user?.id
+      });
+
+    if (error) {
+      console.error('Error enrolling in course:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in enrollInPremiumCourse:', error);
+    return false;
+  }
+}
