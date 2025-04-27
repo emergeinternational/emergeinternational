@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import QrScanner from '@yudiel/react-qr-scanner';
+import { QrReader } from '@yudiel/react-qr-scanner';
 import { validateQRCode } from '@/services/qrCodeService';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,8 +55,8 @@ export const QRCodeScanner: React.FC = () => {
             Start Scanning
           </Button>
         ) : (
-          <QrScanner
-            onDecode={handleScan}
+          <QrReader
+            onResult={(result) => result && handleScan(result.getText())}
             onError={handleError}
             constraints={{
               facingMode: 'environment'

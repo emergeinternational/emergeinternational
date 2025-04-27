@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
@@ -7,7 +8,7 @@ import EventRegistrations from '@/components/admin/EventRegistrations';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useEventForm } from '@/hooks/useEventForm';
 import { useEventsAdmin } from "@/hooks/useEvents";
-import { EventForm } from '@/components/events/EventForm';
+import EventForm from '@/components/events/EventForm';
 import { PaymentInstructionsManager } from '@/components/admin/PaymentInstructionsManager';
 import { QRCodeScanner } from '@/components/admin/QRCodeScanner';
 

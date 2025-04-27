@@ -7,6 +7,24 @@ import QRCode from 'qrcode.react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 
+interface Ticket {
+  id: string;
+  event_id: string;
+  user_id: string;
+  ticket_type: string;
+  amount: number;
+  payment_status: 'pending' | 'approved' | 'rejected';
+  payment_proof_url?: string | null;
+  created_at: string;
+  qr_code?: string | null;
+  qr_code_active?: boolean;
+  events?: {
+    name: string;
+    date: string;
+    location: string | null;
+  };
+}
+
 const UserTickets = () => {
   const { user } = useAuth();
 
@@ -28,7 +46,7 @@ const UserTickets = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Ticket[];
     },
     enabled: !!user,
   });
