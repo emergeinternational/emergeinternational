@@ -6,6 +6,7 @@ interface QrRegistration {
   id: string;
   qr_code?: string | null;
   qr_code_active?: boolean | null;
+  payment_status?: string;
 }
 
 export const generateQRCode = (registration: { id: string, event_id: string }): string => {
@@ -14,7 +15,7 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    // Use explicitly typed query with error handling
+    // Use a more explicit type definition to avoid infinite type instantiation
     const { data, error } = await supabase
       .from('event_registrations')
       .select('id, qr_code_active')
