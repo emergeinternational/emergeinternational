@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -89,9 +90,11 @@ export function PaymentInstructionsManager() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!editingMethod) return;
     
+    // Make sure instructions is always provided as non-optional
     await updateMutation.mutate({
       payment_method: editingMethod,
-      ...values,
+      merchant_code: values.merchant_code,
+      instructions: values.instructions
     });
   };
 
