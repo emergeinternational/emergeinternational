@@ -121,6 +121,13 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
       return { success: false, error: error?.message || "Certificate not found" };
     }
 
+    // Safely access certificate_data only if data exists
+    const certificateData = data?.certificate_data;
+    
+    if (!certificateData) {
+      return { success: false, error: "Certificate data not found" };
+    }
+
     // Using any type to bypass TypeScript's strict checking
     const { error: updateError } = await supabase
       .from('certificates' as any)
@@ -133,7 +140,7 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
 
     return { 
       success: true, 
-      data: data.certificate_data,
+      data: certificateData,
     };
   } catch (error) {
     console.error("Unexpected error in downloadCertificate:", error);
