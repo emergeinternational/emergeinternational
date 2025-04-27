@@ -65,7 +65,7 @@ const App = () => {
               <Toaster />
               <Sonner />
               <Routes>
-                {/* Home routes */}
+                {/* Home routes - make sure Landing is the default route */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/home" element={<Home />} />
                 
