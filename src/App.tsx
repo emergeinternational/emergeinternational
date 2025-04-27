@@ -61,7 +61,7 @@ const App = () => {
               <Sonner />
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
-                <Route path="/home" element={<Home />} />
+                <Route path="/home" element={<Landing />} />
                 
                 <Route path="/education" element={<Education />} />
                 <Route path="/education/course/:id" element={<CourseDetail />} />
