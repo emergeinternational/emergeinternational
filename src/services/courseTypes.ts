@@ -33,6 +33,9 @@ export interface Course {
   content?: string;
   location?: string;
   price?: number;
+  source_id?: string;
+  source_platform?: string;
+  hash_identifier?: string;
 }
 
 export interface ScrapedCourse extends Omit<Course, 'id'> {
@@ -41,6 +44,9 @@ export interface ScrapedCourse extends Omit<Course, 'id'> {
   is_reviewed: boolean;
   is_approved: boolean;
   review_notes?: string;
+  duplicate_of?: string;
+  is_duplicate?: boolean;
+  duplicate_confidence?: number;
 }
 
 export interface CourseProgress {
@@ -88,8 +94,16 @@ export const getDefaultHostingType = (type?: string): CourseHostingType => {
   return validTypes.includes(type as CourseHostingType) ? (type as CourseHostingType) : 'hosted';
 };
 
-// Helper function to safely convert any course data to valid Course type
+export const generateCourseHash = (title: string, source?: string): string => {
+  const normalizedTitle = title.toLowerCase().trim().replace(/\s+/g, '');
+  const normalizedSource = (source || '').toLowerCase().trim();
+  return `${normalizedTitle}-${normalizedSource}`;
+};
+
 export const sanitizeCourseData = (data: any): Course => {
+  const sourceUrl = data.source_url || data.external_link || '';
+  const sourcePlatform = data.source_platform || data.scraper_source || '';
+  
   return {
     id: data.id || '',
     title: data.title || 'Coming Soon',
@@ -100,7 +114,7 @@ export const sanitizeCourseData = (data: any): Course => {
     duration: data.duration || '',
     image_url: data.image_url || '',
     image: data.image_url || '',
-    source_url: data.source_url || '',
+    source_url: sourceUrl,
     content_type: data.content_type || '',
     category_id: data.category_id || '',
     created_at: data.created_at || '',
@@ -110,11 +124,13 @@ export const sanitizeCourseData = (data: any): Course => {
     external_link: data.external_link || data.source_url || '',
     hosting_type: getDefaultHostingType(data.hosting_type),
     is_published: data.is_published !== undefined ? data.is_published : true,
-    price: data.price || 0
+    price: data.price || 0,
+    source_id: data.source_id || '',
+    source_platform: sourcePlatform,
+    hash_identifier: data.hash_identifier || generateCourseHash(data.title || 'Coming Soon', sourcePlatform)
   };
 };
 
-// Helper function to safely convert any course progress data 
 export const sanitizeCourseProgress = (data: any): CourseProgress => {
   const validStatuses = ['not_started', 'started', 'in_progress', 'completed'];
   const status = validStatuses.includes(data.status) ? data.status : 'not_started';

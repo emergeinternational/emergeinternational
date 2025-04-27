@@ -1,20 +1,39 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Course, ScrapedCourse } from "../courseTypes";
+import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
 import { logScraperActivity } from "./courseScraperHelpers";
-import { canUpdateCourse } from "./courseScraperValidation";
+import { canUpdateCourse, checkDuplicateCourse } from "./courseScraperValidation";
 
 // Submit a scraped course to the approval queue
 export const submitScrapedCourse = async (
   course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>
 ): Promise<string | null> => {
   try {
+    // Check if course already exists
+    const { isDuplicate, existingCourseId, confidence } = await checkDuplicateCourse(
+      course.title,
+      course.scraper_source,
+      course.external_link || course.video_embed_url
+    );
+    
+    // Generate hash identifier if not provided
+    const hashIdentifier = course.hash_identifier || 
+      generateCourseHash(course.title, course.scraper_source);
+    
+    // If it's a duplicate with high confidence, mark as duplicate but still add to queue
+    const isDuplicateHighConfidence = isDuplicate && confidence >= 80;
+    
     const { data, error } = await supabase
       .from("scraped_courses")
       .insert({
         ...course,
         is_approved: false,
         is_reviewed: false,
-        level: course.level || 'beginner'
+        level: course.level || 'beginner',
+        hash_identifier: hashIdentifier,
+        is_duplicate: isDuplicate,
+        duplicate_confidence: confidence,
+        duplicate_of: isDuplicate ? existingCourseId : null
       })
       .select()
       .single();
@@ -22,6 +41,21 @@ export const submitScrapedCourse = async (
     if (error) {
       console.error("Error submitting scraped course:", error);
       return null;
+    }
+    
+    // Log the duplicates for analysis
+    if (isDuplicate) {
+      await logScraperActivity(
+        course.scraper_source,
+        "duplicate_detected",
+        isDuplicateHighConfidence ? "warning" : "info",
+        { 
+          scrapedCourseId: data.id, 
+          existingCourseId,
+          confidence,
+          title: course.title
+        }
+      );
     }
     
     return data?.id || null;
@@ -66,6 +100,35 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
       return null;
     }
     
+    // If it's flagged as a duplicate with high confidence, we might want to handle differently
+    if (scrapedCourse.is_duplicate && scrapedCourse.duplicate_confidence >= 90 && scrapedCourse.duplicate_of) {
+      // Update the existing course if needed instead of creating a new one
+      if (await canUpdateCourse(scrapedCourse.duplicate_of)) {
+        const { error: updateError } = await supabase
+          .from("courses")
+          .update({
+            updated_at: new Date().toISOString()
+            // We could update other fields if needed
+          })
+          .eq("id", scrapedCourse.duplicate_of);
+          
+        if (updateError) {
+          console.error("Error updating existing course:", updateError);
+        }
+      }
+      
+      // Mark the scraped course as reviewed and approved
+      await supabase
+        .from("scraped_courses")
+        .update({
+          is_reviewed: true,
+          is_approved: true
+        })
+        .eq("id", id);
+        
+      return scrapedCourse.duplicate_of;
+    }
+    
     // Create a new course from the scraped data
     const { data: newCourse, error: insertError } = await supabase
       .from("courses")
@@ -78,7 +141,11 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
         external_link: scrapedCourse.external_link,
         image_url: scrapedCourse.image_url,
         hosting_type: scrapedCourse.hosting_type,
-        is_published: true
+        is_published: true,
+        source_platform: scrapedCourse.scraper_source,
+        source_url: scrapedCourse.external_link || scrapedCourse.video_embed_url,
+        hash_identifier: scrapedCourse.hash_identifier || 
+          generateCourseHash(scrapedCourse.title, scrapedCourse.scraper_source)
       })
       .select()
       .single();
@@ -151,5 +218,77 @@ export const triggerManualScrape = async (): Promise<{ success: boolean, message
   } catch (error) {
     console.error("Unexpected error triggering scraper:", error);
     return { success: false, message: "Unexpected error occurred" };
+  }
+};
+
+// Get all courses that were automatically scraped from a specific source
+export const getScrapedCoursesBySource = async (source: string): Promise<Course[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("source_platform", source)
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      console.error("Error getting courses by source:", error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error in getScrapedCoursesBySource:", error);
+    return [];
+  }
+};
+
+// Get duplicate detection statistics
+export const getDuplicateStats = async (): Promise<{
+  totalScraped: number;
+  duplicatesDetected: number;
+  duplicatesBySource: Record<string, number>;
+}> => {
+  try {
+    // Get total scraped courses
+    const { count: totalCount, error: totalError } = await supabase
+      .from("scraped_courses")
+      .select("*", { count: 'exact', head: true });
+    
+    // Get duplicates count
+    const { count: duplicateCount, error: duplicateError } = await supabase
+      .from("scraped_courses")
+      .select("*", { count: 'exact', head: true })
+      .eq("is_duplicate", true);
+    
+    // Get duplicates by source
+    const { data: duplicatesBySource, error: sourceError } = await supabase
+      .from("scraped_courses")
+      .select("scraper_source")
+      .eq("is_duplicate", true);
+    
+    if (totalError || duplicateError || sourceError) {
+      console.error("Error getting duplicate stats:", { totalError, duplicateError, sourceError });
+      return { totalScraped: 0, duplicatesDetected: 0, duplicatesBySource: {} };
+    }
+    
+    // Count duplicates by source
+    const sourceCount: Record<string, number> = {};
+    if (duplicatesBySource) {
+      duplicatesBySource.forEach(course => {
+        const source = course.scraper_source;
+        if (source) {
+          sourceCount[source] = (sourceCount[source] || 0) + 1;
+        }
+      });
+    }
+    
+    return {
+      totalScraped: totalCount || 0,
+      duplicatesDetected: duplicateCount || 0,
+      duplicatesBySource: sourceCount
+    };
+  } catch (error) {
+    console.error("Error in getDuplicateStats:", error);
+    return { totalScraped: 0, duplicatesDetected: 0, duplicatesBySource: {} };
   }
 };

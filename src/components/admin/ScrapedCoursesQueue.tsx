@@ -23,7 +23,9 @@ import {
   Eye, 
   Youtube, 
   Link2, 
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Copy
 } from 'lucide-react';
 
 const ScrapedCoursesQueue = () => {
@@ -81,6 +83,38 @@ const ScrapedCoursesQueue = () => {
         return <Link2 className="text-gray-500" size={16} />;
     }
   };
+  
+  // Get duplicate badge if course is a potential duplicate
+  const getDuplicateBadge = (course: ScrapedCourse) => {
+    if (!course.is_duplicate) return null;
+    
+    const confidence = course.duplicate_confidence || 0;
+    
+    if (confidence >= 90) {
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <Copy size={12} />
+          Duplicate ({confidence}%)
+        </Badge>
+      );
+    }
+    
+    if (confidence >= 70) {
+      return (
+        <Badge variant="outline" className="bg-amber-100 text-amber-800 flex items-center gap-1">
+          <AlertTriangle size={12} />
+          Possible Duplicate ({confidence}%)
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge variant="outline" className="bg-blue-100 text-blue-800 flex items-center gap-1">
+        <AlertCircle size={12} />
+        Similar Course ({confidence}%)
+      </Badge>
+    );
+  };
 
   return (
     <Card className="w-full">
@@ -126,17 +160,20 @@ const ScrapedCoursesQueue = () => {
             </TableHeader>
             <TableBody>
               {courses.map((course) => (
-                <TableRow key={course.id}>
+                <TableRow key={course.id} className={course.is_duplicate && course.duplicate_confidence && course.duplicate_confidence >= 90 ? "bg-red-50" : ""}>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {course.image_url && (
-                        <img 
-                          src={course.image_url} 
-                          alt={course.title} 
-                          className="w-10 h-10 object-cover rounded"
-                        />
-                      )}
-                      <span className="font-medium">{course.title}</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center space-x-2">
+                        {course.image_url && (
+                          <img 
+                            src={course.image_url} 
+                            alt={course.title} 
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                        )}
+                        <span className="font-medium">{course.title}</span>
+                      </div>
+                      {getDuplicateBadge(course)}
                     </div>
                   </TableCell>
                   <TableCell>

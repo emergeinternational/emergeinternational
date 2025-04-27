@@ -4,7 +4,9 @@ import { ScrapedCourse } from '@/services/courseTypes';
 import { 
   getPendingScrapedCourses, 
   approveScrapedCourse, 
-  rejectScrapedCourse 
+  rejectScrapedCourse,
+  triggerManualScrape,
+  getDuplicateStats
 } from '@/services/scraping/courseScraperCore';
 import { useToast } from './use-toast';
 
@@ -12,6 +14,16 @@ export const useScrapedCourses = () => {
   const [courses, setCourses] = useState<ScrapedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingAction, setProcessingAction] = useState(false);
+  const [scrapingInProgress, setScrapingInProgress] = useState(false);
+  const [stats, setStats] = useState<{
+    totalScraped: number;
+    duplicatesDetected: number;
+    duplicatesBySource: Record<string, number>;
+  }>({
+    totalScraped: 0,
+    duplicatesDetected: 0,
+    duplicatesBySource: {}
+  });
   const { toast } = useToast();
 
   const fetchPendingCourses = async () => {
@@ -38,7 +50,9 @@ export const useScrapedCourses = () => {
       if (courseId) {
         toast({
           title: "Success",
-          description: "Course approved and published",
+          description: course.is_duplicate && course.duplicate_confidence && course.duplicate_confidence >= 90 
+            ? "Duplicate course handled successfully" 
+            : "Course approved and published",
           variant: "default"
         });
         setCourses(courses.filter(c => c.id !== course.id));
@@ -84,18 +98,60 @@ export const useScrapedCourses = () => {
       setProcessingAction(false);
     }
   };
+  
+  const runManualScrape = async () => {
+    setScrapingInProgress(true);
+    try {
+      const result = await triggerManualScrape();
+      if (result.success) {
+        toast({
+          title: "Scraper Completed",
+          description: "Course scraper completed successfully. Refreshing pending courses...",
+          variant: "default"
+        });
+        await fetchPendingCourses();
+        await fetchStats();
+        return true;
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error("Error running manual scrape:", error);
+      toast({
+        title: "Error",
+        description: "Failed to run course scraper",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setScrapingInProgress(false);
+    }
+  };
+  
+  const fetchStats = async () => {
+    try {
+      const stats = await getDuplicateStats();
+      setStats(stats);
+    } catch (error) {
+      console.error("Error fetching scraper stats:", error);
+    }
+  };
 
   useEffect(() => {
     fetchPendingCourses();
+    fetchStats();
   }, []);
 
   return {
     courses,
     loading,
     processingAction,
+    scrapingInProgress,
+    stats,
     fetchPendingCourses,
     handleApprove,
-    handleReject
+    handleReject,
+    runManualScrape,
+    fetchStats
   };
 };
-
