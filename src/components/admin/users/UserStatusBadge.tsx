@@ -5,10 +5,10 @@ import { Shield, UserCheck, UserX } from "lucide-react";
 
 interface UserStatusBadgeProps {
   role: string;
-  isVerified?: boolean;
+  isActive?: boolean;
 }
 
-const UserStatusBadge = ({ role, isVerified }: UserStatusBadgeProps) => {
+const UserStatusBadge = ({ role, isActive }: UserStatusBadgeProps) => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -41,9 +41,9 @@ const UserStatusBadge = ({ role, isVerified }: UserStatusBadgeProps) => {
         {getRoleIcon(role)}
         {role}
       </Badge>
-      {isVerified !== undefined && (
-        <Badge variant={isVerified ? "success" : "destructive"}>
-          {isVerified ? "Verified" : "Unverified"}
+      {isActive !== undefined && (
+        <Badge variant={isActive ? "success" : "destructive"}>
+          {isActive ? "Active" : "Inactive"}
         </Badge>
       )}
     </div>

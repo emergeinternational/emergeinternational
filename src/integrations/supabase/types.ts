@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          details: Json | null
+          id: string
+          timestamp: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          details?: Json | null
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          details?: Json | null
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       automation_logs: {
         Row: {
           created_at: string | null
@@ -600,6 +627,7 @@ export type Database = {
           full_name: string | null
           id: string
           industry: string | null
+          is_active: boolean | null
           language: string | null
           linkedin_url: string | null
           phone_number: string | null
@@ -622,6 +650,7 @@ export type Database = {
           full_name?: string | null
           id: string
           industry?: string | null
+          is_active?: boolean | null
           language?: string | null
           linkedin_url?: string | null
           phone_number?: string | null
@@ -644,6 +673,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           industry?: string | null
+          is_active?: boolean | null
           language?: string | null
           linkedin_url?: string | null
           phone_number?: string | null
@@ -990,6 +1020,7 @@ export type Database = {
           full_name: string | null
           id: string
           industry: string | null
+          is_active: boolean | null
           language: string | null
           linkedin_url: string | null
           phone_number: string | null
@@ -1020,6 +1051,14 @@ export type Database = {
       has_role: {
         Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      log_user_action: {
+        Args: {
+          action_type: string
+          target_user_id: string
+          action_details: Json
+        }
+        Returns: string
       }
     }
     Enums: {

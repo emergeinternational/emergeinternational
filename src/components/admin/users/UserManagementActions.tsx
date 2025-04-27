@@ -1,22 +1,51 @@
 
 import React from 'react';
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface UserManagementActionsProps {
   onEdit: () => void;
   onDelete: () => void;
+  onStatusChange: (status: boolean) => void;
+  onRoleChange: (role: string) => void;
   isCurrentUser: boolean;
+  currentRole?: string;
+  isActive?: boolean;
 }
 
-const UserManagementActions = ({ onEdit, onDelete, isCurrentUser }: UserManagementActionsProps) => {
+const UserManagementActions = ({
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onRoleChange,
+  isCurrentUser,
+  currentRole = 'user',
+  isActive = true
+}: UserManagementActionsProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -29,15 +58,63 @@ const UserManagementActions = ({ onEdit, onDelete, isCurrentUser }: UserManageme
           <Pencil className="mr-2 h-4 w-4" />
           Edit
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onDelete}
-          className="cursor-pointer text-red-600"
-          disabled={isCurrentUser}
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Shield className="mr-2 h-4 w-4" />
+            Role
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuRadioGroup value={currentRole} onValueChange={onRoleChange}>
+              <DropdownMenuRadioItem value="admin">Admin</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="editor">Editor</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="viewer">Viewer</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="user">User</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuItem 
+          onSelect={(e) => {
+            e.preventDefault();
+            onStatusChange(!isActive);
+          }}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete
+          <div className="flex items-center space-x-2">
+            <span>Active</span>
+            <Switch checked={isActive} />
+          </div>
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+              className="cursor-pointer text-red-600"
+              disabled={isCurrentUser}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the user
+                account and remove their data from our servers.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete} className="bg-red-600">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DropdownMenuContent>
     </DropdownMenu>
   );
