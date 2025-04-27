@@ -26,7 +26,7 @@ const BenefitFields = ({ form, ticketIndex }: { form: any; ticketIndex: number }
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center mb-2">
-        <FormLabel>Benefits</FormLabel>
+        <FormLabel>Benefits (Display Only)</FormLabel>
         <Button
           type="button"
           variant="outline"
@@ -68,6 +68,9 @@ const BenefitFields = ({ form, ticketIndex }: { form: any; ticketIndex: number }
       ) : (
         <p className="text-gray-500 text-sm">No benefits added yet</p>
       )}
+      <p className="text-xs text-muted-foreground mt-1">
+        Note: Benefits are for display purposes only and aren't stored in the database.
+      </p>
     </div>
   );
 };

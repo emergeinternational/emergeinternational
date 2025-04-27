@@ -132,7 +132,6 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
         price: ticket.price,
         description: ticket.description,
         quantity: ticket.quantity,
-        benefits: ticket.benefits || [],
         event_id: eventData_.id
       }));
 
@@ -211,8 +210,8 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
             name: ticket.name,
             price: ticket.price,
             description: ticket.description,
-            quantity: ticket.quantity,
-            benefits: ticket.benefits || []
+            quantity: ticket.quantity
+            // Note: benefits field is removed as it's not in the database schema
           };
           
           const { error: updateTicketError } = await supabase
@@ -230,16 +229,18 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
         } else {
           // Insert new ticket
           console.log(`Creating new ticket for event ${eventId}:`, ticket);
+          const newTicketData = {
+            name: ticket.name,
+            price: ticket.price,
+            description: ticket.description,
+            quantity: ticket.quantity,
+            event_id: eventId
+            // Note: benefits field is removed as it's not in the database schema
+          };
+          
           const { error: insertTicketError } = await supabase
             .from('ticket_types')
-            .insert({
-              name: ticket.name,
-              price: ticket.price,
-              description: ticket.description,
-              quantity: ticket.quantity,
-              benefits: ticket.benefits || [],
-              event_id: eventId
-            });
+            .insert(newTicketData);
             
           if (insertTicketError) {
             console.error('Error creating new ticket type:', insertTicketError);
