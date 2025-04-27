@@ -17,7 +17,7 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Education from "./pages/Education";
-import CourseDetail from "./pages/CourseDetail";  // Add the new import
+import CourseDetail from "./pages/CourseDetail";
 import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Dashboard from "./pages/admin/Dashboard";
@@ -34,7 +34,7 @@ import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
-import CoursesPage from "./pages/admin/CoursesPage";  // Add the new import
+import CoursesPage from "./pages/admin/CoursesPage";
 
 const queryClient = new QueryClient();
 
@@ -63,16 +63,14 @@ function App() {
                 <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
                 <Route path="/home" element={<Landing />} />
                 
-                {/* Public Routes - Accessible without authentication */}
                 <Route path="/education" element={<Education />} />
-                <Route path="/education/course/:id" element={<CourseDetail />} /> {/* Add the new route */}
+                <Route path="/education/course/:id" element={<CourseDetail />} />
                 <Route path="/workshops" element={<Workshops />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/contact" element={<Contact />} />
                 
-                {/* Protected Routes - Require authentication */}
                 <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
                 <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
@@ -81,7 +79,6 @@ function App() {
                 <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 
-                {/* Admin Routes - Require specific roles */}
                 <Route path="/admin" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
                     <Dashboard />
@@ -118,21 +115,18 @@ function App() {
                   </RoleBasedRoute>
                 } />
                 
-                {/* Add the new talent registration route */}
                 <Route path="/talent-registration" element={<TalentRegistration />} />
                 
-                {/* Add the new media submission route */}
                 <Route path="/submit" element={<MediaSubmission />} />
                 
-                {/* Add the new admin courses route */}
-                {
-                  path: "/admin/courses",
-                  element: (
-                    <RoleBasedRoute requiredRoles={["admin", "editor"]}>
+                <Route 
+                  path="/admin/courses" 
+                  element={
+                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
                       <CoursesPage />
                     </RoleBasedRoute>
-                  ),
-                }
+                  } 
+                />
                 
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>

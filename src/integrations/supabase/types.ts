@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      automation_logs: {
+        Row: {
+          created_at: string | null
+          executed_at: string
+          function_name: string
+          id: string
+          results: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          executed_at?: string
+          function_name: string
+          id?: string
+          results?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          executed_at?: string
+          function_name?: string
+          id?: string
+          results?: Json | null
+        }
+        Relationships: []
+      }
       certificate_eligibility: {
         Row: {
           admin_approved: boolean
