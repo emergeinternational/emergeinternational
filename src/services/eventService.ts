@@ -164,6 +164,8 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
 // Update an existing event
 export const updateEvent = async (eventId: string, eventData: UpdateEventPayload): Promise<Event> => {
   try {
+    console.log(`Updating event ${eventId} with data:`, eventData);
+    
     // First, update the event itself (without ticket_types)
     const eventUpdateData = { ...eventData };
     delete eventUpdateData.ticket_types; // Remove ticket_types from event update data
@@ -178,7 +180,7 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
 
     if (eventError) {
       console.error('Error updating event:', eventError);
-      throw eventError;
+      throw new Error(`Error updating event: ${eventError.message}`);
     }
 
     // If ticket types were provided, handle them separately
@@ -189,7 +191,10 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
         .select('*')
         .eq('event_id', eventId);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Error fetching existing tickets:', fetchError);
+        throw new Error(`Error fetching ticket types: ${fetchError.message}`);
+      }
       
       // Create a map of existing tickets by ID for easier lookup
       const existingTicketsMap = new Map();
@@ -197,10 +202,11 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
         existingTicketsMap.set(ticket.id, ticket);
       });
       
-      // Process ticket types
+      // Process each ticket type from the update payload
       for (const ticket of eventData.ticket_types) {
         if (ticket.id && existingTicketsMap.has(ticket.id)) {
           // Update existing ticket
+          console.log(`Updating existing ticket ${ticket.id}:`, ticket);
           const ticketUpdateData = {
             name: ticket.name,
             price: ticket.price,
@@ -214,12 +220,16 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
             .update(ticketUpdateData)
             .eq('id', ticket.id);
             
-          if (updateTicketError) throw updateTicketError;
+          if (updateTicketError) {
+            console.error('Error updating ticket type:', updateTicketError);
+            throw new Error(`Error updating ticket type: ${updateTicketError.message}`);
+          }
           
           // Remove from map to track which ones are processed
           existingTicketsMap.delete(ticket.id);
         } else {
           // Insert new ticket
+          console.log(`Creating new ticket for event ${eventId}:`, ticket);
           const { error: insertTicketError } = await supabase
             .from('ticket_types')
             .insert({
@@ -231,22 +241,26 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
               event_id: eventId
             });
             
-          if (insertTicketError) throw insertTicketError;
+          if (insertTicketError) {
+            console.error('Error creating new ticket type:', insertTicketError);
+            throw new Error(`Error creating ticket type: ${insertTicketError.message}`);
+          }
         }
       }
       
-      // Optional: delete any tickets that weren't included in the update
-      // Uncomment if you want to remove tickets not included in the update
-      /*
+      // Delete any tickets that weren't included in the update
       for (const [id, ticket] of existingTicketsMap.entries()) {
+        console.log(`Deleting ticket ${id} that was not included in the update`);
         const { error: deleteError } = await supabase
           .from('ticket_types')
           .delete()
           .eq('id', id);
           
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error('Error deleting ticket type:', deleteError);
+          throw new Error(`Error deleting ticket type: ${deleteError.message}`);
+        }
       }
-      */
     }
     
     // Fetch the updated event with its ticket types
@@ -259,7 +273,10 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
       .eq('id', eventId)
       .single();
       
-    if (fetchFinalError) throw fetchFinalError;
+    if (fetchFinalError) {
+      console.error('Error fetching updated event:', fetchFinalError);
+      throw new Error(`Error fetching updated event: ${fetchFinalError.message}`);
+    }
     
     return {
       ...finalEvent,
@@ -267,7 +284,7 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
     } as Event;
   } catch (error) {
     console.error(`Error updating event ${eventId}:`, error);
-    throw error;
+    throw error instanceof Error ? error : new Error('Unknown error updating event');
   }
 };
 

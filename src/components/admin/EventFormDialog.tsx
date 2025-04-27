@@ -24,17 +24,15 @@ const EventFormDialog: React.FC = () => {
   });
 
   return (
-    <>
-      <EventForm 
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        form={form}
-        isEditMode={isEditMode}
-        onSubmit={onSubmit}
-        isSubmitting={isSubmitting}
-        currentEvent={currentEvent}
-      />
-    </>
+    <EventForm 
+      open={isDialogOpen}
+      onOpenChange={setIsDialogOpen}
+      form={form}
+      isEditMode={isEditMode}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+      currentEvent={currentEvent}
+    />
   );
 };
 
