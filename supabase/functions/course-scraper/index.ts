@@ -1,4 +1,3 @@
-
 // Deno edge function for course scraping automation
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -74,7 +73,7 @@ const courseSources: CourseSource[] = [
   }
 ];
 
-// Log scraper activity
+// Enhanced logging function for scraper activity
 const logScraperActivity = async (
   supabase: any,
   source: string,
@@ -84,13 +83,15 @@ const logScraperActivity = async (
 ) => {
   try {
     await supabase
-      .from("scraper_logs")
+      .from("automation_logs")
       .insert({
-        source,
-        action,
-        status,
-        details: JSON.stringify(details),
-        created_at: new Date().toISOString()
+        function_name: `scraper:${source}`,
+        executed_at: new Date().toISOString(),
+        results: {
+          action,
+          status,
+          details
+        }
       });
   } catch (error) {
     console.error("Error logging scraper activity:", error);
@@ -347,6 +348,14 @@ serve(async (req) => {
     const activeSources = courseSources.filter(source => source.isActive);
     
     if (activeSources.length === 0) {
+      await logScraperActivity(
+        supabaseClient,
+        "system",
+        "scraper_check",
+        "warning",
+        { message: "No active scraper sources configured" }
+      );
+
       return new Response(
         JSON.stringify({ success: false, message: "No active scraper sources configured" }),
         {
@@ -358,14 +367,29 @@ serve(async (req) => {
     
     // Run scrapers for each active source
     const results = [];
+    const startTime = new Date().toISOString();
     
     for (const source of activeSources) {
+      console.log(`Starting scrape for source: ${source.name}`);
       const result = await runScraper(supabaseClient, source);
       results.push({
         source: source.name,
         ...result
       });
     }
+    
+    // Log the overall scraping session
+    await logScraperActivity(
+      supabaseClient,
+      "system",
+      "scraping_session",
+      "success",
+      {
+        startTime,
+        endTime: new Date().toISOString(),
+        results
+      }
+    );
     
     // Return results
     return new Response(
