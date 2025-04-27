@@ -110,7 +110,6 @@ export type Database = {
           id: string
           image_url: string | null
           is_published: boolean
-          level: Database["public"]["Enums"]["course_level"]
           summary: string | null
           title: string
           updated_at: string | null
@@ -124,7 +123,6 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_published?: boolean
-          level: Database["public"]["Enums"]["course_level"]
           summary?: string | null
           title: string
           updated_at?: string | null
@@ -138,7 +136,6 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_published?: boolean
-          level?: Database["public"]["Enums"]["course_level"]
           summary?: string | null
           title?: string
           updated_at?: string | null
@@ -541,6 +538,60 @@ export type Database = {
         }
         Relationships: []
       }
+      scraped_courses: {
+        Row: {
+          category: Database["public"]["Enums"]["course_category"]
+          created_at: string | null
+          external_link: string | null
+          hosting_type: Database["public"]["Enums"]["course_hosting_type"]
+          id: string
+          image_url: string | null
+          is_approved: boolean
+          is_reviewed: boolean
+          level: Database["public"]["Enums"]["course_level"]
+          review_notes: string | null
+          scraper_source: string
+          summary: string | null
+          title: string
+          updated_at: string | null
+          video_embed_url: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["course_category"]
+          created_at?: string | null
+          external_link?: string | null
+          hosting_type: Database["public"]["Enums"]["course_hosting_type"]
+          id?: string
+          image_url?: string | null
+          is_approved?: boolean
+          is_reviewed?: boolean
+          level: Database["public"]["Enums"]["course_level"]
+          review_notes?: string | null
+          scraper_source: string
+          summary?: string | null
+          title: string
+          updated_at?: string | null
+          video_embed_url?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["course_category"]
+          created_at?: string | null
+          external_link?: string | null
+          hosting_type?: Database["public"]["Enums"]["course_hosting_type"]
+          id?: string
+          image_url?: string | null
+          is_approved?: boolean
+          is_reviewed?: boolean
+          level?: Database["public"]["Enums"]["course_level"]
+          review_notes?: string | null
+          scraper_source?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string | null
+          video_embed_url?: string | null
+        }
+        Relationships: []
+      }
       shipping_addresses: {
         Row: {
           address_line1: string
@@ -829,6 +880,15 @@ export type Database = {
         | "musical_artist"
         | "fine_artist"
         | "event_planner"
+      course_category:
+        | "model"
+        | "designer"
+        | "photographer"
+        | "videographer"
+        | "musical_artist"
+        | "fine_artist"
+        | "event_planner"
+      course_hosting_type: "hosted" | "embedded" | "external"
       course_level: "beginner" | "intermediate" | "expert"
       hosting_type: "hosted" | "embedded" | "external"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
@@ -957,6 +1017,16 @@ export const Constants = {
         "fine_artist",
         "event_planner",
       ],
+      course_category: [
+        "model",
+        "designer",
+        "photographer",
+        "videographer",
+        "musical_artist",
+        "fine_artist",
+        "event_planner",
+      ],
+      course_hosting_type: ["hosted", "embedded", "external"],
       course_level: ["beginner", "intermediate", "expert"],
       hosting_type: ["hosted", "embedded", "external"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],

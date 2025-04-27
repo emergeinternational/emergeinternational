@@ -1,8 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse } from "./courseTypes";
 import { trackCourseEngagement } from "./courseDataService";
-import { useToast } from "@/hooks/use-toast";
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
@@ -47,22 +45,22 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
 // Submit a scraped course to the approval queue
 export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>): Promise<string | null> => {
   try {
-    // Type assertion to any to work around the type limitations with the Supabase client
-    const { data, error } = await (supabase
-      .from("scraped_courses" as any)
+    const { data, error } = await supabase
+      .from("scraped_courses")
       .insert({
         ...course,
         is_approved: false,
         is_reviewed: false
       })
-      .select() as any);
+      .select()
+      .single();
     
     if (error) {
       console.error("Error submitting scraped course:", error);
       return null;
     }
     
-    return data?.[0]?.id || null;
+    return data?.id || null;
   } catch (error) {
     console.error("Error in submitScrapedCourse:", error);
     return null;
@@ -72,19 +70,18 @@ export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'cr
 // Get all pending scraped courses
 export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
   try {
-    // Type assertion to overcome the Supabase client limitations
-    const { data, error } = await (supabase
-      .from("scraped_courses" as any)
+    const { data, error } = await supabase
+      .from("scraped_courses")
       .select("*")
       .eq("is_reviewed", false)
-      .order("created_at", { ascending: false }) as any);
+      .order("created_at", { ascending: false });
     
     if (error) {
       console.error("Error getting pending scraped courses:", error);
       return [];
     }
     
-    return data as ScrapedCourse[];
+    return data;
   } catch (error) {
     console.error("Error in getPendingScrapedCourses:", error);
     return [];
@@ -94,12 +91,11 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
 // Approve a scraped course
 export const approveScrapedCourse = async (id: string): Promise<string | null> => {
   try {
-    // Type assertion to overcome the Supabase client limitations
-    const { data: scrapedCourse, error: fetchError } = await (supabase
-      .from("scraped_courses" as any)
+    const { data: scrapedCourse, error: fetchError } = await supabase
+      .from("scraped_courses")
       .select("*")
       .eq("id", id)
-      .single() as any);
+      .single();
     
     if (fetchError || !scrapedCourse) {
       console.error("Error fetching scraped course:", fetchError);
@@ -129,13 +125,13 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
     }
     
     // Mark the scraped course as reviewed and approved
-    const { error: updateError } = await (supabase
-      .from("scraped_courses" as any)
+    const { error: updateError } = await supabase
+      .from("scraped_courses")
       .update({
         is_reviewed: true,
         is_approved: true
       })
-      .eq("id", id) as any);
+      .eq("id", id);
     
     if (updateError) {
       console.error("Error updating scraped course:", updateError);
@@ -151,14 +147,14 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
 // Reject a scraped course
 export const rejectScrapedCourse = async (id: string, reason: string): Promise<boolean> => {
   try {
-    const { error } = await (supabase
-      .from("scraped_courses" as any)
+    const { error } = await supabase
+      .from("scraped_courses")
       .update({
         is_reviewed: true,
         is_approved: false,
         review_notes: reason
       })
-      .eq("id", id) as any);
+      .eq("id", id);
     
     if (error) {
       console.error("Error rejecting scraped course:", error);
@@ -180,7 +176,7 @@ export const logScraperActivity = async (
   details: any
 ): Promise<void> => {
   try {
-    await (supabase
+    await supabase
       .from("automation_logs")
       .insert({
         function_name: `scraper:${source}`,
@@ -189,7 +185,7 @@ export const logScraperActivity = async (
           status,
           details
         }
-      }) as any);
+      });
   } catch (error) {
     console.error("Error logging scraper activity:", error);
   }
@@ -198,17 +194,9 @@ export const logScraperActivity = async (
 // Create a verified course directly (for manual course creation)
 export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
   try {
-    // Need to cast the courseData to make TypeScript happy with the strict category types
-    const typedCourseData = {
-      ...courseData,
-      category: courseData.category as any,
-      level: courseData.level as any,
-      hosting_type: courseData.hosting_type as 'hosted' | 'embedded' | 'external'
-    };
-    
     const { data, error } = await supabase
       .from("courses")
-      .insert(typedCourseData)
+      .insert(courseData)
       .select()
       .single();
     
