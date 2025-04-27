@@ -131,7 +131,6 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
     }
 
     // Create a course object from the education_content data
-    // The new fields might not exist in older records
     return {
       id: data.id,
       title: data.title,
@@ -144,10 +143,10 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       category_id: data.category_id,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      // Use optional chaining to safely access properties that might not exist
-      video_embed_url: data.video_embed_url ?? undefined,
-      external_link: data.external_link ?? undefined,
-      hosting_type: (data.hosting_type as 'hosted' | 'embedded' | 'external') ?? 'hosted'
+      // Handle fields that might not exist in older records
+      video_embed_url: data.video_embed_url,
+      external_link: data.external_link,
+      hosting_type: data.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted'
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
@@ -202,10 +201,10 @@ export const getAllCourses = async (): Promise<Course[]> => {
       category_id: item.category_id,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      // Safely handle potentially missing fields
-      video_embed_url: item.video_embed_url ?? undefined,
-      external_link: item.external_link ?? undefined,
-      hosting_type: (item.hosting_type as 'hosted' | 'embedded' | 'external') ?? 'hosted',
+      // Handle fields that might not exist in older records
+      video_embed_url: item.video_embed_url,
+      external_link: item.external_link,
+      hosting_type: item.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted',
       career_interests: []
     }));
   } catch (error) {
@@ -331,6 +330,9 @@ export const getCourses = async (
   careerInterest?: string
 ): Promise<Course[]> => {
   try {
+    // Valid career interests list
+    const validCareerInterests = ["model", "designer", "photographer", "videographer", "musical_artist", "fine_artist", "event_planner"];
+    
     // First try the courses table if it exists
     let courseQuery = supabase.from("courses").select("*");
 
@@ -367,7 +369,6 @@ export const getCourses = async (
 
       if (careerInterest && careerInterest !== "all") {
         // Ensure careerInterest is one of the allowed values
-        const validCareerInterests = ["model", "designer", "photographer", "videographer", "musical_artist", "fine_artist", "event_planner"];
         const safeCareerInterest = validCareerInterests.includes(careerInterest) ? careerInterest : "all";
         
         if (safeCareerInterest !== "all") {
@@ -423,10 +424,10 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
-          // Safely handle potentially missing fields
-          video_embed_url: item.video_embed_url ?? undefined,
-          external_link: item.external_link ?? undefined,
-          hosting_type: (item.hosting_type as 'hosted' | 'embedded' | 'external') ?? 'hosted',
+          // Handle fields that might not exist in older records
+          video_embed_url: item.video_embed_url,
+          external_link: item.external_link,
+          hosting_type: item.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted',
           career_interests: []
         };
       })
@@ -434,7 +435,6 @@ export const getCourses = async (
 
     if (careerInterest && careerInterest !== "all") {
       // Ensure careerInterest is one of the allowed values
-      const validCareerInterests = ["model", "designer", "photographer", "videographer", "musical_artist", "fine_artist", "event_planner"];
       const safeCareerInterest = validCareerInterests.includes(careerInterest) ? careerInterest : "all";
       
       if (safeCareerInterest !== "all") {
