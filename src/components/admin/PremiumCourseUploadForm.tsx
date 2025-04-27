@@ -61,6 +61,19 @@ export default function PremiumCourseUploadForm() {
         }
       }
 
+      const parsedStartDate = startDate ? new Date(startDate) : undefined;
+      const parsedEndDate = endDate ? new Date(endDate) : undefined;
+
+      if (parsedStartDate && parsedEndDate && parsedStartDate > parsedEndDate) {
+        toast({
+          title: "Error",
+          description: "Start date cannot be after end date",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const courseData = {
         title,
         summary,
@@ -68,8 +81,8 @@ export default function PremiumCourseUploadForm() {
         level: level as CourseLevel,
         hosting_type: hostingType as CourseHostingType,
         image_path: imagePath,
-        start_date: startDate?.toISOString(),
-        end_date: endDate?.toISOString(),
+        start_date: startDate ? new Date(startDate).toISOString() : null,
+        end_date: endDate ? new Date(endDate).toISOString() : null,
         student_capacity: parseInt(studentCapacity) || 20,
         is_published: false
       };
@@ -102,7 +115,7 @@ export default function PremiumCourseUploadForm() {
   };
 
   return (
-    <Form>
+    <div className="space-y-8">
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid grid-cols-1 gap-4">
           <div>
@@ -211,7 +224,18 @@ export default function PremiumCourseUploadForm() {
                 <Input
                   type="date"
                   value={startDate ? startDate.split('T')[0] : ''}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    const newStartDate = e.target.value;
+                    if (endDate && new Date(newStartDate) > new Date(endDate)) {
+                      toast({
+                        title: "Warning",
+                        description: "Start date cannot be after end date",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    setStartDate(newStartDate);
+                  }}
                 />
               </FormControl>
               <FormMessage />
@@ -225,7 +249,18 @@ export default function PremiumCourseUploadForm() {
                 <Input
                   type="date"
                   value={endDate ? endDate.split('T')[0] : ''}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    const newEndDate = e.target.value;
+                    if (startDate && new Date(newEndDate) < new Date(startDate)) {
+                      toast({
+                        title: "Warning",
+                        description: "End date cannot be before start date",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    setEndDate(newEndDate);
+                  }}
                   min={startDate} // Prevent end date before start date
                 />
               </FormControl>
@@ -253,6 +288,6 @@ export default function PremiumCourseUploadForm() {
           {isSubmitting ? "Submitting..." : "Submit"}
         </Button>
       </form>
-    </Form>
+    </div>
   );
 }
