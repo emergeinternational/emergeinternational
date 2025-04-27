@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { AlertTriangle, Calendar, Heart, Settings, Users, UserCheck, Award } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -179,7 +178,6 @@ const Dashboard = () => {
                 </Card>
               )}
               
-              {/* New Talent Management Card */}
               {hasRole(['admin', 'editor']) && (
                 <Card>
                   <CardHeader className="pb-2">
@@ -203,7 +201,6 @@ const Dashboard = () => {
                 </Card>
               )}
               
-              {/* New Certificate Management Card */}
               {hasRole(['admin', 'editor']) && (
                 <Card>
                   <CardHeader className="pb-2">
@@ -361,7 +358,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : events && events.length > 0 ? (
-                <EventsSection events={events} />
+                <EventsSection />
               ) : (
                 <div className="bg-white p-8 text-center rounded shadow">
                   No events found. Add your first event.
