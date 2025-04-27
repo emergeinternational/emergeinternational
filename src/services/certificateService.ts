@@ -131,9 +131,17 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
       console.warn("Failed to update download timestamp:", updateError);
     }
 
+    // Type safety check for certificate_data
+    if (!('certificate_data' in data)) {
+      return { 
+        success: false, 
+        error: "Certificate data not found in response"
+      };
+    }
+
     return { 
       success: true, 
-      data: data.certificate_data,
+      data: data.certificate_data as string,
     };
   } catch (error) {
     console.error("Unexpected error in downloadCertificate:", error);
