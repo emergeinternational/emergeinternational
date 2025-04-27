@@ -217,16 +217,31 @@ const EventsPage = () => {
       });
     } else {
       // Create new event
-      createEventMutation.mutate({
-        ...values,
-        ticket_types: values.ticketTypes?.map(ticket => ({
+      const eventPayload: CreateEventPayload = {
+        name: values.name,
+        description: values.description,
+        date: values.date,
+        location: values.location,
+        capacity: values.capacity,
+        is_featured: values.is_featured,
+        category: values.category,
+        image_url: values.image_url,
+        currency_code: values.currency_code,
+        max_tickets: values.max_tickets
+      };
+      
+      // Only add ticket_types if they exist
+      if (values.ticketTypes && values.ticketTypes.length > 0) {
+        eventPayload.ticket_types = values.ticketTypes.map(ticket => ({
           name: ticket.name,
           price: ticket.price,
           description: ticket.description,
           quantity: ticket.quantity,
           benefits: ticket.benefits
-        }))
-      });
+        }));
+      }
+      
+      createEventMutation.mutate(eventPayload);
     }
   };
 

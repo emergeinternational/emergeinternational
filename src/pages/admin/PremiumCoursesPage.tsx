@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +30,10 @@ interface PremiumCourse {
   created_by?: string;
 }
 
+interface EnrollmentCount {
+  count: number;
+}
+
 const PremiumCoursesPage = () => {
   const { toast } = useToast();
   const { hasRole } = useAuth();
@@ -49,13 +54,22 @@ const PremiumCoursesPage = () => {
 
       if (error) throw error;
 
-      return data.map(course => ({
-        ...course,
-        description: course.summary || '',
-        status: course.is_published ? 'published' : 'draft',
-        price: 0,
-        enrollments_count: course.enrollments?.[0]?.count || 0
-      })) as PremiumCourse[];
+      return data.map(course => {
+        // Safely handle the enrollments count
+        let enrollmentsCount = 0;
+        if (course.enrollments && course.enrollments[0] && 
+            typeof course.enrollments[0].count === 'number') {
+          enrollmentsCount = course.enrollments[0].count;
+        }
+        
+        return {
+          ...course,
+          description: course.summary || '',
+          status: course.is_published ? 'published' : 'draft',
+          price: 0, // Placeholder value
+          enrollments_count: enrollmentsCount
+        };
+      }) as PremiumCourse[];
     }
   });
 
