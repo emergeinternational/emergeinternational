@@ -13,7 +13,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
       .select('id')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
-      .maybeSingle();
+      .single();
 
     if (error) {
       console.log("QR code validation error:", error);
@@ -30,7 +30,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
       .from('event_registrations')
       .select('qr_code_active')
       .eq('id', data.id)
-      .maybeSingle();
+      .single();
 
     if (activeError) {
       console.error("Error checking QR code active status:", activeError);
