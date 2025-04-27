@@ -55,6 +55,33 @@ const CertificateManagement = () => {
     denied: 0
   });
 
+  const handleManualCertificateIssue = async (user: any) => {
+    setActionLoading(true);
+    try {
+      const courseTitle = "Fashion Design & Model Development";
+      const result = await generateCertificate(user.user_id, courseTitle);
+      
+      if (result.success) {
+        toast({
+          title: "Certificate Issued",
+          description: `Certificate has been manually issued for ${user.profiles?.full_name || user.profiles?.email || "User"}.`,
+        });
+        await fetchEligibleUsers();
+      } else {
+        throw new Error(result.error || "Failed to issue certificate");
+      }
+    } catch (error) {
+      console.error("Error issuing certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to issue certificate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEligibleUsers();
     fetchCertificateSettings();
@@ -334,26 +361,40 @@ const CertificateManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <CertificateActions 
-                        user={user}
-                        hasMetRequirements={hasMetRequirements(user)}
-                        onViewDetails={() => {
-                          setSelectedUser(user);
-                          setShowDetailsDialog(true);
-                        }}
-                        onApprove={() => {
-                          setSelectedUser(user);
-                          setShowApprovalDialog(true);
-                        }}
-                        onGenerate={() => {
-                          setSelectedUser(user);
-                          setShowGenerateDialog(true);
-                        }}
-                        onRevoke={() => {
-                          setSelectedUser(user);
-                          setShowRevocationDialog(true);
-                        }}
-                      />
+                      <div className="flex items-center space-x-2">
+                        <CertificateActions 
+                          user={user}
+                          hasMetRequirements={hasMetRequirements(user)}
+                          onViewDetails={() => {
+                            setSelectedUser(user);
+                            setShowDetailsDialog(true);
+                          }}
+                          onApprove={() => {
+                            setSelectedUser(user);
+                            setShowApprovalDialog(true);
+                          }}
+                          onGenerate={() => {
+                            setSelectedUser(user);
+                            setShowGenerateDialog(true);
+                          }}
+                          onRevoke={() => {
+                            setSelectedUser(user);
+                            setShowRevocationDialog(true);
+                          }}
+                        />
+                        
+                        {/* Add Manual Certificate Issuance Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManualCertificateIssue(user)}
+                          disabled={actionLoading}
+                          className="border-yellow-300 hover:bg-yellow-50"
+                        >
+                          <Award className="h-4 w-4 mr-2 text-yellow-600" />
+                          Manual Issue
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
