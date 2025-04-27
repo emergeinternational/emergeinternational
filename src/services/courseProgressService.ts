@@ -1,6 +1,12 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { CourseProgress } from "./courseTypes";
+
+const validateStatus = (status: string): CourseProgress['status'] => {
+  const validStatuses = ['not_started', 'started', 'in_progress', 'completed'];
+  return validStatuses.includes(status as CourseProgress['status']) 
+    ? (status as CourseProgress['status']) 
+    : 'not_started';
+};
 
 export const calculateCourseCompletion = (progress: number): string => {
   if (progress < 25) {
@@ -28,10 +34,10 @@ export const getUserCourseProgress = async (userId?: string): Promise<CourseProg
       return [];
     }
 
-    // Ensure all items have a progress field with a numeric value
     return data.map((item): CourseProgress => ({
       ...item,
-      progress: typeof item.progress === 'number' ? item.progress : 0
+      progress: typeof item.progress === 'number' ? item.progress : 0,
+      status: validateStatus(item.status || 'not_started')
     }));
   } catch (error) {
     console.error("Unexpected error in getUserCourseProgress:", error);
@@ -129,7 +135,8 @@ export const getCourseProgress = async (
 
     return {
       ...data,
-      progress: typeof data.progress === 'number' ? data.progress : 0
+      progress: typeof data.progress === 'number' ? data.progress : 0,
+      status: validateStatus(data.status || 'not_started')
     } as CourseProgress;
   } catch (error) {
     console.error("Unexpected error in getCourseProgress:", error);

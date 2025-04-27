@@ -3,6 +3,22 @@ import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHosting
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
 
+// Helper function to ensure valid category
+const validateCategory = (category: string): CourseCategory => {
+  const validCategories: CourseCategory[] = ['model', 'designer', 'photographer', 'videographer', 'musical_artist', 'fine_artist', 'event_planner'];
+  return validCategories.includes(category as CourseCategory) 
+    ? (category as CourseCategory) 
+    : 'model';
+};
+
+// Helper function to ensure valid level
+const validateLevel = (level: string): CourseLevel => {
+  const validLevels: CourseLevel[] = ['beginner', 'intermediate', 'expert'];
+  return validLevels.includes(level as CourseLevel) 
+    ? (level as CourseLevel) 
+    : 'beginner';
+};
+
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
     const { data, error } = await supabase
@@ -100,7 +116,12 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       .maybeSingle();
 
     if (courseData) {
-      return courseData as Course;
+      return {
+        ...courseData,
+        category: validateCategory(courseData.category),
+        level: validateLevel(courseData.level || 'beginner'),
+        hosting_type: courseData.hosting_type || 'hosted'
+      } as Course;
     }
 
     const { data, error } = await supabase
@@ -144,20 +165,11 @@ export const getAllCourses = async (): Promise<Course[]> => {
 
     if (coursesData && coursesData.length > 0) {
       return coursesData.map(item => ({
-        id: item.id,
-        title: item.title,
-        summary: item.summary,
-        category: item.category,
-        level: item.level,
-        image_url: item.image_url,
-        video_embed_url: item.video_embed_url,
-        external_link: item.external_link,
-        hosting_type: item.hosting_type,
-        is_published: item.is_published,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        career_interests: []
-      }));
+        ...item,
+        category: validateCategory(item.category),
+        level: validateLevel(item.level || 'beginner'),
+        hosting_type: item.hosting_type || 'hosted'
+      })) as Course[];
     }
 
     const { data, error } = await supabase
