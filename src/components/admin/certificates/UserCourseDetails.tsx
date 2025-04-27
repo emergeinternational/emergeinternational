@@ -24,7 +24,7 @@ interface UserCourseDetailsProps {
   };
 }
 
-export const UserCourseDetails = ({ user, certificateRequirements }: UserCourseDetailsProps) => {
+export const UserCourseDetails = ({ user, certificateRequirements = { min_courses_required: 5, min_workshops_required: 3 } }: UserCourseDetailsProps) => {
   const getUserCourseDetails = (user: any) => ({
     embeddedCoursesWatched: [
       { title: "Fashion Design 101", watchPercent: 95, date: "2023-05-15" },
@@ -40,6 +40,10 @@ export const UserCourseDetails = ({ user, certificateRequirements }: UserCourseD
     ],
   });
 
+  // Ensure certificate requirements have default values if undefined
+  const minCoursesRequired = certificateRequirements?.min_courses_required || 5;
+  const minWorkshopsRequired = certificateRequirements?.min_workshops_required || 3;
+
   return (
     <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
       <div className="grid grid-cols-2 gap-4">
@@ -49,7 +53,7 @@ export const UserCourseDetails = ({ user, certificateRequirements }: UserCourseD
             Online Course Progress
           </h3>
           <p className="text-lg font-bold mt-1">{user.online_courses_completed || 0} courses</p>
-          <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_courses_required}</p>
+          <p className="text-xs text-gray-500">Minimum required: {minCoursesRequired}</p>
         </div>
         <div className="p-4 bg-gray-50 rounded border">
           <h3 className="font-medium flex items-center">
@@ -57,7 +61,7 @@ export const UserCourseDetails = ({ user, certificateRequirements }: UserCourseD
             Workshop Attendance
           </h3>
           <p className="text-lg font-bold mt-1">{user.workshops_completed || 0} workshops</p>
-          <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_workshops_required}</p>
+          <p className="text-xs text-gray-500">Minimum required: {minWorkshopsRequired}</p>
         </div>
       </div>
       

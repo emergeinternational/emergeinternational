@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Award, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { 
@@ -337,7 +338,7 @@ const CertificateManagement = () => {
                     </TableCell>
                     <TableCell>
                       {hasMetRequirements(user) ? (
-                        <Badge variant="success" className="flex items-center">
+                        <Badge className="flex items-center bg-green-500 text-white hover:bg-green-600">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           All Met
                         </Badge>
@@ -350,7 +351,7 @@ const CertificateManagement = () => {
                     </TableCell>
                     <TableCell>
                       {user.admin_approved ? (
-                        <Badge variant="success" className="flex items-center">
+                        <Badge className="flex items-center bg-green-500 text-white hover:bg-green-600">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Approved
                         </Badge>
