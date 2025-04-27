@@ -22,7 +22,7 @@ export interface Course {
   created_at?: string;
   updated_at?: string;
   source_url?: string;
-  image_url: string;
+  image_url?: string;
   content_type?: string;
   category_id?: string;
   career_interests?: string[];
@@ -71,4 +71,3 @@ export interface Review {
   comment?: string;
   created_at: string;
 }
-
