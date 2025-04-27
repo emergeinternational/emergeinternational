@@ -20,4 +20,21 @@ export {
   calculateCourseCompletion
 } from './courseProgressService';
 
+export {
+  submitScrapedCourse,
+  getPendingScrapedCourses,
+  approveScrapedCourse,
+  rejectScrapedCourse
+} from './scraping/courseScraperCore';
+
+export {
+  canUpdateCourse
+} from './scraping/courseScraperValidation';
+
+export {
+  logScraperActivity,
+  createVerifiedCourse
+} from './scraping/courseScraperHelpers';
+
 export type { Course, CourseProgress, Category, Review } from './courseTypes';
+

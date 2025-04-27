@@ -1,6 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,17 +10,10 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from '@/components/ui/textarea';
-import { getPendingScrapedCourses, approveScrapedCourse, rejectScrapedCourse } from '@/services/courseScraperService';
+import { Badge } from '@/components/ui/badge';
+import { useScrapedCourses } from '@/hooks/useScrapedCourses';
+import CoursePreviewDialog from './CoursePreviewDialog';
+import RejectionDialog from './RejectionDialog';
 import { ScrapedCourse } from '@/services/courseTypes';
 import { 
   Check, 
@@ -33,103 +24,15 @@ import {
   Link2, 
   AlertCircle
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 const ScrapedCoursesQueue = () => {
-  const [courses, setCourses] = useState<ScrapedCourse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { courses, loading, processingAction, fetchPendingCourses, handleApprove, handleReject } = useScrapedCourses();
   const [selectedCourse, setSelectedCourse] = useState<ScrapedCourse | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
-  const [processingAction, setProcessingAction] = useState(false);
-  const { toast } = useToast();
-  
-  // Fetch pending courses
-  const fetchPendingCourses = async () => {
-    setLoading(true);
-    try {
-      const pendingCourses = await getPendingScrapedCourses();
-      setCourses(pendingCourses);
-    } catch (error) {
-      console.error("Error fetching pending courses:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pending courses",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Load courses on component mount
-  useEffect(() => {
-    fetchPendingCourses();
-  }, []);
-  
-  // Handle course approval
-  const handleApprove = async (course: ScrapedCourse) => {
-    setProcessingAction(true);
-    try {
-      const courseId = await approveScrapedCourse(course.id);
-      if (courseId) {
-        toast({
-          title: "Success",
-          description: "Course approved and published",
-          variant: "default"
-        });
-        // Remove from list
-        setCourses(courses.filter(c => c.id !== course.id));
-      } else {
-        throw new Error("Failed to approve course");
-      }
-    } catch (error) {
-      console.error("Error approving course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve course",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingAction(false);
-    }
-  };
-  
-  // Handle course rejection
-  const handleReject = async () => {
-    if (!selectedCourse) return;
-    
-    setProcessingAction(true);
-    try {
-      const success = await rejectScrapedCourse(selectedCourse.id, rejectionReason);
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Course rejected",
-          variant: "default"
-        });
-        // Remove from list
-        setCourses(courses.filter(c => c.id !== selectedCourse.id));
-        setIsRejectionDialogOpen(false);
-        setRejectionReason('');
-        setSelectedCourse(null);
-      } else {
-        throw new Error("Failed to reject course");
-      }
-    } catch (error) {
-      console.error("Error rejecting course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject course",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingAction(false);
-    }
-  };
-  
+
   // Preview content
   const handlePreview = (course: ScrapedCourse) => {
     setSelectedCourse(course);
@@ -159,7 +62,7 @@ const ScrapedCoursesQueue = () => {
     
     setIsPreviewDialogOpen(true);
   };
-  
+
   // Get source icon
   const getSourceIcon = (source: string) => {
     switch (source.toLowerCase()) {
@@ -177,7 +80,7 @@ const ScrapedCoursesQueue = () => {
         return <Link2 className="text-gray-500" size={16} />;
     }
   };
-  
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -296,113 +199,37 @@ const ScrapedCoursesQueue = () => {
           </Table>
         )}
         
-        {/* Rejection Dialog */}
-        <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reject Course</DialogTitle>
-              <DialogDescription>
-                Please provide a reason for rejecting "{selectedCourse?.title}"
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Enter rejection reason"
-                rows={4}
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsRejectionDialogOpen(false);
-                  setRejectionReason('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleReject}
-                disabled={processingAction || !rejectionReason.trim()}
-              >
-                {processingAction ? 'Processing...' : 'Reject Course'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CoursePreviewDialog
+          isOpen={isPreviewDialogOpen}
+          onOpenChange={setIsPreviewDialogOpen}
+          course={selectedCourse}
+          onApprove={handleApprove}
+          onReject={() => {
+            setIsPreviewDialogOpen(false);
+            setIsRejectionDialogOpen(true);
+          }}
+          processingAction={processingAction}
+          previewUrl={previewUrl}
+        />
         
-        {/* Preview Dialog */}
-        <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>{selectedCourse?.title}</DialogTitle>
-              <DialogDescription>
-                {selectedCourse?.summary}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              {selectedCourse?.hosting_type === 'embedded' && previewUrl ? (
-                <div className="aspect-video">
-                  <iframe
-                    src={previewUrl}
-                    className="w-full h-full"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              ) : selectedCourse?.hosting_type === 'external' ? (
-                <div className="flex flex-col items-center justify-center p-4 border rounded-md">
-                  <ExternalLink className="h-16 w-16 text-gray-400 mb-2" />
-                  <p className="text-center text-sm text-gray-500 mb-3">
-                    External course hosted at:
-                  </p>
-                  <a
-                    href={previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-emerge-gold hover:underline break-all text-center"
-                  >
-                    {previewUrl}
-                  </a>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  No preview available
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <div className="flex w-full justify-between">
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setIsPreviewDialogOpen(false);
-                    setIsRejectionDialogOpen(true);
-                  }}
-                >
-                  <X size={16} className="mr-1" />
-                  Reject
-                </Button>
-                <Button
-                  variant="default"
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={() => {
-                    setIsPreviewDialogOpen(false);
-                    if (selectedCourse) handleApprove(selectedCourse);
-                  }}
-                  disabled={processingAction}
-                >
-                  <Check size={16} className="mr-1" />
-                  Approve
-                </Button>
-              </div>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <RejectionDialog
+          isOpen={isRejectionDialogOpen}
+          onOpenChange={setIsRejectionDialogOpen}
+          courseName={selectedCourse?.title || ''}
+          reason={rejectionReason}
+          onReasonChange={setRejectionReason}
+          onConfirm={async () => {
+            if (selectedCourse) {
+              const success = await handleReject(selectedCourse.id, rejectionReason);
+              if (success) {
+                setIsRejectionDialogOpen(false);
+                setRejectionReason('');
+                setSelectedCourse(null);
+              }
+            }
+          }}
+          processingAction={processingAction}
+        />
       </CardContent>
     </Card>
   );
