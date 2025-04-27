@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface CourseCardProps {
   id: string | number;
@@ -25,17 +26,13 @@ const CourseCard = ({
   isUrlValid 
 }: CourseCardProps) => {
   
-  // Check if image URL is valid, if not, use a placeholder
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     e.currentTarget.onerror = null;
     e.currentTarget.src = "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&auto=format&fit=crop";
   };
   
   return (
-    <Link 
-      to={`/education/course/${id}`} 
-      className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col"
-    >
+    <div className="bg-white group shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
       <div className="aspect-video overflow-hidden">
         <img 
           src={image} 
@@ -63,13 +60,22 @@ const CourseCard = ({
           </div>
         )}
         
-        <div className="mt-4">
-          <span className="text-emerge-gold group-hover:underline flex items-center">
+        <div className="mt-4 flex justify-between items-center">
+          <Link 
+            to={`/education/course/${id}`}
+            className="text-emerge-gold group-hover:underline flex items-center"
+          >
             Learn More <ChevronRight size={16} className="ml-1" />
-          </span>
+          </Link>
+          
+          <Link to="/login">
+            <Button variant="outline" size="sm" className="border-emerge-gold text-emerge-gold hover:bg-emerge-gold hover:text-white">
+              Sign Up
+            </Button>
+          </Link>
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 
