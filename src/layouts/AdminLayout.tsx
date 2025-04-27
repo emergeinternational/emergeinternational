@@ -13,7 +13,8 @@ import {
   Settings,
   AlertCircle,
   ShoppingCart,
-  UserCheck
+  UserCheck,
+  BookOpen
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -62,6 +63,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { icon: <Calendar size={20} />, label: "Events", path: "/admin/events", requiredRoles: ['admin', 'editor'] },
     { icon: <Heart size={20} />, label: "Donations", path: "/admin/donations", requiredRoles: ['admin', 'editor'] },
     { icon: <ShoppingCart size={20} />, label: "Orders", path: "/admin/orders", requiredRoles: ['admin', 'editor'] },
+    { icon: <BookOpen size={20} />, label: "Courses", path: "/admin/courses", requiredRoles: ['admin', 'editor'] },
     { icon: <Settings size={20} />, label: "Settings", path: "/admin/settings", requiredRoles: ['admin'] },
   ];
 

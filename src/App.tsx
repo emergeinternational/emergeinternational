@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,6 +34,7 @@ import DonationsPage from "./pages/admin/DonationsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import TalentsPage from "./pages/admin/TalentsPage";
+import CoursesPage from "./pages/admin/CoursesPage";  // Add the new import
 
 const queryClient = new QueryClient();
 
@@ -123,6 +123,16 @@ function App() {
                 
                 {/* Add the new media submission route */}
                 <Route path="/submit" element={<MediaSubmission />} />
+                
+                {/* Add the new admin courses route */}
+                {
+                  path: "/admin/courses",
+                  element: (
+                    <RoleBasedRoute requiredRoles={["admin", "editor"]}>
+                      <CoursesPage />
+                    </RoleBasedRoute>
+                  ),
+                }
                 
                 <Route path="*" element={<Navigate to="/home" replace />} />
               </Routes>

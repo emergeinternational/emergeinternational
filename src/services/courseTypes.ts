@@ -30,6 +30,14 @@ export interface Course {
   is_published?: boolean;
   content?: string;
   location?: string;
+  // New fields for scraping management
+  last_scraped_at?: string;
+  is_locked?: boolean;
+  locked_reason?: string;
+  locked_until?: string;
+  has_active_students?: boolean;
+  is_approved?: boolean;
+  scraper_source?: string;
 }
 
 export interface CourseProgress {
@@ -60,4 +68,22 @@ export interface Review {
   rating: number;
   comment: string;
   created_at?: string;
+}
+
+// Interface for course scraping queue
+export interface ScrapedCourse {
+  id: string;
+  title: string;
+  summary?: string;
+  category: string;
+  level: string;
+  video_embed_url?: string;
+  external_link?: string;
+  image_url?: string;
+  hosting_type: 'hosted' | 'embedded' | 'external';
+  scraper_source: string;
+  created_at: string;
+  is_approved: boolean;
+  is_reviewed: boolean;
+  review_notes?: string;
 }
