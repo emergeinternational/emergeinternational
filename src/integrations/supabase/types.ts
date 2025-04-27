@@ -77,51 +77,6 @@ export type Database = {
         }
         Relationships: []
       }
-      courses: {
-        Row: {
-          category: Database["public"]["Enums"]["career_path"]
-          created_at: string | null
-          external_link: string | null
-          hosting_type: Database["public"]["Enums"]["hosting_type"]
-          id: string
-          image_url: string | null
-          is_published: boolean
-          level: Database["public"]["Enums"]["course_level"]
-          summary: string | null
-          title: string
-          updated_at: string | null
-          video_embed_url: string | null
-        }
-        Insert: {
-          category: Database["public"]["Enums"]["career_path"]
-          created_at?: string | null
-          external_link?: string | null
-          hosting_type?: Database["public"]["Enums"]["hosting_type"]
-          id?: string
-          image_url?: string | null
-          is_published?: boolean
-          level: Database["public"]["Enums"]["course_level"]
-          summary?: string | null
-          title: string
-          updated_at?: string | null
-          video_embed_url?: string | null
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["career_path"]
-          created_at?: string | null
-          external_link?: string | null
-          hosting_type?: Database["public"]["Enums"]["hosting_type"]
-          id?: string
-          image_url?: string | null
-          is_published?: boolean
-          level?: Database["public"]["Enums"]["course_level"]
-          summary?: string | null
-          title?: string
-          updated_at?: string | null
-          video_embed_url?: string | null
-        }
-        Relationships: []
-      }
       donations: {
         Row: {
           amount: number
@@ -797,16 +752,6 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer" | "user"
-      career_path:
-        | "model"
-        | "designer"
-        | "photographer"
-        | "videographer"
-        | "musical_artist"
-        | "fine_artist"
-        | "event_planner"
-      course_level: "beginner" | "intermediate" | "expert"
-      hosting_type: "hosted" | "embedded" | "external"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
     }
     CompositeTypes: {
@@ -924,17 +869,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer", "user"],
-      career_path: [
-        "model",
-        "designer",
-        "photographer",
-        "videographer",
-        "musical_artist",
-        "fine_artist",
-        "event_planner",
-      ],
-      course_level: ["beginner", "intermediate", "expert"],
-      hosting_type: ["hosted", "embedded", "external"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
     },
   },
