@@ -23,10 +23,10 @@ export interface Course {
   content_type?: string;
   category_id?: string;
   career_interests?: string[];
-  // New fields based on our database schema
+  // Add the new fields
   video_embed_url?: string;
   external_link?: string;
-  hosting_type?: string;
+  hosting_type?: 'hosted' | 'embedded' | 'external';
   is_published?: boolean;
   content?: string;
   location?: string;

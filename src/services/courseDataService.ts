@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Course, CourseProgress } from "./courseTypes";
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
@@ -94,7 +93,7 @@ export const trackCourseEngagement = async (courseId: string): Promise<boolean> 
 
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {
-    // First try to fetch from the new courses table if it exists
+    // First try to fetch from the courses table
     const { data: courseData, error: courseError } = await supabase
       .from("courses")
       .select("*")
@@ -130,7 +129,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       return null;
     }
 
-    const course: Course = {
+    return {
       id: data.id,
       title: data.title,
       summary: data.summary,
@@ -142,11 +141,10 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       category_id: data.category_id,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      // These fields might not exist in education_content
-      video_embed_url: data.video_embed_url || undefined
+      video_embed_url: data.video_embed_url,
+      external_link: data.external_link,
+      hosting_type: data.hosting_type || 'hosted'
     };
-
-    return course;
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
     return null;
@@ -155,7 +153,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 
 export const getAllCourses = async (): Promise<Course[]> => {
   try {
-    // First try to fetch from the new courses table if it exists
+    // First try to fetch from the courses table if it exists
     let { data: coursesData, error: coursesError } = await supabase
       .from("courses")
       .select("*");
@@ -329,7 +327,7 @@ export const getCourses = async (
     let courseQuery = supabase.from("courses").select("*");
 
     if (level && level !== "all") {
-      courseQuery = courseQuery.eq("level", level);
+      courseQuery = courseQuery.eq("level", level as "beginner" | "intermediate" | "expert");
     }
 
     if (featured) {
@@ -411,6 +409,9 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
+          video_embed_url: item.video_embed_url,
+          external_link: item.external_link,
+          hosting_type: item.hosting_type || 'hosted',
           career_interests: []
         };
       })
