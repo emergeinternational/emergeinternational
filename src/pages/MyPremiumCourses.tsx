@@ -25,7 +25,8 @@ const MyPremiumCourses = () => {
 
     const fetchEnrollments = async () => {
       const data = await getUserEnrolledCourses();
-      setEnrollments(data);
+      // Only show enrollments for published courses
+      setEnrollments(data.filter(enrollment => enrollment.course?.is_published));
       setLoading(false);
     };
 

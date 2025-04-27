@@ -96,7 +96,7 @@ export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
     const { data, error } = await supabase
       .from('premium_courses')
       .select('*')
-      .eq('is_published', true)
+      .eq('is_published', true)  // Only fetch published courses
       .order('created_at', { ascending: false });
 
     if (error) {
