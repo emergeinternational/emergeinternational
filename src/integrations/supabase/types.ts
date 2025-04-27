@@ -1064,6 +1064,7 @@ export type Database = {
       }
       ticket_types: {
         Row: {
+          benefits: string[]
           created_at: string | null
           description: string | null
           event_id: string | null
@@ -1075,6 +1076,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          benefits?: string[]
           created_at?: string | null
           description?: string | null
           event_id?: string | null
@@ -1086,6 +1088,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          benefits?: string[]
           created_at?: string | null
           description?: string | null
           event_id?: string | null

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,14 +99,23 @@ export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {
             </div>
           )}
 
-          <div>
-            <h3 className="font-semibold text-lg">What You'll Get</h3>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="secondary">Event Access</Badge>
-              <Badge variant="secondary">Networking</Badge>
-              <Badge variant="secondary">Certificate</Badge>
+          {event.ticket_types && event.ticket_types.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-lg">What You'll Get</h3>
+              {event.ticket_types.map((ticket) => (
+                <div key={ticket.id} className="mt-4">
+                  <h4 className="font-medium">{ticket.name}</h4>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {ticket.benefits?.map((benefit, index) => (
+                      <Badge key={index} variant="secondary">
+                        {benefit}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>

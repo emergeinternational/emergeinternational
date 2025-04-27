@@ -1,18 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { EventRegistration } from './workshopService';
 
-export const generateQRCode = (registration: EventRegistration): string => {
+export const generateQRCode = (registration: { id: string, event_id: string }): string => {
   return `EVT-${registration.event_id}-${registration.id}-${Date.now()}`;
-};
-
-export const sendQRCodeNotification = async (registration: EventRegistration) => {
-  try {
-    // Placeholder for email/notification sending logic
-    console.log(`Sending QR Code for Event: ${registration.events?.name}`);
-  } catch (error) {
-    console.error("QR Code Notification Error:", error);
-  }
 };
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
@@ -23,7 +13,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .eq('qr_code_active', true)
-      .single();
+      .maybeSingle();
 
     if (error || !registration) {
       return false;
