@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import {
+import React, { useState, useEffect, useMemo } from "react";
+import { Award, Loader2 } from "lucide-react";
+import { 
   getEligibleUsers,
   updateCertificateApproval,
   generateCertificate,
@@ -7,8 +8,7 @@ import {
   getUsersByStatus
 } from "@/services/certificate";
 import { useToast } from "@/hooks/use-toast";
-import CertificateSettings from "./CertificateSettings";
-import { Award, Loader2, CheckCircle, AlertTriangle, Eye, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { 
   Table, 
   TableBody, 
@@ -17,7 +17,6 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -67,6 +66,7 @@ const CertificateManagement = () => {
           description: `Certificate has been manually issued for ${user.profiles?.full_name || user.profiles?.email || "User"}.`,
         });
         await fetchEligibleUsers();
+        await fetchStatusCounts();
       } else {
         throw new Error(result.error || "Failed to issue certificate");
       }
@@ -383,7 +383,6 @@ const CertificateManagement = () => {
                           }}
                         />
                         
-                        {/* Add Manual Certificate Issuance Button */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -404,7 +403,6 @@ const CertificateManagement = () => {
         </div>
       )}
 
-      {/* Approval Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent>
           <DialogHeader>
@@ -458,7 +456,6 @@ const CertificateManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Generate Certificate Dialog */}
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
         <DialogContent>
           <DialogHeader>
@@ -517,7 +514,6 @@ const CertificateManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Revocation Dialog */}
       <Dialog open={showRevocationDialog} onOpenChange={setShowRevocationDialog}>
         <DialogContent>
           <DialogHeader>
@@ -553,7 +549,6 @@ const CertificateManagement = () => {
         </DialogContent>
       </Dialog>
       
-      {/* User Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
