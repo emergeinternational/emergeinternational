@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Currency {
   id: string;
@@ -11,44 +12,78 @@ export interface Currency {
 }
 
 export const useCurrency = () => {
+  const { toast } = useToast();
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCurrencies = async () => {
-      const { data, error } = await supabase
-        .from('currencies')
-        .select('*')
-        .eq('is_active', true);
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('currencies')
+          .select('*')
+          .eq('is_active', true);
 
-      if (data) {
-        setCurrencies(data);
-        // Default to ETB if available, otherwise first active currency
-        const defaultCurrency = data.find(c => c.code === 'ETB') || data[0];
-        setSelectedCurrency(defaultCurrency);
-      }
+        if (error) {
+          throw error;
+        }
 
-      if (error) {
+        if (data) {
+          setCurrencies(data);
+          // Try to get previously selected currency from localStorage
+          const savedCurrencyCode = localStorage.getItem('selectedCurrency');
+          const defaultCurrency = savedCurrencyCode 
+            ? data.find(c => c.code === savedCurrencyCode)
+            : data.find(c => c.code === 'ETB') || data[0];
+          
+          setSelectedCurrency(defaultCurrency);
+        }
+      } catch (error) {
         console.error('Error fetching currencies:', error);
+        toast({
+          title: "Error loading currencies",
+          description: "Using default currency (ETB) for now. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchCurrencies();
-  }, []);
+  }, [toast]);
 
-  const convertPrice = (basePrice: number, fromCurrency: string = 'ETB') => {
-    if (!selectedCurrency) return basePrice;
+  const updateSelectedCurrency = (currency: Currency) => {
+    setSelectedCurrency(currency);
+    localStorage.setItem('selectedCurrency', currency.code);
+  };
 
-    const fromRate = currencies.find(c => c.code === fromCurrency)?.exchange_rate || 1;
-    const toRate = selectedCurrency.exchange_rate;
+  const convertPrice = (basePrice: number, fromCurrency: string = 'ETB'): number => {
+    try {
+      if (!selectedCurrency || !currencies.length) return basePrice;
 
-    return (basePrice / fromRate) * toRate;
+      const fromRate = currencies.find(c => c.code === fromCurrency)?.exchange_rate || 1;
+      const toRate = selectedCurrency.exchange_rate;
+
+      if (!fromRate || !toRate) {
+        console.error('Invalid exchange rates:', { fromRate, toRate });
+        return basePrice;
+      }
+
+      return (basePrice / fromRate) * toRate;
+    } catch (error) {
+      console.error('Error converting price:', error);
+      return basePrice;
+    }
   };
 
   return {
     currencies,
     selectedCurrency,
-    setSelectedCurrency,
-    convertPrice
+    setSelectedCurrency: updateSelectedCurrency,
+    convertPrice,
+    isLoading
   };
 };
