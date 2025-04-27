@@ -8,7 +8,6 @@ export {
   getStaticCourses,
   getCoursesWithProgress,
   getCoursesForCategory,
-  getCourses,
   trackCourseEngagement,
   getEligibleUsers,
   updateCertificateApproval
