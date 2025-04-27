@@ -100,11 +100,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       .maybeSingle();
 
     if (courseData) {
-      return {
-        ...courseData,
-        category: courseData.category as CourseCategory,
-        level: courseData.level as CourseLevel
-      };
+      return courseData as Course;
     }
 
     const { data, error } = await supabase
@@ -177,8 +173,8 @@ export const getAllCourses = async (): Promise<Course[]> => {
       id: item.id,
       title: item.title,
       summary: item.summary,
-      category: (item.category_id || '') as CourseCategory,
-      level: (item.content_type || '') as CourseLevel,
+      category: (item.category_id as CourseCategory) || '',
+      level: (item.content_type as CourseLevel) || '',
       source_url: item.source_url,
       image_url: item.image_url,
       content_type: item.content_type,
@@ -450,8 +446,9 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-design",
       content_type: "course",
-      career_interests: ["designer"]
-    },
+      career_interests: ["designer"],
+      hosting_type: "hosted"
+    } as Course,
     {
       id: "2",
       title: "Advanced Pattern Making",
@@ -462,7 +459,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/pattern-making",
       content_type: "course",
-      career_interests: ["designer"]
+      career_interests: ["designer"],
+      hosting_type: "hosted"
     },
     {
       id: "3",
@@ -474,7 +472,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-photography",
       content_type: "course",
-      career_interests: ["photographer"]
+      career_interests: ["photographer"],
+      hosting_type: "hosted"
     },
     {
       id: "4",
@@ -486,7 +485,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/runway-walk",
       content_type: "course",
-      career_interests: ["model"]
+      career_interests: ["model"],
+      hosting_type: "hosted"
     },
     {
       id: "5",
@@ -498,7 +498,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/video-production",
       content_type: "course",
-      career_interests: ["videographer"]
+      career_interests: ["videographer"],
+      hosting_type: "hosted"
     },
     {
       id: "6",
@@ -510,7 +511,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-music",
       content_type: "course",
-      career_interests: ["musical_artist"]
+      career_interests: ["musical_artist"],
+      hosting_type: "hosted"
     },
     {
       id: "7",
@@ -522,7 +524,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-illustration",
       content_type: "course",
-      career_interests: ["fine_artist"]
+      career_interests: ["fine_artist"],
+      hosting_type: "hosted"
     },
     {
       id: "8",
@@ -534,7 +537,8 @@ export const getStaticCourses = (): Course[] => {
       image_url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-show-planning",
       content_type: "course",
-      career_interests: ["event_planner"]
+      career_interests: ["event_planner"],
+      hosting_type: "hosted"
     }
   ];
 };

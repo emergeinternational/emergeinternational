@@ -12,7 +12,6 @@ export interface Course {
   level: CourseLevel;
   duration?: string;
   instructor?: string;
-  image?: string;
   link?: string;
   slug?: string;
   rating?: number;
@@ -29,15 +28,46 @@ export interface Course {
   career_interests?: string[];
   video_embed_url?: string;
   external_link?: string;
-  hosting_type?: CourseHostingType;
+  hosting_type: CourseHostingType;
   is_published?: boolean;
   content?: string;
   location?: string;
-  last_scraped_at?: string;
-  is_locked?: boolean;
-  locked_reason?: string;
-  locked_until?: string;
-  has_active_students?: boolean;
-  is_approved?: boolean;
-  scraper_source?: string;
+}
+
+export interface ScrapedCourse extends Omit<Course, 'id'> {
+  id: string;
+  scraper_source: string;
+  is_reviewed: boolean;
+  is_approved: boolean;
+  review_notes?: string;
+}
+
+export interface CourseProgress {
+  id: string;
+  user_id: string;
+  course_id: string;
+  progress: number;
+  status: 'not_started' | 'started' | 'in_progress' | 'completed';
+  date_started?: string;
+  date_completed?: string;
+  course_category?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Review {
+  id: string;
+  course_id: string;
+  user_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
 }

@@ -43,14 +43,17 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
 };
 
 // Submit a scraped course to the approval queue
-export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>): Promise<string | null> => {
+export const submitScrapedCourse = async (
+  course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>
+): Promise<string | null> => {
   try {
     const { data, error } = await supabase
       .from("scraped_courses")
       .insert({
         ...course,
         is_approved: false,
-        is_reviewed: false
+        is_reviewed: false,
+        level: course.level || 'beginner'
       })
       .select()
       .single();
