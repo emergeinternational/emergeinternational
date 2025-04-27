@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { Course, CourseProgress } from "./courseTypes";
+import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
 
@@ -106,8 +105,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
         id: courseData.id,
         title: courseData.title,
         summary: courseData.summary,
-        category: courseData.category || '',
-        level: courseData.level || '',
+        category: courseData.category,
+        level: courseData.level,
         image_url: courseData.image_url,
         video_embed_url: courseData.video_embed_url,
         external_link: courseData.external_link,
@@ -135,8 +134,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       id: data.id,
       title: data.title,
       summary: data.summary,
-      category: data.category_id || '',
-      level: data.content_type || '',
+      category: (data.category_id || '') as CourseCategory,
+      level: (data.content_type || '') as CourseLevel,
       source_url: data.source_url,
       image_url: data.image_url,
       content_type: data.content_type,
@@ -146,7 +145,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       // These fields might not exist in the database yet, provide defaults
       video_embed_url: data.source_url, // Use source_url as fallback
       external_link: data.source_url, // Use source_url as fallback
-      hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external' // Default to 'hosted'
+      hosting_type: 'hosted' as CourseHostingType // Default to 'hosted'
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
@@ -166,8 +165,8 @@ export const getAllCourses = async (): Promise<Course[]> => {
         id: item.id,
         title: item.title,
         summary: item.summary,
-        category: item.category || '',
-        level: item.level || '',
+        category: item.category,
+        level: item.level,
         image_url: item.image_url,
         video_embed_url: item.video_embed_url,
         external_link: item.external_link,
@@ -193,8 +192,8 @@ export const getAllCourses = async (): Promise<Course[]> => {
       id: item.id,
       title: item.title,
       summary: item.summary,
-      category: item.category_id || '',
-      level: item.content_type || '',
+      category: (item.category_id || '') as CourseCategory,
+      level: (item.content_type || '') as CourseLevel,
       source_url: item.source_url,
       image_url: item.image_url,
       content_type: item.content_type,
@@ -204,7 +203,7 @@ export const getAllCourses = async (): Promise<Course[]> => {
       // Provide defaults for fields that might not exist in the database
       video_embed_url: item.source_url, // Use source_url as fallback
       external_link: item.source_url, // Use source_url as fallback
-      hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external', // Default to 'hosted'
+      hosting_type: 'hosted' as CourseHostingType, // Default to 'hosted'
       career_interests: []
     }));
   } catch (error) {
@@ -227,8 +226,8 @@ export const getPopularCourses = async (): Promise<Course[]> => {
         id: item.id,
         title: item.title,
         summary: item.summary || "",
-        category: item.category || '',
-        level: item.level || '',
+        category: item.category,
+        level: item.level,
         image_url: item.image_url,
         video_embed_url: item.video_embed_url,
         external_link: item.external_link,
@@ -331,7 +330,7 @@ export const getCourses = async (
 ): Promise<Course[]> => {
   try {
     // Define valid career interests list to ensure type safety
-    const validCareerInterests = [
+    const validCareerInterests: CourseCategory[] = [
       "model", 
       "designer", 
       "photographer", 
@@ -339,15 +338,13 @@ export const getCourses = async (
       "musical_artist", 
       "fine_artist", 
       "event_planner"
-    ] as const;
-    
-    type ValidCareerInterest = typeof validCareerInterests[number];
+    ];
     
     // First try the courses table if it exists
     let courseQuery = supabase.from("courses").select("*");
 
     if (level && level !== "all") {
-      courseQuery = courseQuery.eq("level", level as "beginner" | "intermediate" | "expert");
+      courseQuery = courseQuery.eq("level", level as CourseLevel);
     }
 
     if (featured) {
@@ -365,8 +362,8 @@ export const getCourses = async (
         id: item.id,
         title: item.title,
         summary: item.summary || "",
-        category: item.category || '',
-        level: item.level || '',
+        category: item.category,
+        level: item.level,
         image_url: item.image_url,
         video_embed_url: item.video_embed_url,
         external_link: item.external_link,
@@ -378,9 +375,9 @@ export const getCourses = async (
       }));
 
       if (careerInterest && careerInterest !== "all") {
-        // Fix: Cast careerInterest to ValidCareerInterest type explicitly before checking inclusion
-        const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) 
-          ? careerInterest as ValidCareerInterest 
+        // Fix: Check if careerInterest is in validCareerInterests
+        const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
+          ? careerInterest as CourseCategory 
           : "all";
         
         if (safeCareerInterest !== "all") {
@@ -439,16 +436,16 @@ export const getCourses = async (
           // Provide defaults for fields that might not exist
           video_embed_url: item.source_url, // Use source_url as fallback
           external_link: item.source_url, // Use source_url as fallback
-          hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external', // Default to 'hosted'
+          hosting_type: 'hosted' as CourseHostingType, // Default to 'hosted'
           career_interests: []
         };
       })
     );
 
     if (careerInterest && careerInterest !== "all") {
-      // Fix: Cast careerInterest to ValidCareerInterest type explicitly before checking inclusion
-      const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) 
-        ? careerInterest as ValidCareerInterest 
+      // Fix: Check if careerInterest is in validCareerInterests
+      const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
+        ? careerInterest as CourseCategory 
         : "all";
       
       if (safeCareerInterest !== "all") {

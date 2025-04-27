@@ -16,7 +16,7 @@ import {
 import { AlertCircle, Check, X } from 'lucide-react';
 import { createVerifiedCourse } from '@/services/courseScraperService';
 import { useStorage } from '@/hooks/useStorage';
-import { Course } from '@/services/courseTypes';
+import { Course, CourseCategory, CourseLevel, CourseHostingType } from '@/services/courseTypes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';

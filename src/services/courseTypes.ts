@@ -1,11 +1,15 @@
 
+export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
+export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
+export type CourseHostingType = 'hosted' | 'embedded' | 'external';
+
 export interface Course {
   id: string;
   title: string;
   summary?: string;
   description?: string;
-  category: string;
-  level: string;
+  category: CourseCategory;
+  level: CourseLevel;
   duration?: string;
   instructor?: string;
   image?: string;
@@ -25,7 +29,7 @@ export interface Course {
   career_interests?: string[];
   video_embed_url?: string;
   external_link?: string;
-  hosting_type?: 'hosted' | 'embedded' | 'external';
+  hosting_type?: CourseHostingType;
   is_published?: boolean;
   content?: string;
   location?: string;
@@ -72,12 +76,12 @@ export interface ScrapedCourse {
   id: string;
   title: string;
   summary?: string;
-  category: 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
-  level: 'beginner' | 'intermediate' | 'expert';
+  category: CourseCategory;
+  level: CourseLevel;
   video_embed_url?: string;
   external_link?: string;
   image_url?: string;
-  hosting_type: 'hosted' | 'embedded' | 'external';
+  hosting_type: CourseHostingType;
   scraper_source: string;
   is_approved: boolean;
   is_reviewed: boolean;
