@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventsAdmin } from "@/hooks/useEvents";
@@ -16,7 +15,7 @@ import {
 import { format } from "date-fns";
 import { deleteEvent } from "@/services/eventService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Event } from "@/hooks/useEvents";
+import { Event } from "@/services/events/types";
 
 interface EventsSectionProps {
   onCreateEvent?: () => void;
@@ -33,7 +32,6 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
 
   const canEdit = hasRole(['admin', 'editor']);
   
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: (id: string) => deleteEvent(id),
     onSuccess: () => {
@@ -43,7 +41,7 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
         description: "The event has been deleted successfully."
       });
       setIsDeleteDialogOpen(false);
-      refetch(); // Refresh events list after deletion
+      refetch();
     },
     onError: (error) => {
       toast({
@@ -85,7 +83,6 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
             onClick={() => {
               if (onCreateEvent) {
                 onCreateEvent();
-                // After event creation dialog is closed, refetch data
                 setTimeout(() => refetch(), 500);
               }
             }}
@@ -158,7 +155,6 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
         )}
       </div>
 
-      {/* Delete Event Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

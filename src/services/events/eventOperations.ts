@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Event, CreateEventPayload, UpdateEventPayload } from "./types";
+import { updateEventTickets } from "./ticketOperations";
 
 export const getEvents = async (): Promise<Event[]> => {
   try {

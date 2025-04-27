@@ -6,6 +6,7 @@ import { CurrencySelector } from '@/components/CurrencySelector';
 import { Loader } from 'lucide-react';
 import { useEvents } from '@/hooks/useEvents';
 import EventCard from '@/components/events/EventCard';
+import { Event as ServiceEvent } from '@/services/events/types';
 
 const Events = () => {
   const { selectedCurrency } = useCurrency();
@@ -62,7 +63,7 @@ const Events = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard key={event.id} event={event as unknown as ServiceEvent} />
           ))}
         </div>
       </div>

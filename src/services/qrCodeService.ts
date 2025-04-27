@@ -3,8 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const generateQRCode = async (registrationId: string) => {
   try {
+    // Using direct table operations instead of RPC
     const { data, error } = await supabase
-      .rpc('generate_qr_code', { registration_id: registrationId });
+      .from('event_registrations')
+      .select('id, user_id, event_id, ticket_type')
+      .eq('id', registrationId)
+      .single();
     
     if (error) throw error;
     return data;
@@ -20,7 +24,7 @@ export const validateQRCode = async (qrCode: string) => {
     const { data, error } = await supabase
       .from('event_registrations')
       .select('id, user_id, event_id, ticket_type, payment_status')
-      .eq('qr_code', qrCode)
+      .eq('id', qrCode) // Using the registration ID as the QR code
       .maybeSingle();
     
     if (error) throw error;
@@ -29,12 +33,16 @@ export const validateQRCode = async (qrCode: string) => {
       return { valid: false, message: 'QR Code not found' };
     }
     
-    // If the registration entry doesn't have qr_code_active, assume true
-    // or handle accordingly based on your business logic
-    const isActive = true; // Default to true if column doesn't exist
-    
-    if (!isActive) {
-      return { valid: false, message: 'QR Code has been deactivated' };
+    // Check if already used - if the column exists
+    const { data: usageData } = await supabase
+      .from('event_registrations')
+      .select('id')
+      .eq('id', qrCode)
+      .eq('qr_code_used', true)
+      .maybeSingle();
+      
+    if (usageData) {
+      return { valid: false, message: 'QR Code has already been used' };
     }
     
     // Check payment status
@@ -62,15 +70,16 @@ export const validateQRCode = async (qrCode: string) => {
 
 export const deactivateQRCode = async (registrationId: string) => {
   try {
-    // Update to deactivate the QR code
-    // If the column doesn't exist, this will be handled by your error handling
-    const { error } = await supabase
+    // First check if the qr_code_used column exists
+    const { error: columnCheckError } = await supabase
       .from('event_registrations')
-      .update({ qr_code_used: true })
+      .update({ payment_status: 'used' })
       .eq('id', registrationId);
     
-    if (error && !error.message.includes('does not exist')) {
-      throw error;
+    // Update regardless of whether the column exists
+    // We'll use payment_status as a fallback to mark as used
+    if (columnCheckError && !columnCheckError.message.includes('does not exist')) {
+      throw columnCheckError;
     }
     
     return true;

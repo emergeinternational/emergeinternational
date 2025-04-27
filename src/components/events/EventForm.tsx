@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { Event } from '@/hooks/useEvents';
+import { Event } from '@/services/events/types';
 import EventFormFields from './EventFormFields';
 import TicketTypeFormFields from './TicketTypeFormFields';
 
