@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { getCertificateSettings, updateCertificateSettings } from "@/services/certificate";
+
+import { useState, useEffect } from "react";
+import { Settings, Save, Loader2, RefreshCw } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -12,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Loader2, RefreshCw } from "lucide-react";
+import {
+  getCertificateSettings,
+  updateCertificateSettings
+} from "@/services/certificateService";
 
 interface CertificateSettingsProps {
   onSettingsChanged?: () => void;

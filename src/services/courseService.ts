@@ -9,6 +9,8 @@ export {
   getCoursesWithProgress,
   getCoursesForCategory,
   trackCourseEngagement,
+  getEligibleUsers,
+  updateCertificateApproval
 } from './courseDataService';
 
 export {
@@ -34,6 +36,5 @@ export {
   createVerifiedCourse
 } from './scraping/courseScraperHelpers';
 
-export { getEligibleUsers, updateCertificateApproval } from './certificate/eligibilityService';
-
 export type { Course, CourseProgress, Category, Review } from './courseTypes';
+

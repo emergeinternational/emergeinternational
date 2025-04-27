@@ -1,13 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  CourseProgress, 
-  CourseWithModules,
-  CourseModule
-} from "./courseTypes";
-import { 
-  isEligibleForCertificate,
-  getUserCertificates 
-} from "@/services/certificate";
+
+import { Course, CourseProgress } from "./courseTypes";
 import { getUserCourseProgress } from "./courseProgressService";
 import { getStaticCourses } from "./staticCoursesData";
 import { 
