@@ -522,38 +522,56 @@ export type Database = {
       events: {
         Row: {
           capacity: number | null
+          category: string | null
           created_at: string | null
           currency_code: string
           date: string
           description: string | null
           id: string
+          image_url: string | null
+          is_featured: boolean | null
           location: string | null
+          max_tickets: number | null
           name: string
+          organizer_id: string | null
           price: number | null
+          status: Database["public"]["Enums"]["event_status"] | null
           updated_at: string | null
         }
         Insert: {
           capacity?: number | null
+          category?: string | null
           created_at?: string | null
           currency_code?: string
           date: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
           location?: string | null
+          max_tickets?: number | null
           name: string
+          organizer_id?: string | null
           price?: number | null
+          status?: Database["public"]["Enums"]["event_status"] | null
           updated_at?: string | null
         }
         Update: {
           capacity?: number | null
+          category?: string | null
           created_at?: string | null
           currency_code?: string
           date?: string
           description?: string | null
           id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
           location?: string | null
+          max_tickets?: number | null
           name?: string
+          organizer_id?: string | null
           price?: number | null
+          status?: Database["public"]["Enums"]["event_status"] | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1016,40 +1034,37 @@ export type Database = {
       }
       ticket_types: {
         Row: {
-          available_quantity: number
-          benefits: string[] | null
-          created_at: string
+          created_at: string | null
           description: string | null
-          event_id: string
+          event_id: string | null
           id: string
+          name: string
           price: number
-          sold_quantity: number
-          type: string
-          updated_at: string
+          quantity: number
+          tickets_sold: number | null
+          updated_at: string | null
         }
         Insert: {
-          available_quantity?: number
-          benefits?: string[] | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          event_id: string
+          event_id?: string | null
           id?: string
-          price: number
-          sold_quantity?: number
-          type: string
-          updated_at?: string
+          name: string
+          price?: number
+          quantity?: number
+          tickets_sold?: number | null
+          updated_at?: string | null
         }
         Update: {
-          available_quantity?: number
-          benefits?: string[] | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
-          event_id?: string
+          event_id?: string | null
           id?: string
+          name?: string
           price?: number
-          sold_quantity?: number
-          type?: string
-          updated_at?: string
+          quantity?: number
+          tickets_sold?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1273,6 +1288,7 @@ export type Database = {
         | "event_planner"
       course_hosting_type: "hosted" | "embedded" | "external"
       course_level: "beginner" | "intermediate" | "expert"
+      event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
     }
@@ -1412,6 +1428,7 @@ export const Constants = {
       ],
       course_hosting_type: ["hosted", "embedded", "external"],
       course_level: ["beginner", "intermediate", "expert"],
+      event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
     },

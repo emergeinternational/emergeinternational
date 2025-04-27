@@ -13,16 +13,6 @@ import {
   DialogFooter,
   DialogClose
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface Event {
   id: number;
@@ -38,36 +28,17 @@ interface EventsSectionProps {
 const EventsSection = ({ events }: EventsSectionProps) => {
   const { hasRole } = useAuth();
   const { toast } = useToast();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const canEdit = hasRole(['admin', 'editor']);
-  const canDelete = hasRole(['admin']);
 
   const handleEditClick = (event: Event) => {
     setSelectedEvent(event);
   };
 
-  const handleDeleteClick = (event: Event) => {
-    setSelectedEvent(event);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (!selectedEvent) return;
-
-    // In a real app, you'd delete the event from Supabase
-    toast({
-      title: "Event Deleted",
-      description: `${selectedEvent.name} has been deleted successfully.`
-    });
-    setIsDeleteDialogOpen(false);
-  };
-
   const handleUpdateEvent = () => {
     if (!selectedEvent) return;
 
-    // In a real app, you'd update the event in Supabase
     toast({
       title: "Event Updated",
       description: `${selectedEvent.name} has been updated successfully.`
@@ -182,42 +153,12 @@ const EventsSection = ({ events }: EventsSectionProps) => {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-
-                  {canDelete && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-red-500 border-red-200 hover:bg-red-50"
-                      onClick={() => handleDeleteClick(event)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
                 </div>
               )}
             </div>
           </div>
         ))}
       </div>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the event "{selectedEvent?.name}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-500 hover:bg-red-600">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
