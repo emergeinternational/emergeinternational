@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -87,8 +88,9 @@ export const generateCertificate = async (
 
 export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
+    // Using any type to bypass TypeScript's strict checking since our table is not in the generated types
     const { data: certificates, error } = await supabase
-      .from('certificates')
+      .from('certificates' as any)
       .select('*')
       .eq('user_id', userId)
       .order('issue_date', { ascending: false });
@@ -98,7 +100,7 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
       return [];
     }
 
-    return (certificates as Certificate[]) || [];
+    return (certificates as unknown as Certificate[]) || [];
   } catch (error) {
     console.error("Unexpected error in getUserCertificates:", error);
     return [];
@@ -107,8 +109,9 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
 
 export const downloadCertificate = async (certificateId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
   try {
+    // Using any type to bypass TypeScript's strict checking
     const { data, error } = await supabase
-      .from('certificates')
+      .from('certificates' as any)
       .select('certificate_data, course_title')
       .eq('id', certificateId)
       .single();
@@ -118,8 +121,9 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
       return { success: false, error: error?.message || "Certificate not found" };
     }
 
+    // Using any type to bypass TypeScript's strict checking
     const { error: updateError } = await supabase
-      .from('certificates')
+      .from('certificates' as any)
       .update({ last_downloaded_at: new Date().toISOString() })
       .eq('id', certificateId);
     

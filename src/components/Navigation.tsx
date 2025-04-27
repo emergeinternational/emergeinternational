@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Settings } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavigationProps {
   variant?: "dark" | "light";
@@ -10,7 +12,18 @@ interface NavigationProps {
 
 const Navigation = ({ variant = "light" }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, userRole } = useAuth();
+  const location = useLocation();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    console.log("Navigation auth state:", {
+      isAuthenticated: !!user,
+      userRole,
+      userEmail: user?.email,
+      isAdminLink: hasRole('admin')
+    });
+  }, [user, userRole, hasRole]);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -23,6 +36,16 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   const bgClass = variant === "dark" ? "bg-emerge-darkBg" : "bg-white";
   const textClass = variant === "dark" ? "text-white" : "text-emerge-darkBg";
   const logoVariant = variant === "dark" ? "gold" : "gold";
+
+  const handleAdminClick = () => {
+    if (!hasRole('admin')) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have admin permissions",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <nav className={`${bgClass} ${textClass} fixed w-full z-50 top-0`}>
@@ -58,22 +81,40 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
             </Link>
           )}
           
-          {user && hasRole('admin') && (
+          {user && userRole === 'admin' && (
             <>
               <Link
                 to="/admin"
-                className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium flex items-center"
+                onClick={handleAdminClick}
+                className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium flex items-center"
+                data-testid="admin-dashboard-link"
               >
                 <Settings size={16} className="mr-1" />
                 Admin Dashboard
               </Link>
               <Link
                 to="/admin/premium-enrollments"
-                className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium"
+                onClick={handleAdminClick}
+                className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium"
               >
                 Premium Enrollments
               </Link>
+              <Link
+                to="/certificates"
+                className="hover:text-emerge-gold transition-colors font-medium"
+              >
+                Certificates
+              </Link>
             </>
+          )}
+          
+          {user && userRole !== 'admin' && (
+            <Link
+              to="/certificates"
+              className="hover:text-emerge-gold transition-colors font-medium"
+            >
+              Certificates
+            </Link>
           )}
         </div>
 
@@ -111,11 +152,14 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
               </Link>
             )}
             
-            {user && hasRole('admin') && (
+            {user && userRole === 'admin' && (
               <>
                 <Link
                   to="/admin"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleAdminClick();
+                  }}
                   className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
                 >
                   <Settings size={16} className="mr-2" />
@@ -123,12 +167,32 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
                 </Link>
                 <Link
                   to="/admin/premium-enrollments"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleAdminClick();
+                  }}
                   className="py-2 border-b border-gray-700 text-emerge-gold"
                 >
                   Premium Enrollments
                 </Link>
+                <Link
+                  to="/certificates"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+                >
+                  Certificates
+                </Link>
               </>
+            )}
+            
+            {user && userRole !== 'admin' && (
+              <Link
+                to="/certificates"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+              >
+                Certificates
+              </Link>
             )}
           </div>
         </div>

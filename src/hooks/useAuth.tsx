@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      console.log("Fetching user role for:", userId);
+      
       const { data: userRoleData, error: userRoleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -38,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (userRoleError) {
         console.error('Error fetching user role from user_roles table:', userRoleError);
+        console.log("Falling back to profiles table for role lookup");
         fallbackToProfilesTable(userId);
         return;
       }
@@ -48,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
+      console.log("No role found in user_roles table, falling back to profiles table");
       fallbackToProfilesTable(userId);
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
@@ -57,6 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const fallbackToProfilesTable = async (userId: string) => {
     try {
+      console.log("Looking up role in profiles table for user:", userId);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -65,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
       if (error) {
         console.error('Error fetching user role from profiles table:', error);
+        console.log("Setting default role to 'user'");
         setUserRole('user' as UserRole);
         return;
       }
@@ -78,16 +86,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const hasRole = (requiredRole: UserRole | UserRole[]): boolean => {
-    if (!user || !userRole) return false;
-
-    if (Array.isArray(requiredRole)) {
-      return requiredRole.includes(userRole);
+    if (!user || !userRole) {
+      console.log("hasRole check failed: user or userRole is null", { user: !!user, userRole });
+      return false;
     }
 
-    return userRole === requiredRole;
+    if (Array.isArray(requiredRole)) {
+      const hasRequiredRole = requiredRole.includes(userRole);
+      console.log(`hasRole check (array): user has role ${userRole}, needs one of [${requiredRole.join(', ')}] = ${hasRequiredRole}`);
+      return hasRequiredRole;
+    }
+
+    const hasRequiredRole = userRole === requiredRole;
+    console.log(`hasRole check (single): user has role ${userRole}, needs ${requiredRole} = ${hasRequiredRole}`);
+    return hasRequiredRole;
   };
 
   useEffect(() => {
+    console.log("Setting up auth state listener");
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change event:", event);
@@ -96,10 +113,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log("User authenticated:", session.user.email);
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);
         } else {
+          console.log("No authenticated user");
           setUserRole(null);
         }
         
@@ -132,13 +151,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        console.log("Initial auth session check...");
         const { data: { session } } = await supabase.auth.getSession();
         console.log("Initial auth session check:", session ? "Session exists" : "No session");
+        
         setSession(session);
         setUser(session?.user ?? null);
+        
         if (session?.user) {
           console.log("User is already authenticated", session.user.email);
           await fetchUserRole(session.user.id);
+        } else {
+          console.log("No authenticated user found during initialization");
         }
       } catch (error) {
         console.error('Error checking authentication:', error);

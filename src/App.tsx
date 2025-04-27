@@ -39,16 +39,19 @@ import Talents from "./pages/admin/Talents";
 import Orders from "./pages/admin/Orders";
 import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
+import TestAuthPage from "./pages/TestAuthPage";
 
 const queryClient = new QueryClient();
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  console.log("PrivateRoute check: user authenticated =", !!user);
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  console.log("PublicRoute check: user authenticated =", !!user);
   return !user ? <>{children}</> : <Navigate to="/" replace />;
 };
 
@@ -72,6 +75,7 @@ const App = () => {
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/test-auth" element={<TestAuthPage />} />
                 
                 <Route path="/shop" element={<PrivateRoute><Shop /></PrivateRoute>} />
                 <Route path="/shop/product/:id" element={<PrivateRoute><ProductDetail /></PrivateRoute>} />
