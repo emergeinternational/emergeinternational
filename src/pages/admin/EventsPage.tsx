@@ -66,7 +66,7 @@ const EventsPage = () => {
                 <CardTitle>Manage Events & Tickets</CardTitle>
               </CardHeader>
               <CardContent>
-                <EventsSection onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
+                <EventsSection onCreateEvent={eventFormProps.handleCreateEvent} onEditEvent={eventFormProps.handleEditEvent} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { QrScanner } from '@yudiel/react-qr-scanner';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { validateQRCode } from '@/services/qrCodeService';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,9 @@ import { QrCode } from 'lucide-react';
 export const QRCodeScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleScan = async (result: string) => {
+  const handleScan = async (result: string | null) => {
+    if (!result) return;
+    
     try {
       const isValid = await validateQRCode(result);
       
@@ -19,8 +21,8 @@ export const QRCodeScanner: React.FC = () => {
           description: `QR Code: ${result}`
         });
       } else {
-        toast.error('Invalid or Expired Ticket', {
-          description: 'Please check the ticket details'
+        toast.error('Invalid or Already Used Ticket', {
+          description: 'This ticket has either expired or been used'
         });
       }
     } catch (error) {
@@ -28,6 +30,13 @@ export const QRCodeScanner: React.FC = () => {
         description: 'Unable to validate ticket'
       });
     }
+  };
+
+  const handleError = (error: Error) => {
+    console.error('QR Scanner error:', error);
+    toast.error('Scanner Error', {
+      description: 'Please ensure camera permissions are granted'
+    });
   };
 
   return (
@@ -46,9 +55,12 @@ export const QRCodeScanner: React.FC = () => {
             Start Scanning
           </Button>
         ) : (
-          <QrScanner
-            onDecode={handleScan}
-            onError={(error) => console.log(error?.message)}
+          <Scanner
+            onResult={handleScan}
+            onError={handleError}
+            constraints={{
+              facingMode: 'environment'
+            }}
           />
         )}
       </CardContent>

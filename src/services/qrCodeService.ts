@@ -1,10 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import QRCode from 'qrcode.react';
 import { EventRegistration } from './workshopService';
 
 export const generateQRCode = (registration: EventRegistration): string => {
-  // Generate a unique, secure QR code value
   return `EVT-${registration.event_id}-${registration.id}-${Date.now()}`;
 };
 
@@ -19,7 +17,7 @@ export const sendQRCodeNotification = async (registration: EventRegistration) =>
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    const { data: registration, error } = await supabase
       .from('event_registrations')
       .select('*')
       .eq('qr_code', qrCodeValue)
@@ -27,7 +25,22 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
       .eq('qr_code_active', true)
       .single();
 
-    return !!data && !error;
+    if (error || !registration) {
+      return false;
+    }
+
+    // Deactivate the QR code after successful scan
+    const { error: updateError } = await supabase
+      .from('event_registrations')
+      .update({ qr_code_active: false })
+      .eq('id', registration.id);
+
+    if (updateError) {
+      console.error("Error deactivating QR code:", updateError);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error("QR Code Validation Error:", error);
     return false;

@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { useStorage } from "@/hooks/useStorage"; // Import our hook
+import UserTickets from '@/components/profile/UserTickets';
 
 const Profile = () => {
   const { user, isLoading, signOut } = useAuth();
@@ -75,6 +75,10 @@ const Profile = () => {
           </div>
           
           <ProfileForm />
+          
+          <div className="border-t border-white/10 pt-8">
+            <UserTickets />
+          </div>
           
           <div className="border-t border-white/10 pt-8">
             <ShippingAddresses />
