@@ -15,7 +15,7 @@ interface ScannerComponentProps {
 export const QRCodeScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleScan = async (result: string | null) => {
+  const handleScan = async (result: string) => {
     if (!result) return;
     
     try {
@@ -61,7 +61,7 @@ export const QRCodeScanner: React.FC = () => {
           </Button>
         ) : (
           <Scanner
-            onResult={handleScan}
+            onScan={handleScan}
             onError={handleError}
             constraints={{
               facingMode: 'environment'
