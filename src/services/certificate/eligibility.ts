@@ -31,7 +31,7 @@ export const updateCertificateApproval = async (
       .from("certificate_eligibility")
       .update({ 
         admin_approved: isApproved,
-        status: isApproved ? 'approved' : 'rejected'
+        status: isApproved ? 'approved' : 'rejected' // This is now consistent with the type definition
       })
       .eq("user_id", userId);
 
