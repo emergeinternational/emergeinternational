@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Course } from '@/services/courseTypes';
@@ -11,7 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 const Education = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -41,6 +42,8 @@ const Education = () => {
     return searchMatch && categoryMatch;
   });
 
+  const fallbackImage = "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop";
+
   return (
     <div className="container mx-auto py-12">
       <div className="mb-8 flex justify-between items-center">
@@ -58,12 +61,15 @@ const Education = () => {
         <Label htmlFor="category" className="block text-sm font-medium text-gray-700">
           Filter by Category
         </Label>
-        <Select onValueChange={setSelectedCategory}>
+        <Select
+          value={selectedCategory || ""}
+          onValueChange={(value) => setSelectedCategory(value === "all" ? null : value)}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="model">Model</SelectItem>
             <SelectItem value="designer">Designer</SelectItem>
             <SelectItem value="photographer">Photographer</SelectItem>
@@ -75,52 +81,51 @@ const Education = () => {
         </Select>
       </div>
 
-      <CourseListSection courses={filteredCourses} loading={loading} />
-    </div>
-  );
-};
-
-const CourseListSection = ({ courses, loading }: { courses: Course[]; loading: boolean }) => {
-  const [hoveredCourse, setHoveredCourse] = useState<string | null>(null);
-  
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {loading ? (
-        <div className="col-span-full text-center py-8">
-          Loading courses...
-        </div>
-      ) : courses.length > 0 ? (
-        courses.map((course) => (
-          <Link
-            key={course.id}
-            to={`/courses/${course.id}`}
-            className="group relative block bg-black rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-            onMouseEnter={() => setHoveredCourse(course.id)}
-            onMouseLeave={() => setHoveredCourse(null)}
-          >
-            <img
-              alt={course.title}
-              src={course.image_url || '/placeholder.svg'} // Fixed: using image_url instead of image
-              className="absolute inset-0 h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-50"
-            />
-            <div className="absolute inset-0 flex flex-col items-start justify-end p-6">
-              <h3 className="text-white text-xl font-bold relative mb-2">
-                {course.title}
-                {hoveredCourse === course.id && (
-                  <span className="absolute top-0 left-0 w-full h-full bg-black opacity-20"></span>
-                )}
-              </h3>
-              <p className="text-gray-300 text-sm">
-                {course.summary}
-              </p>
-            </div>
-          </Link>
-        ))
-      ) : (
-        <div className="col-span-full text-center py-8">
-          No courses found.
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="col-span-full text-center py-8">
+            Loading courses...
+          </div>
+        ) : filteredCourses.length > 0 ? (
+          filteredCourses.map((course) => (
+            <Link
+              key={course.id}
+              to={`/courses/${course.id}`}
+              className="group relative block bg-black rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+            >
+              <img
+                alt={course.title}
+                src={course.image_url || fallbackImage}
+                className="absolute inset-0 h-full w-full object-cover opacity-75 transition-opacity group-hover:opacity-50"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = fallbackImage;
+                }}
+              />
+              <div className="relative h-64">
+                <div className="absolute inset-0 flex flex-col items-start justify-end p-6 bg-gradient-to-t from-black/80 to-transparent">
+                  <div className="mb-2">
+                    <span className="inline-block bg-emerge-gold px-3 py-1 text-sm text-black font-medium rounded">
+                      {course.category.charAt(0).toUpperCase() + course.category.slice(1).replace('_', ' ')}
+                    </span>
+                  </div>
+                  <h3 className="text-white text-xl font-bold mb-2">
+                    {course.title}
+                  </h3>
+                  <p className="text-gray-200 text-sm line-clamp-2">
+                    {course.summary || 'No description available'}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-8">
+            No courses found.
+          </div>
+        )}
+      </div>
     </div>
   );
 };

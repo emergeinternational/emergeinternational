@@ -3,7 +3,6 @@ import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHosting
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
 
-// Helper function to ensure valid category
 const validateCategory = (category: string): CourseCategory => {
   const validCategories: CourseCategory[] = ['model', 'designer', 'photographer', 'videographer', 'musical_artist', 'fine_artist', 'event_planner'];
   return validCategories.includes(category as CourseCategory) 
@@ -11,7 +10,6 @@ const validateCategory = (category: string): CourseCategory => {
     : 'model';
 };
 
-// Helper function to ensure valid level
 const validateLevel = (level: string): CourseLevel => {
   const validLevels: CourseLevel[] = ['beginner', 'intermediate', 'expert'];
   return validLevels.includes(level as CourseLevel) 
@@ -19,7 +17,6 @@ const validateLevel = (level: string): CourseLevel => {
     : 'beginner';
 };
 
-// Helper function to validate hosting type
 const validateHostingType = (type: string): CourseHostingType => {
   const validTypes: CourseHostingType[] = ['hosted', 'embedded', 'external'];
   return validTypes.includes(type as CourseHostingType)
@@ -387,15 +384,18 @@ export const getAllCourses = async (): Promise<Course[]> => {
       .select("*");
 
     if (coursesData && coursesData.length > 0) {
-      return coursesData.map(item => ({
-        ...item,
-        category: validateCategory(item.category),
-        level: validateLevel(item.level || 'beginner'),
-        hosting_type: item.hosting_type || 'hosted'
+      return coursesData.map(course => ({
+        ...course,
+        category: validateCategory(course.category),
+        level: validateLevel(course.level || 'beginner'),
+        hosting_type: validateHostingType(course.hosting_type || 'hosted'),
+        image_url: course.image_url || 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop',
+        summary: course.summary || '',
+        career_interests: course.career_interests || []
       })) as Course[];
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("education_content")
       .select("*");
 
@@ -407,20 +407,20 @@ export const getAllCourses = async (): Promise<Course[]> => {
     return data.map(item => ({
       id: item.id,
       title: item.title,
-      summary: item.summary,
-      category: (item.category_id as CourseCategory) || 'model',
-      level: (item.content_type as CourseLevel) || 'beginner',
-      source_url: item.source_url,
-      image_url: item.image_url,
-      content_type: item.content_type,
-      category_id: item.category_id,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      video_embed_url: item.source_url,
-      external_link: item.source_url,
+      summary: item.summary || '',
+      category: validateCategory(item.category_id || 'model'),
+      level: validateLevel(item.content_type || 'beginner'),
+      source_url: item.source_url || '',
+      image_url: item.image_url || 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&auto=format&fit=crop',
+      content_type: item.content_type || '',
+      category_id: item.category_id || '',
+      created_at: item.created_at || '',
+      updated_at: item.updated_at || '',
+      video_embed_url: item.source_url || '',
+      external_link: item.source_url || '',
       hosting_type: 'hosted' as CourseHostingType,
       career_interests: []
-    }));
+    })) as Course[];
   } catch (error) {
     console.error("Unexpected error in getAllCourses:", error);
     return [];
