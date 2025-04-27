@@ -40,6 +40,7 @@ export type Database = {
           id: string
           is_eligible: boolean
           online_courses_completed: number
+          status: Database["public"]["Enums"]["certificate_status"]
           updated_at: string | null
           user_id: string
           workshops_completed: number
@@ -50,6 +51,7 @@ export type Database = {
           id?: string
           is_eligible?: boolean
           online_courses_completed?: number
+          status?: Database["public"]["Enums"]["certificate_status"]
           updated_at?: string | null
           user_id: string
           workshops_completed?: number
@@ -60,6 +62,7 @@ export type Database = {
           id?: string
           is_eligible?: boolean
           online_courses_completed?: number
+          status?: Database["public"]["Enums"]["certificate_status"]
           updated_at?: string | null
           user_id?: string
           workshops_completed?: number
@@ -73,6 +76,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      certificate_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          min_courses_required: number
+          min_workshops_required: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          min_courses_required?: number
+          min_workshops_required?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          min_courses_required?: number
+          min_workshops_required?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       course_engagement: {
         Row: {
@@ -810,6 +840,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_certificates: {
+        Row: {
+          certificate_file: string | null
+          course_title: string
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          issue_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          certificate_file?: string | null
+          course_title: string
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          certificate_file?: string | null
+          course_title?: string
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issue_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_course_progress: {
         Row: {
           course_category: string | null
@@ -969,6 +1032,7 @@ export type Database = {
         | "musical_artist"
         | "fine_artist"
         | "event_planner"
+      certificate_status: "pending" | "approved" | "denied"
       course_category:
         | "model"
         | "designer"
@@ -1106,6 +1170,7 @@ export const Constants = {
         "fine_artist",
         "event_planner",
       ],
+      certificate_status: ["pending", "approved", "denied"],
       course_category: [
         "model",
         "designer",
