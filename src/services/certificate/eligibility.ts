@@ -15,7 +15,7 @@ export const getEligibleUsers = async (): Promise<CertificateEligibility[]> => {
 
     if (error) throw error;
     
-    return data || [];
+    return data as CertificateEligibility[];
   } catch (error) {
     console.error("Error fetching eligible users:", error);
     return [];
@@ -31,7 +31,7 @@ export const updateCertificateApproval = async (
       .from("certificate_eligibility")
       .update({ 
         admin_approved: isApproved,
-        status: isApproved ? 'approved' : 'rejected' 
+        status: isApproved ? 'approved' : 'rejected'
       })
       .eq("user_id", userId);
 
