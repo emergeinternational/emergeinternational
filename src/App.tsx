@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -30,6 +31,7 @@ import Cart from "./pages/Cart";
 import Donations from "./pages/Donations";
 import Payment from "./pages/Payment";
 import Events from "./pages/Events";
+import EventsPage from "./pages/admin/EventsPage";
 import Profile from "./pages/Profile";
 import Certificates from "./pages/Certificates";
 import Dashboard from "./pages/admin/Dashboard";
@@ -113,7 +115,7 @@ const App = () => {
                 } />
                 <Route path="/admin/events" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <Events />
+                    <EventsPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/donations" element={

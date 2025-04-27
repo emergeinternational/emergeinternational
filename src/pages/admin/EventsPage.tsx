@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, Edit, Trash2, Plus, Loader } from "lucide-react";
@@ -49,15 +48,11 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
-  createTicketType,
-  updateTicketType,
-  deleteTicketType,
   CreateEventPayload,
   UpdateEventPayload
 } from "@/services/eventService";
 import { Badge } from "@/components/ui/badge";
 
-// Schema for ticket types
 const ticketTypeSchema = z.object({
   name: z.string().min(1, "Ticket name is required"),
   price: z.coerce.number().min(0, "Price must be zero or greater"),
@@ -66,7 +61,6 @@ const ticketTypeSchema = z.object({
   benefits: z.array(z.string()).optional()
 });
 
-// Schema for creating/editing an event
 const eventFormSchema = z.object({
   name: z.string().min(3, "Event name must be at least 3 characters"),
   description: z.string().optional(),
@@ -93,8 +87,8 @@ const EventsPage = () => {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
+  const [formDialogOpen, setFormDialogOpen] = useState(false);
 
-  // Query for fetching all events
   const { 
     data: events, 
     isLoading, 
@@ -105,7 +99,6 @@ const EventsPage = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Form for creating/editing events
   const eventForm = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
     defaultValues: {
@@ -123,13 +116,11 @@ const EventsPage = () => {
     },
   });
 
-  // Field array for ticket types
   const { fields, append, remove } = useFieldArray({
     control: eventForm.control,
     name: "ticketTypes"
   });
 
-  // Mutation for creating an event
   const createEventMutation = useMutation({
     mutationFn: (data: CreateEventPayload) => createEvent(data),
     onSuccess: () => {
@@ -139,6 +130,7 @@ const EventsPage = () => {
         description: "The event has been created successfully.",
       });
       eventForm.reset();
+      setFormDialogOpen(false);
     },
     onError: (error) => {
       console.error("Error creating event:", error);
@@ -150,7 +142,6 @@ const EventsPage = () => {
     }
   });
 
-  // Mutation for updating an event
   const updateEventMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateEventPayload }) => 
       updateEvent(id, data),
@@ -163,6 +154,7 @@ const EventsPage = () => {
       setIsEditMode(false);
       setCurrentEvent(null);
       eventForm.reset();
+      setFormDialogOpen(false);
     },
     onError: (error) => {
       console.error("Error updating event:", error);
@@ -174,7 +166,6 @@ const EventsPage = () => {
     }
   });
 
-  // Mutation for deleting an event
   const deleteEventMutation = useMutation({
     mutationFn: (id: string) => deleteEvent(id),
     onSuccess: () => {
@@ -196,10 +187,10 @@ const EventsPage = () => {
     }
   });
 
-  // Handle form submission for creating/editing an event
   const handleSubmitEvent = async (values: EventFormValues) => {
+    console.log("Submitting event form with values:", values);
+    
     if (isEditMode && currentEvent) {
-      // Update existing event
       updateEventMutation.mutate({
         id: currentEvent.id,
         data: {
@@ -216,7 +207,6 @@ const EventsPage = () => {
         }
       });
     } else {
-      // Create new event
       const eventPayload: CreateEventPayload = {
         name: values.name,
         description: values.description,
@@ -230,7 +220,6 @@ const EventsPage = () => {
         max_tickets: values.max_tickets
       };
       
-      // Only add ticket_types if they exist
       if (values.ticketTypes && values.ticketTypes.length > 0) {
         eventPayload.ticket_types = values.ticketTypes.map(ticket => ({
           name: ticket.name,
@@ -241,11 +230,11 @@ const EventsPage = () => {
         }));
       }
       
+      console.log("Creating event with payload:", eventPayload);
       createEventMutation.mutate(eventPayload);
     }
   };
 
-  // Setup edit mode with current event data
   const handleEditEvent = (event: Event) => {
     setCurrentEvent(event);
     setIsEditMode(true);
@@ -269,28 +258,47 @@ const EventsPage = () => {
         benefits: ticket.benefits || []
       })) || []
     });
+    
+    setFormDialogOpen(true);
   };
 
-  // Handle event deletion
   const handleDeleteEvent = async () => {
     if (eventToDelete) {
       deleteEventMutation.mutate(eventToDelete.id);
     }
   };
 
-  // Confirm deletion
   const confirmDeleteEvent = (event: Event) => {
     setEventToDelete(event);
     setIsDeleteDialogOpen(true);
   };
 
-  // Reset form when closing the dialog
   const handleDialogClose = () => {
     if (!createEventMutation.isPending && !updateEventMutation.isPending) {
       eventForm.reset();
       setIsEditMode(false);
       setCurrentEvent(null);
+      setFormDialogOpen(false);
     }
+  };
+
+  const handleAddEventClick = () => {
+    setIsEditMode(false);
+    setCurrentEvent(null);
+    eventForm.reset({
+      name: "",
+      description: "",
+      date: "",
+      location: "",
+      capacity: undefined,
+      is_featured: false,
+      category: "",
+      image_url: "",
+      currency_code: "ETB",
+      max_tickets: undefined,
+      ticketTypes: []
+    });
+    setFormDialogOpen(true);
   };
 
   if (isLoading) {
@@ -339,295 +347,13 @@ const EventsPage = () => {
           </div>
           
           {canEdit && (
-            <Dialog onOpenChange={handleDialogClose}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <CalendarPlus className="h-4 w-4" />
-                  Add Event
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{isEditMode ? "Edit Event" : "Create New Event"}</DialogTitle>
-                </DialogHeader>
-                <Form {...eventForm}>
-                  <form onSubmit={eventForm.handleSubmit(handleSubmitEvent)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={eventForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Event Name*</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter event name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={eventForm.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date*</FormLabel>
-                            <FormControl>
-                              <Input type="datetime-local" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={eventForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Event description" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={eventForm.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Location</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Event location" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={eventForm.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Event category" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={eventForm.control}
-                        name="capacity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Capacity</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="Event capacity" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={eventForm.control}
-                        name="max_tickets"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Max Tickets</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="Maximum ticket limit" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={eventForm.control}
-                        name="image_url"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Image URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Image URL" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={eventForm.control}
-                        name="currency_code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Currency Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="ETB" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={eventForm.control}
-                      name="is_featured"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Input
-                              type="checkbox"
-                              checked={field.value}
-                              onChange={field.onChange}
-                              className="h-4 w-4"
-                            />
-                          </FormControl>
-                          <FormLabel>Feature this event</FormLabel>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {!isEditMode && (
-                      <>
-                        <div className="border-t mt-6 pt-6">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-medium">Ticket Types</h3>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => append({ 
-                                name: "", 
-                                price: 0, 
-                                description: "", 
-                                quantity: 1,
-                                benefits: [] 
-                              })}
-                            >
-                              <Plus className="h-4 w-4 mr-1" /> Add Ticket Type
-                            </Button>
-                          </div>
-
-                          {fields.map((field, index) => (
-                            <div key={field.id} className="border rounded-md p-4 mb-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-medium">Ticket Type {index + 1}</h4>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => remove(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                                <FormField
-                                  control={eventForm.control}
-                                  name={`ticketTypes.${index}.name`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Name*</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="Ticket name" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <FormField
-                                  control={eventForm.control}
-                                  name={`ticketTypes.${index}.price`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Price*</FormLabel>
-                                      <FormControl>
-                                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                              <FormField
-                                control={eventForm.control}
-                                name={`ticketTypes.${index}.description`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                      <Textarea placeholder="Ticket description" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                              <FormField
-                                control={eventForm.control}
-                                name={`ticketTypes.${index}.quantity`}
-                                render={({ field }) => (
-                                  <FormItem className="mt-2">
-                                    <FormLabel>Quantity*</FormLabel>
-                                    <FormControl>
-                                      <Input type="number" placeholder="1" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                          ))}
-
-                          {fields.length === 0 && (
-                            <div className="text-center py-4 bg-gray-50 rounded-md">
-                              <p className="text-gray-500">No ticket types added yet</p>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="mt-2"
-                                onClick={() => append({ 
-                                  name: "", 
-                                  price: 0, 
-                                  description: "", 
-                                  quantity: 1,
-                                  benefits: [] 
-                                })}
-                              >
-                                <Plus className="h-4 w-4 mr-1" /> Add Ticket Type
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    <DialogFooter className="mt-6">
-                      <Button type="submit" disabled={createEventMutation.isPending || updateEventMutation.isPending}>
-                        {(createEventMutation.isPending || updateEventMutation.isPending) ? (
-                          <>
-                            <Loader className="mr-2 h-4 w-4 animate-spin" />
-                            {isEditMode ? "Updating..." : "Creating..."}
-                          </>
-                        ) : (
-                          isEditMode ? "Update Event" : "Create Event"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              className="flex items-center gap-2"
+              onClick={handleAddEventClick}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Add Event
+            </Button>
           )}
         </div>
 
@@ -733,6 +459,293 @@ const EventsPage = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={formDialogOpen} onOpenChange={(open) => {
+        setFormDialogOpen(open);
+        if (!open) handleDialogClose();
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEditMode ? "Edit Event" : "Create New Event"}</DialogTitle>
+          </DialogHeader>
+          <Form {...eventForm}>
+            <form onSubmit={eventForm.handleSubmit(handleSubmitEvent)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={eventForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event Name*</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter event name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={eventForm.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date*</FormLabel>
+                      <FormControl>
+                        <Input type="datetime-local" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={eventForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Event description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={eventForm.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Event location" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={eventForm.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Event category" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={eventForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capacity</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Event capacity" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={eventForm.control}
+                  name="max_tickets"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Tickets</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Maximum ticket limit" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={eventForm.control}
+                  name="image_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Image URL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={eventForm.control}
+                  name="currency_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ETB" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={eventForm.control}
+                name="is_featured"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4"
+                      />
+                    </FormControl>
+                    <FormLabel>Feature this event</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {!isEditMode && (
+                <>
+                  <div className="border-t mt-6 pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Ticket Types</h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ 
+                          name: "", 
+                          price: 0, 
+                          description: "", 
+                          quantity: 1,
+                          benefits: [] 
+                        })}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Ticket Type
+                      </Button>
+                    </div>
+
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="border rounded-md p-4 mb-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-medium">Ticket Type {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                          <FormField
+                            control={eventForm.control}
+                            name={`ticketTypes.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Name*</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Ticket name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={eventForm.control}
+                            name={`ticketTypes.${index}.price`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Price*</FormLabel>
+                                <FormControl>
+                                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={eventForm.control}
+                          name={`ticketTypes.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Ticket description" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={eventForm.control}
+                          name={`ticketTypes.${index}.quantity`}
+                          render={({ field }) => (
+                            <FormItem className="mt-2">
+                              <FormLabel>Quantity*</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="1" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
+
+                    {fields.length === 0 && (
+                      <div className="text-center py-4 bg-gray-50 rounded-md">
+                        <p className="text-gray-500">No ticket types added yet</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => append({ 
+                            name: "", 
+                            price: 0, 
+                            description: "", 
+                            quantity: 1,
+                            benefits: [] 
+                          })}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add Ticket Type
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <DialogFooter className="mt-6">
+                <Button type="submit" disabled={createEventMutation.isPending || updateEventMutation.isPending}>
+                  {(createEventMutation.isPending || updateEventMutation.isPending) ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      {isEditMode ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    isEditMode ? "Update Event" : "Create Event"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>

@@ -30,7 +30,7 @@ interface PremiumCourse {
   created_by?: string;
 }
 
-interface EnrollmentCount {
+interface EnrollmentData {
   count: number;
 }
 
@@ -57,7 +57,10 @@ const PremiumCoursesPage = () => {
       return data.map(course => {
         // Safely handle the enrollments count
         let enrollmentsCount = 0;
-        if (course.enrollments && course.enrollments[0] && 
+        if (course.enrollments && 
+            Array.isArray(course.enrollments) && 
+            course.enrollments.length > 0 && 
+            course.enrollments[0] && 
             typeof course.enrollments[0].count === 'number') {
           enrollmentsCount = course.enrollments[0].count;
         }

@@ -37,6 +37,15 @@ export interface Event {
 export const useEvents = () => {
   return useQuery({
     queryKey: ['events'],
-    queryFn: getEvents
+    queryFn: getEvents,
+    refetchOnWindowFocus: false
+  });
+};
+
+export const useEventsAdmin = () => {
+  return useQuery({
+    queryKey: ['admin', 'events'],
+    queryFn: getEvents,
+    refetchOnWindowFocus: false
   });
 };
