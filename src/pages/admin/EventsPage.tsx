@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
@@ -16,7 +15,7 @@ import { createEvent, updateEvent } from "@/services/eventService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-// Schema for event form validation
+// Update the schema to include ticket types
 const eventFormSchema = z.object({
   name: z.string().min(3, "Event name is required"),
   date: z.string().min(3, "Event date is required"),
@@ -28,13 +27,13 @@ const eventFormSchema = z.object({
   image_url: z.string().optional(),
   currency_code: z.string().default("ETB"),
   is_featured: z.boolean().default(false),
-  ticketTypes: z.array(
+  ticket_types: z.array(
     z.object({
       name: z.string().min(1, "Ticket name is required"),
       price: z.number().min(0, "Price must be a positive number"),
       description: z.string().optional(),
       quantity: z.number().min(1, "At least one ticket must be available"),
-      benefits: z.array(z.string()).optional()
+      benefits: z.array(z.string()).default([])
     })
   ).default([])
 });
@@ -65,7 +64,7 @@ const EventsPage = () => {
       image_url: '',
       currency_code: 'ETB',
       is_featured: false,
-      ticketTypes: []
+      ticket_types: []
     }
   });
 
@@ -118,17 +117,36 @@ const EventsPage = () => {
     setIsSubmitting(true);
     try {
       if (isEditMode && currentEvent) {
-        // Handle event update
         await updateEventMutation.mutateAsync({
           id: currentEvent.id,
           data: {
-            ...values,
-            // Handle ticket types if needed
+            name: values.name,
+            date: values.date,
+            description: values.description,
+            location: values.location,
+            category: values.category,
+            capacity: values.capacity,
+            max_tickets: values.max_tickets,
+            image_url: values.image_url,
+            currency_code: values.currency_code,
+            is_featured: values.is_featured,
+            ticket_types: values.ticket_types
           }
         });
       } else {
-        // Handle event creation
-        await createEventMutation.mutateAsync(values);
+        await createEventMutation.mutateAsync({
+          name: values.name,
+          date: values.date,
+          description: values.description,
+          location: values.location,
+          category: values.category,
+          capacity: values.capacity,
+          max_tickets: values.max_tickets,
+          image_url: values.image_url,
+          currency_code: values.currency_code,
+          is_featured: values.is_featured,
+          ticket_types: values.ticket_types
+        });
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -150,7 +168,7 @@ const EventsPage = () => {
       image_url: '',
       currency_code: 'ETB',
       is_featured: false,
-      ticketTypes: []
+      ticket_types: []
     });
     setIsEditMode(false);
     setCurrentEvent(null);
@@ -159,7 +177,6 @@ const EventsPage = () => {
 
   // Function to open form for editing an existing event
   const handleEditEvent = (event: Event) => {
-    // Populate form with event data
     form.reset({
       name: event.name,
       date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
@@ -171,7 +188,7 @@ const EventsPage = () => {
       image_url: event.image_url || '',
       currency_code: event.currency_code || 'ETB',
       is_featured: event.is_featured || false,
-      ticketTypes: event.ticket_types?.map(ticket => ({
+      ticket_types: event.ticket_types?.map(ticket => ({
         name: ticket.name,
         price: ticket.price,
         description: ticket.description || '',

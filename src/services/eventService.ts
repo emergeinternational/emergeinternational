@@ -13,7 +13,13 @@ export interface CreateEventPayload {
   image_url?: string;
   currency_code?: string;
   max_tickets?: number;
-  ticket_types?: CreateTicketTypePayload[];
+  ticket_types?: {
+    name: string;
+    price: number;
+    description?: string;
+    quantity: number;
+    benefits?: string[];
+  }[];
 }
 
 // Type for creating a ticket type
