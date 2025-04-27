@@ -143,10 +143,10 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       category_id: data.category_id,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      // Handle fields that might not exist in older records
-      video_embed_url: data.video_embed_url,
-      external_link: data.external_link,
-      hosting_type: data.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted'
+      // These fields might not exist in the database yet, provide defaults
+      video_embed_url: data.source_url, // Use source_url as fallback
+      external_link: data.source_url, // Use source_url as fallback
+      hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external' // Default to 'hosted'
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
@@ -201,10 +201,10 @@ export const getAllCourses = async (): Promise<Course[]> => {
       category_id: item.category_id,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      // Handle fields that might not exist in older records
-      video_embed_url: item.video_embed_url,
-      external_link: item.external_link,
-      hosting_type: item.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted',
+      // Provide defaults for fields that might not exist in the database
+      video_embed_url: item.source_url, // Use source_url as fallback
+      external_link: item.source_url, // Use source_url as fallback
+      hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external', // Default to 'hosted'
       career_interests: []
     }));
   } catch (error) {
@@ -330,8 +330,18 @@ export const getCourses = async (
   careerInterest?: string
 ): Promise<Course[]> => {
   try {
-    // Valid career interests list
-    const validCareerInterests = ["model", "designer", "photographer", "videographer", "musical_artist", "fine_artist", "event_planner"];
+    // Define valid career interests list to ensure type safety
+    const validCareerInterests = [
+      "model", 
+      "designer", 
+      "photographer", 
+      "videographer", 
+      "musical_artist", 
+      "fine_artist", 
+      "event_planner"
+    ] as const;
+    
+    type ValidCareerInterest = typeof validCareerInterests[number];
     
     // First try the courses table if it exists
     let courseQuery = supabase.from("courses").select("*");
@@ -369,7 +379,7 @@ export const getCourses = async (
 
       if (careerInterest && careerInterest !== "all") {
         // Ensure careerInterest is one of the allowed values
-        const safeCareerInterest = validCareerInterests.includes(careerInterest) ? careerInterest : "all";
+        const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) ? careerInterest : "all";
         
         if (safeCareerInterest !== "all") {
           return coursesWithValidImages.filter(course => 
@@ -424,10 +434,10 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
-          // Handle fields that might not exist in older records
-          video_embed_url: item.video_embed_url,
-          external_link: item.external_link,
-          hosting_type: item.hosting_type as 'hosted' | 'embedded' | 'external' || 'hosted',
+          // Provide defaults for fields that might not exist
+          video_embed_url: item.source_url, // Use source_url as fallback
+          external_link: item.source_url, // Use source_url as fallback
+          hosting_type: 'hosted' as 'hosted' | 'embedded' | 'external', // Default to 'hosted'
           career_interests: []
         };
       })
@@ -435,7 +445,7 @@ export const getCourses = async (
 
     if (careerInterest && careerInterest !== "all") {
       // Ensure careerInterest is one of the allowed values
-      const safeCareerInterest = validCareerInterests.includes(careerInterest) ? careerInterest : "all";
+      const safeCareerInterest = validCareerInterests.includes(careerInterest as ValidCareerInterest) ? careerInterest : "all";
       
       if (safeCareerInterest !== "all") {
         return coursesWithValidImages.filter(course => 
