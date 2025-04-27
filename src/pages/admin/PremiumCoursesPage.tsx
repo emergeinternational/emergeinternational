@@ -6,14 +6,17 @@ import PremiumCourseUploadForm from "@/components/admin/PremiumCourseUploadForm"
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PremiumCourse } from "@/services/premiumCourseService";
+import { PremiumCourse, triggerExpirationNotifications } from "@/services/premiumCourseService";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Bell } from "lucide-react";
 
 const PremiumCoursesPage = () => {
   const { hasRole } = useAuth();
   const [courses, setCourses] = useState<PremiumCourse[]>([]);
   const [activeTab, setActiveTab] = useState("active");
+  const [processingNotification, setProcessingNotification] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,6 +65,43 @@ const PremiumCoursesPage = () => {
     return new Date(course.end_date) < new Date();
   };
 
+  const getDaysUntilExpiration = (course: PremiumCourse) => {
+    if (!course.end_date) return null;
+    const endDate = new Date(course.end_date);
+    const today = new Date();
+    const differenceInTime = endDate.getTime() - today.getTime();
+    return Math.ceil(differenceInTime / (1000 * 3600 * 24));
+  };
+
+  const handleTestNotifications = async (courseId: string) => {
+    setProcessingNotification(courseId);
+    
+    try {
+      const result = await triggerExpirationNotifications(courseId);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Notification test triggered successfully. Check logs for details.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to trigger notifications",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingNotification(null);
+    }
+  };
+
   const filterCourses = (courses: PremiumCourse[], tab: string) => {
     return courses.filter(course => {
       const isExpired = isCourseExpired(course);
@@ -101,24 +141,41 @@ const PremiumCoursesPage = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium">{course.title}</h3>
-                          {isCourseExpired(course) && (
-                            <Badge variant="secondary" className="bg-gray-200 text-gray-600">
-                              Expired
+                          {course.end_date && (
+                            <Badge variant={isCourseExpired(course) ? "secondary" : "pending"} className="ml-2">
+                              {isCourseExpired(course) 
+                                ? "Expired" 
+                                : `${getDaysUntilExpiration(course)} days remaining`}
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-gray-500">
-                          {course.is_published ? 'Published' : 'Draft'}
+                          {course.is_published ? 'Published' : 'Draft'} • 
+                          {course.end_date 
+                            ? ` Ends on ${new Date(course.end_date).toLocaleDateString()}` 
+                            : ' No end date'}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm">
-                          {course.is_published ? 'Published' : 'Draft'}
-                        </span>
-                        <Switch
-                          checked={course.is_published}
-                          onCheckedChange={() => togglePublishStatus(course.id, course.is_published)}
-                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleTestNotifications(course.id)}
+                          disabled={processingNotification === course.id || !course.end_date}
+                          title={!course.end_date ? "Course needs an end date to test notifications" : "Test expiration notifications"}
+                        >
+                          <Bell className="w-4 h-4 mr-1" />
+                          {processingNotification === course.id ? "Sending..." : "Test Notifications"}
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">
+                            {course.is_published ? 'Published' : 'Draft'}
+                          </span>
+                          <Switch
+                            checked={course.is_published}
+                            onCheckedChange={() => togglePublishStatus(course.id, course.is_published)}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

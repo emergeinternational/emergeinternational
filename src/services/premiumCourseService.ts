@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -213,19 +212,48 @@ export async function updateCourseActiveStudentsFlag(courseId: string): Promise<
   }
 }
 
-export async function triggerExpirationNotifications(): Promise<boolean> {
+/**
+ * Triggers the generation of course expiration notifications
+ * @param courseId Optional course ID to generate notifications only for a specific course (useful for testing)
+ * @returns Object containing success status and any response data
+ */
+export async function triggerExpirationNotifications(courseId?: string): Promise<{
+  success: boolean;
+  data?: any;
+  error?: string;
+}> {
   try {
-    const { error } = await supabase.functions.invoke('generate-course-expiration-notifications');
+    console.log('Triggering course expiration notifications' + 
+      (courseId ? ` for course ID: ${courseId}` : ''));
+    
+    const payload = courseId ? { course_id: courseId } : {};
+    const { data, error } = await supabase.functions.invoke(
+      'generate-course-expiration-notifications',
+      {
+        method: 'POST',
+        body: payload
+      }
+    );
     
     if (error) {
       console.error('Error triggering expiration notifications:', error);
-      return false;
+      return { 
+        success: false, 
+        error: error.message || 'Unknown error'
+      };
     }
     
-    return true;
+    console.log('Expiration notifications triggered successfully:', data);
+    return { 
+      success: true, 
+      data 
+    };
   } catch (error) {
     console.error('Error in triggerExpirationNotifications:', error);
-    return false;
+    return { 
+      success: false, 
+      error: error.message || 'Unknown error'
+    };
   }
 }
 

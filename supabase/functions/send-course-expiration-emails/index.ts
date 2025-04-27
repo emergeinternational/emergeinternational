@@ -25,10 +25,27 @@ interface EmailNotification {
   end_date: string;
 }
 
-const handler = async (_req: Request): Promise<Response> => {
+const handler = async (req: Request): Promise<Response> => {
   try {
-    // Query for unsent notifications along with user and course details
-    const { data: notifications, error: queryError } = await supabase
+    console.log("Starting send-course-expiration-emails function");
+    
+    // Check if a specific course ID was provided for testing
+    let courseId: string | undefined;
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        courseId = body.course_id;
+        if (courseId) {
+          console.log(`Processing notifications for specific course ID: ${courseId}`);
+        }
+      } catch (e) {
+        // If parsing fails, continue without courseId
+        console.log("No course ID provided or invalid JSON body");
+      }
+    }
+
+    // Build the query for unsent notifications
+    let query = supabase
       .from('premium_course_notifications')
       .select(`
         id as notification_id,
@@ -40,9 +57,18 @@ const handler = async (_req: Request): Promise<Response> => {
       `)
       .is('sent_at', null);
 
+    // If a specific course ID was provided, filter by it
+    if (courseId) {
+      query = query.eq('course_id', courseId);
+    }
+
+    const { data: notifications, error: queryError } = await query;
+
     if (queryError) {
       throw new Error(`Error querying notifications: ${queryError.message}`);
     }
+
+    console.log(`Found ${notifications?.length || 0} unsent notifications`);
 
     if (!notifications || notifications.length === 0) {
       return new Response(
@@ -55,6 +81,7 @@ const handler = async (_req: Request): Promise<Response> => {
     }
 
     const processedNotifications = [];
+    const failedNotifications = [];
 
     for (const notification of notifications) {
       const emailData: EmailNotification = {
@@ -73,8 +100,10 @@ const handler = async (_req: Request): Promise<Response> => {
       };
 
       try {
+        console.log(`Sending email to ${emailData.user_email} about course ${emailData.course_title}`);
+        
         // Send email using Resend
-        await resend.emails.send({
+        const emailResult = await resend.emails.send({
           from: "Emerge Course Notifications <notifications@emerge.education>",
           to: [emailData.user_email],
           subject: `Reminder: Your course ${emailData.course_title} is ending soon!`,
@@ -89,6 +118,8 @@ const handler = async (_req: Request): Promise<Response> => {
           `,
         });
 
+        console.log(`Email sent successfully to ${emailData.user_email}, id: ${emailResult.id}`);
+
         // Mark notification as sent
         const { error: updateError } = await supabase
           .from('premium_course_notifications')
@@ -97,20 +128,37 @@ const handler = async (_req: Request): Promise<Response> => {
 
         if (updateError) {
           console.error(`Error updating notification ${emailData.notification_id}:`, updateError);
+          failedNotifications.push({
+            notification_id: emailData.notification_id,
+            error: updateError.message
+          });
           continue;
         }
 
-        processedNotifications.push(emailData.notification_id);
+        processedNotifications.push({
+          notification_id: emailData.notification_id,
+          email: emailData.user_email,
+          course: emailData.course_title
+        });
 
       } catch (error) {
         console.error(`Error processing notification ${emailData.notification_id}:`, error);
+        failedNotifications.push({
+          notification_id: emailData.notification_id,
+          email: emailData.user_email,
+          error: error.message
+        });
       }
     }
 
     return new Response(
       JSON.stringify({ 
         message: "Notification processing complete", 
-        processed: processedNotifications 
+        processed: processedNotifications,
+        failed: failedNotifications,
+        total_notifications: notifications.length,
+        successful_notifications: processedNotifications.length,
+        failed_notifications: failedNotifications.length
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -130,4 +178,11 @@ const handler = async (_req: Request): Promise<Response> => {
   }
 };
 
-serve(handler);
+// Handle CORS preflight requests
+serve((req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
+  return handler(req);
+});
