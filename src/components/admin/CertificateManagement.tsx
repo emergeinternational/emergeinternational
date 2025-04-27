@@ -1,10 +1,10 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Clock, X } from "lucide-react";
 import { extendedButtonVariants } from "@/components/ui/button";
-import { approveCertificate, rejectCertificate } from "@/services/certificateService";
+import { approveCertificate, rejectCertificate, getCertificateSettings } from "@/services/certificate/index";
 import CertificateStatusFilter from "./CertificateStatusFilter";
 import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
 import { UserCourseDetails } from "./certificates/UserCourseDetails";
@@ -19,12 +19,32 @@ export function CertificateManagement() {
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [statusFilter, setStatusFilter] = useState("pending");
   const [isLoading, setIsLoading] = useState(false);
+  const [certificateSettings, setCertificateSettings] = useState({
+    min_courses_required: 5,
+    min_workshops_required: 3
+  });
+
+  // Fetch certificate settings on component mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await getCertificateSettings();
+        setCertificateSettings(settings);
+      } catch (error) {
+        console.error("Error fetching certificate settings:", error);
+      }
+    };
+    
+    fetchSettings();
+  }, []);
 
   const dummyUsers = [
     {
       id: "1",
       name: "Aster Aweke",
       email: "aster@example.com",
+      online_courses_completed: 6,
+      workshops_completed: 4,
       courses: [
         {
           id: "course1",
@@ -38,12 +58,18 @@ export function CertificateManagement() {
       id: "2",
       name: "Teddy Afro",
       email: "teddy@example.com",
+      online_courses_completed: 8,
+      workshops_completed: 5,
       courses: [
         {
           id: "course2",
           title: "Advanced Pattern Making",
           progress: 90,
-          certification: { status: "approved", requested_at: "2023-05-10", approved_at: "2023-05-12" },
+          certification: { 
+            status: "approved", 
+            requested_at: "2023-05-10", 
+            approved_at: "2023-05-12" 
+          },
         },
       ],
     },
@@ -51,12 +77,19 @@ export function CertificateManagement() {
       id: "3",
       name: "Gigi Hadid",
       email: "gigi@example.com",
+      online_courses_completed: 4,
+      workshops_completed: 2,
       courses: [
         {
           id: "course3",
           title: "Fashion Photography Basics",
           progress: 100,
-          certification: { status: "rejected", requested_at: "2023-05-08", rejected_at: "2023-05-11", reason: "Incomplete final project submission" },
+          certification: { 
+            status: "rejected", 
+            requested_at: "2023-05-08", 
+            rejected_at: "2023-05-11", 
+            reason: "Incomplete final project submission" 
+          },
         },
       ],
     },
@@ -128,14 +161,17 @@ export function CertificateManagement() {
         counts={{
           pending: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'pending')).length,
           approved: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'approved')).length,
-          rejected: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'rejected')).length,
+          denied: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'rejected')).length,
         }}
       />
       
-      <CertificateRequirementsBanner minCoursesRequired={5} minWorkshopsRequired={3} />
+      <CertificateRequirementsBanner 
+        minCoursesRequired={certificateSettings.min_courses_required} 
+        minWorkshopsRequired={certificateSettings.min_workshops_required} 
+      />
       
       {filteredUsers.length === 0 ? (
-        <EmptyEligibleUsers type={statusFilter} />
+        <EmptyEligibleUsers status={statusFilter} />
       ) : (
         <div className="space-y-4">
           {filteredUsers.map((user) => {
@@ -147,7 +183,10 @@ export function CertificateManagement() {
                 key={`${user.id}-${course.id}`} 
                 className="border rounded-lg p-4 bg-white shadow-sm"
               >
-                <UserCourseDetails user={user} course={course} certification={course.certification} />
+                <UserCourseDetails 
+                  user={user} 
+                  certificateRequirements={certificateSettings}
+                />
                 
                 {statusFilter === "pending" && (
                   <div className="mt-4 flex justify-end gap-3">
@@ -183,8 +222,8 @@ export function CertificateManagement() {
                 
                 {statusFilter === "approved" && (
                   <CertificateActions 
-                    user={user.id}
-                    course={course.id}
+                    userId={user.id}
+                    courseId={course.id}
                     approvedDate={course.certification?.approved_at}
                   />
                 )}
