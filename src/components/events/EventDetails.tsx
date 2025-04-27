@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +11,7 @@ interface EventDetailsProps {
 export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {
   const { selectedCurrency, convertPrice } = useCurrency();
   const eventDate = new Date(event.date);
+  
   const formattedDate = eventDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -26,10 +26,28 @@ export const EventDetails: React.FC<EventDetailsProps> = ({ event }) => {
 
   return (
     <Card className="overflow-hidden">
-      <div className="bg-emerge-cream h-48 flex items-center justify-center">
-        <h2 className="text-2xl font-bold text-center px-4">{event.name}</h2>
+      <div className="relative bg-emerge-cream h-48 flex items-center justify-center">
+        {event.image_url ? (
+          <img 
+            src={event.image_url} 
+            alt={event.name} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <h2 className="text-2xl font-bold text-center px-4">{event.name}</h2>
+        )}
+        {event.is_featured && (
+          <Badge 
+            variant="secondary" 
+            className="absolute top-4 right-4 bg-emerge-gold text-black"
+          >
+            Featured
+          </Badge>
+        )}
       </div>
       <CardContent className="p-6">
+        {!event.image_url && <h2 className="text-2xl font-bold mb-4">{event.name}</h2>}
+        
         <div className="space-y-6">
           <div>
             <h3 className="font-semibold text-lg">Event Details</h3>

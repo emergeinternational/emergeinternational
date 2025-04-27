@@ -4,6 +4,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from '@/hooks/useCurrency';
 import { TicketType } from '@/hooks/useEvents';
+import { Badge } from "@/components/ui/badge";
 
 interface Currency {
   id: string;
@@ -48,47 +49,54 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
       className="space-y-3"
     >
       {tickets.map((ticket) => {
-        // Calculate available quantity
         const availableQuantity = (ticket.quantity || 0) - (ticket.tickets_sold || 0);
+        const isSoldOut = availableQuantity <= 0;
         
         return (
           <div
             key={ticket.id}
-            className={`border rounded-md p-4 transition-colors ${
+            className={`relative border rounded-md p-4 transition-colors ${
               selectedTicket?.id === ticket.id 
                 ? 'border-emerge-gold bg-emerge-cream/20' 
                 : 'hover:bg-gray-50'
-            }`}
+            } ${isSoldOut ? 'opacity-50' : ''}`}
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value={ticket.id} id={`ticket-${ticket.id}`} />
+              <RadioGroupItem 
+                value={ticket.id} 
+                id={`ticket-${ticket.id}`}
+                disabled={isSoldOut}
+              />
               <Label 
                 htmlFor={`ticket-${ticket.id}`} 
                 className="flex-grow cursor-pointer"
               >
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="font-medium">{ticket.name}</span>
-                  <span className="font-bold">
-                    {currency?.symbol} {convertPrice(ticket.price).toFixed(2)}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    {availableQuantity <= 5 && availableQuantity > 0 && (
+                      <Badge variant="outline" className="text-orange-600 border-orange-600">
+                        Only {availableQuantity} left
+                      </Badge>
+                    )}
+                    <span className="font-bold">
+                      {currency?.symbol} {convertPrice(ticket.price).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
                 
                 {ticket.description && (
                   <p className="text-sm text-gray-600 mt-1">{ticket.description}</p>
                 )}
                 
-                {availableQuantity <= 5 && availableQuantity > 0 && (
-                  <p className="text-xs text-orange-600 mt-1">
-                    Only {availableQuantity} left!
-                  </p>
-                )}
-                
-                {availableQuantity <= 0 && (
-                  <p className="text-xs text-red-600 mt-1">Sold out</p>
+                {isSoldOut && (
+                  <Badge variant="secondary" className="mt-2 bg-red-100 text-red-700">
+                    Sold Out
+                  </Badge>
                 )}
                 
                 {ticket.benefits && ticket.benefits.length > 0 && (
-                  <ul className="text-xs text-gray-600 mt-1 space-y-1">
+                  <ul className="text-xs text-gray-600 mt-2 space-y-1">
                     {ticket.benefits.map((benefit, idx) => (
                       <li key={idx} className="flex items-center">
                         <span className="mr-1">•</span> {benefit}

@@ -38,7 +38,8 @@ export const useEvents = () => {
   return useQuery({
     queryKey: ['events'],
     queryFn: getEvents,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 };
 
@@ -46,6 +47,7 @@ export const useEventsAdmin = () => {
   return useQuery({
     queryKey: ['admin', 'events'],
     queryFn: getEvents,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true, // Enable auto-refresh for admin panel
+    staleTime: 1000 * 60, // Cache for 1 minute for admin
   });
 };
