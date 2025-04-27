@@ -1,69 +1,46 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
-interface CertificateSettings {
-  id: string;
-  min_courses_required: number;
-  min_workshops_required: number;
-  created_at?: string;
-  updated_at?: string;
-  updated_by?: string;
-}
-
-interface UserCertificate {
-  id: string;
-  user_id: string;
-  course_title: string;
-  issue_date: string;
-  expiry_date?: string;
-  certificate_file?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface CertificateEligibility {
-  id: string;
-  user_id: string;
-  online_courses_completed: number;
-  workshops_completed: number;
-  is_eligible: boolean;
-  admin_approved: boolean;
-  status: 'pending' | 'approved' | 'denied';
-  created_at: string;
-  updated_at: string;
-}
-
-export const getEligibleUsers = async (): Promise<CertificateEligibility[]> => {
+/**
+ * Fetches users who are eligible for certificates
+ * @returns Array of users with their certificate eligibility status
+ */
+export const getEligibleUsers = async () => {
   try {
     const { data, error } = await supabase
-      .from('certificate_eligibility')
+      .from("certificate_eligibility")
       .select(`
         *,
         profiles:profiles(full_name, email)
-      `);
+      `)
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
+    
     return data || [];
   } catch (error) {
     console.error("Error fetching eligible users:", error);
-    throw error;
+    return [];
   }
 };
 
+/**
+ * Updates the certificate approval status for a user
+ * @param userId User ID
+ * @param isApproved Whether to approve or revoke the certificate
+ * @returns Boolean indicating success
+ */
 export const updateCertificateApproval = async (
   userId: string,
   isApproved: boolean
 ): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('certificate_eligibility')
-      .update({ 
-        admin_approved: isApproved,
-        status: isApproved ? 'approved' : 'denied'
-      })
-      .eq('user_id', userId);
+      .from("certificate_eligibility")
+      .update({ admin_approved: isApproved })
+      .eq("user_id", userId);
 
     if (error) throw error;
+    
     return true;
   } catch (error) {
     console.error("Error updating certificate approval:", error);
@@ -71,6 +48,12 @@ export const updateCertificateApproval = async (
   }
 };
 
+/**
+ * Generates a certificate for a user
+ * @param userId User ID
+ * @param courseTitle Title of the course
+ * @returns Object with success status and potentially error message
+ */
 export const generateCertificate = async (
   userId: string,
   courseTitle: string
@@ -78,9 +61,9 @@ export const generateCertificate = async (
   try {
     // Check if user is approved for certificate
     const { data: eligibilityData, error: eligibilityError } = await supabase
-      .from('certificate_eligibility')
-      .select('admin_approved')
-      .eq('user_id', userId)
+      .from("certificate_eligibility")
+      .select("admin_approved")
+      .eq("user_id", userId)
       .single();
     
     if (eligibilityError) throw eligibilityError;
@@ -91,15 +74,15 @@ export const generateCertificate = async (
       };
     }
     
-    // Create certificate record
+    // Create certificate record in user_certificates table
     const { error: insertError } = await supabase
-      .from('user_certificates')
+      .from("user_certificates")
       .insert({
         user_id: userId,
         course_title: courseTitle,
         issue_date: new Date().toISOString(),
-        expiry_date: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString(),
-        certificate_file: `certificate_${userId}_${new Date().getTime()}.pdf`
+        expiry_date: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString(), // 2 years validity
+        certificate_file: "certificate_" + userId + "_" + new Date().getTime() + ".pdf"
       });
     
     if (insertError) throw insertError;
@@ -114,15 +97,21 @@ export const generateCertificate = async (
   }
 };
 
-export const getUserCertificates = async (userId: string): Promise<UserCertificate[]> => {
+/**
+ * Fetches certificates for a specific user
+ * @param userId User ID
+ * @returns Array of user certificates
+ */
+export const getUserCertificates = async (userId: string) => {
   try {
     const { data, error } = await supabase
-      .from('user_certificates')
-      .select('*')
-      .eq('user_id', userId)
+      .from("user_certificates")
+      .select("*")
+      .eq("user_id", userId)
       .order('issue_date', { ascending: false });
 
     if (error) throw error;
+    
     return data || [];
   } catch (error) {
     console.error("Error fetching user certificates:", error);
@@ -130,6 +119,11 @@ export const getUserCertificates = async (userId: string): Promise<UserCertifica
   }
 };
 
+/**
+ * Downloads a certificate by its ID
+ * @param certificateId Certificate ID
+ * @returns Object with success status, potentially error message, and base64 data
+ */
 export const downloadCertificate = async (certificateId: string): Promise<{ 
   success: boolean; 
   error?: string;
@@ -137,9 +131,9 @@ export const downloadCertificate = async (certificateId: string): Promise<{
 }> => {
   try {
     const { data, error } = await supabase
-      .from('user_certificates')
-      .select('certificate_file')
-      .eq('id', certificateId)
+      .from("certificates")
+      .select("certificate_file")
+      .eq("id", certificateId)
       .single();
 
     if (error) throw error;
@@ -151,9 +145,10 @@ export const downloadCertificate = async (certificateId: string): Promise<{
       };
     }
 
-    // In a real implementation, this would fetch the actual file
-    // For now, return a simulated base64 PDF
-    const simulatedBase64 = "JVBERi0xLjcKJeLjz9MKNSAwIG9iago8..."; // Truncated for brevity
+    // In a real implementation, this would either return a URL or the actual file content
+    // For now, we'll simulate returning base64 PDF data
+    // Simulated base64 data for an empty PDF
+    const simulatedBase64 = "JVBERi0xLjcKJeLjz9MKNSAwIG9iago8PCAvVHlwZSAvUGFnZSAvUGFyZW50IDEgMCBSIC9MYXN0TW9kaWZpZWQgKEQpIC9SZXNvdXJjZXMgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyLjAwMDAwMCA3OTIuMDAwMDAwXSAvQ29udGVudHMgNiAwIFIgL0Nyb3BCb3ggWzAuMDAwMDAwIDAuMDAwMDAwIDYxMi4wMDAwMDAgNzkyLjAwMDAwMF0gL0JsZWVkQm94IFswLjAwMDAwMCAwLjAwMDAwMCA2MTIuMDAwMDAwIDc5Mi4wMDAwMDBdIC9UcmltQm94IFswLjAwMDAwMCAwLjAwMDAwMCA2MTIuMDAwMDAwIDc5Mi4wMDAwMDBdIC9BcnRCb3ggWzAuMDAwMDAwIDAuMDAwMDAwIDYxMi4wMDAwMDAgNzkyLjAwMDAwMF0gL1JvdGF0ZSAwPj4KZW5kb2JqCjYgMCBvYmoKPDwgL0xlbmd0aCA2NTQ0ID4+CnN0cmVhbQogICAgCmVuZHN0cmVhbQplbmRvYmoKMSAwIG9iago8PCAvVHlwZSAvUGFnZXMgL0tpZHMgWyA1IDAgUiBdIC9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKPDwvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMSAwIFIgL01ldGFkYXRhIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8L0xlbmd0aCA2NTE1Pj4Kc3RyZWFtCiAgICAKZW5kc3RyZWFtCmVuZG9iagoyIDAgb2JqCjw8IC9Qcm9jU2V0IFsvUERGIC9UZXh0IC9JbWFnZUIgL0ltYWdlQyAvSW1hZ2VJXSAvRm9udCA8PCAvRTFNSkdGIDE1IDAgUiA+PiAvWE9iamVjdCA8PD4+IC9FeHRHU3RhdGUgPDw+PiAvQ29sb3JTcGFjZSA8PCAvRGVmYXVsdFJHQiA5IDAgUiA+Pj4+CmVuZG9iagowIDAgb2JqCjw8L1R5cGUgL0ZEUiAvRmlsdGVyIC9GbGF0ZURlY29kZSAvTGVuZ3RoIDI2OT4+CnN0cmVhbQp4ADIwMkkyMDIyIOWkh+Wkh+WkhzIyMjIyMjAyMjA2MjIyMjIyMjIyMg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KZW5kc3RyZWFtCnN0YXJ0eHJlZiA4MTQwIiUlRU9GCg==";
     
     return {
       success: true,
@@ -168,48 +163,51 @@ export const downloadCertificate = async (certificateId: string): Promise<{
   }
 };
 
-export const getCertificateSettings = async (): Promise<CertificateSettings> => {
+/**
+ * Gets certificate settings from the database
+ * @returns Object containing certificate settings
+ */
+export const getCertificateSettings = async () => {
   try {
     const { data, error } = await supabase
-      .from('certificate_settings')
-      .select('*')
+      .from("certificate_settings")
+      .select("*")
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
     if (error) throw error;
     
-    return data || { 
-      id: '',
-      min_courses_required: 5, 
-      min_workshops_required: 3 
-    };
+    return data || { min_courses_required: 5, min_workshops_required: 3 };
   } catch (error) {
     console.error("Error fetching certificate settings:", error);
-    return { 
-      id: '',
-      min_courses_required: 5, 
-      min_workshops_required: 3 
-    };
+    return { min_courses_required: 5, min_workshops_required: 3 };
   }
 };
 
+/**
+ * Updates certificate settings
+ * @param settings Settings object with min courses and workshops required
+ * @returns Boolean indicating success
+ */
 export const updateCertificateSettings = async (
-  settings: Pick<CertificateSettings, 'min_courses_required' | 'min_workshops_required'>
+  settings: { min_courses_required: number; min_workshops_required: number }
 ): Promise<boolean> => {
   try {
-    const { data: existingSettings, error: fetchError } = await supabase
-      .from('certificate_settings')
-      .select('id')
+    // First, get the settings record ID
+    const { data, error: fetchError } = await supabase
+      .from("certificate_settings")
+      .select("id")
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+    if (fetchError) throw fetchError;
     
-    if (!existingSettings) {
+    if (!data) {
+      // If no settings record exists yet, create one
       const { error: insertError } = await supabase
-        .from('certificate_settings')
+        .from("certificate_settings")
         .insert({
           min_courses_required: settings.min_courses_required,
           min_workshops_required: settings.min_workshops_required,
@@ -218,15 +216,16 @@ export const updateCertificateSettings = async (
         
       if (insertError) throw insertError;
     } else {
+      // Otherwise update the existing record
       const { error: updateError } = await supabase
-        .from('certificate_settings')
+        .from("certificate_settings")
         .update({
           min_courses_required: settings.min_courses_required,
           min_workshops_required: settings.min_workshops_required,
           updated_at: new Date().toISOString(),
           updated_by: (await supabase.auth.getUser()).data.user?.id
         })
-        .eq('id', existingSettings.id);
+        .eq("id", data.id);
         
       if (updateError) throw updateError;
     }
@@ -238,6 +237,11 @@ export const updateCertificateSettings = async (
   }
 };
 
+/**
+ * Checks if a user meets the certificate requirements
+ * @param user User object with course and workshop counts
+ * @returns Boolean indicating if user meets requirements
+ */
 export const userMeetsRequirements = async (user: any): Promise<boolean> => {
   try {
     const settings = await getCertificateSettings();
@@ -245,8 +249,8 @@ export const userMeetsRequirements = async (user: any): Promise<boolean> => {
     const onlineCoursesCompleted = user.online_courses_completed || 0;
     const workshopsCompleted = user.workshops_completed || 0;
     
-    return onlineCoursesCompleted >= settings.min_courses_required && 
-           workshopsCompleted >= settings.min_workshops_required;
+    return onlineCoursesCompleted >= settings.min_courses_required 
+      && workshopsCompleted >= settings.min_workshops_required;
   } catch (error) {
     console.error("Error checking if user meets requirements:", error);
     return false;
