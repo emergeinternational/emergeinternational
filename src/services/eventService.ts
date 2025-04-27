@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Event, TicketType } from "@/hooks/useEvents";
 
@@ -23,7 +22,6 @@ export interface CreateTicketTypePayload {
   price: number;
   description?: string;
   quantity: number;
-  benefits?: string[];
 }
 
 // Type for updating an event
@@ -115,7 +113,10 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
     // If ticket types were provided, create them
     if (eventData.ticket_types && eventData.ticket_types.length > 0) {
       const ticketTypesWithEventId = eventData.ticket_types.map(ticket => ({
-        ...ticket,
+        name: ticket.name,
+        price: ticket.price,
+        description: ticket.description,
+        quantity: ticket.quantity,
         event_id: eventData_.id
       }));
 

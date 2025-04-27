@@ -33,8 +33,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
                   name: "", 
                   price: 0, 
                   description: "", 
-                  quantity: 1,
-                  benefits: [] 
+                  quantity: 1
+                  // Removed benefits field
                 })}
               >
                 <Plus className="h-4 w-4 mr-1" /> Add Ticket Type
@@ -124,8 +124,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
                     name: "", 
                     price: 0, 
                     description: "", 
-                    quantity: 1,
-                    benefits: [] 
+                    quantity: 1
+                    // Removed benefits field
                   })}
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add Ticket Type

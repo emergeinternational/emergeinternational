@@ -10,6 +10,7 @@ export interface TicketType {
   description?: string;
   quantity: number;
   tickets_sold?: number;
+  // Make benefits optional to prevent errors if the column doesn't exist
   benefits?: string[];
   created_at: string;
   updated_at: string;
