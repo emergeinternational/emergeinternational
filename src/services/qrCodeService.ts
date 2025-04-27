@@ -17,7 +17,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
     const { data: registration } = await supabase
       .from('event_registrations')
-      .select<string, QrRegistration>('id, qr_code_active')
+      .select('id, qr_code_active')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .single();
