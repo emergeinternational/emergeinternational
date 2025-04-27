@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Check, X, Eye, QrCode, Download, RefreshCw } from "lucide-react";
 import QRCode from 'qrcode.react';
 import { useEventsAdmin } from "@/hooks/useEvents";
-import { Event } from "@/hooks/useEvents";
 import { EventRegistration, updateRegistrationStatus, toggleQrCodeStatus } from '@/services/workshopService';
 
 const fetchEventRegistrations = async (): Promise<EventRegistration[]> => {
@@ -82,7 +80,6 @@ export const EventRegistrations = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-registrations'] });
       toast({ title: "Success", description: "QR code status updated successfully!" });
-      setIsQrCodeDialogOpen(false);
     },
     onError: (error) => {
       toast({ 
@@ -160,11 +157,76 @@ export const EventRegistrations = () => {
     }
   };
 
+  const getActionButtonsForRow = (registration: EventRegistration) => {
+    const buttons = [];
+    
+    if (registration.payment_proof_url) {
+      buttons.push(
+        <Button 
+          key="view"
+          variant="outline" 
+          size="sm" 
+          onClick={() => openViewDialog(registration)}
+          className="flex items-center"
+        >
+          <Eye className="h-4 w-4 mr-1" /> View Proof
+        </Button>
+      );
+    }
+    
+    if (registration.payment_status === 'pending') {
+      buttons.push(
+        <Button 
+          key="approve"
+          variant="outline" 
+          size="sm" 
+          className="text-green-600 border-green-600 hover:bg-green-50 flex items-center"
+          onClick={() => handleApprove(registration.id)}
+        >
+          <Check className="h-4 w-4 mr-1" /> Approve
+        </Button>
+      );
+      
+      buttons.push(
+        <Button 
+          key="reject"
+          variant="outline" 
+          size="sm" 
+          className="text-red-600 border-red-600 hover:bg-red-50 flex items-center"
+          onClick={() => handleReject(registration.id)}
+        >
+          <X className="h-4 w-4 mr-1" /> Reject
+        </Button>
+      );
+    }
+    
+    if (registration.payment_status === 'approved') {
+      buttons.push(
+        <Button 
+          key="qrcode"
+          variant="outline" 
+          size="sm"
+          onClick={() => openQrCodeDialog(registration)}
+          className="flex items-center"
+        >
+          <QrCode className="h-4 w-4 mr-1" /> Manage QR Code
+        </Button>
+      );
+    }
+    
+    return buttons;
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Event Registrations</CardTitle>
+          <div>
+            <CardTitle>Event Registrations</CardTitle>
+            <CardDescription>
+              Manage event registrations, payments, and QR codes for attendees
+            </CardDescription>
+          </div>
           <Button 
             variant="outline" 
             onClick={() => refetch()}
@@ -234,45 +296,8 @@ export const EventRegistrations = () => {
                           {new Date(registration.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <div className="flex space-x-2">
-                            {registration.payment_proof_url && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => openViewDialog(registration)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {registration.payment_status === 'pending' && (
-                              <>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="text-green-600"
-                                  onClick={() => handleApprove(registration.id)}
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="text-red-600"
-                                  onClick={() => handleReject(registration.id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            {registration.payment_status === 'approved' && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => openQrCodeDialog(registration)}
-                              >
-                                <QrCode className="h-4 w-4" />
-                              </Button>
-                            )}
+                          <div className="flex flex-col space-y-2">
+                            {getActionButtonsForRow(registration)}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -299,6 +324,9 @@ export const EventRegistrations = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Payment Proof</DialogTitle>
+            <DialogDescription>
+              Review the payment screenshot submitted by the customer
+            </DialogDescription>
           </DialogHeader>
           {selectedRegistration?.payment_proof_url && (
             <div className="flex flex-col items-center gap-4">
@@ -336,7 +364,7 @@ export const EventRegistrations = () => {
                     }}
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    Approve
+                    Approve Payment
                   </Button>
                   <Button 
                     onClick={() => {
@@ -345,7 +373,7 @@ export const EventRegistrations = () => {
                     }}
                     variant="destructive"
                   >
-                    Reject
+                    Reject Payment
                   </Button>
                 </div>
               )}
@@ -359,6 +387,9 @@ export const EventRegistrations = () => {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Ticket QR Code</DialogTitle>
+            <DialogDescription>
+              Manage the QR code for this ticket
+            </DialogDescription>
           </DialogHeader>
           {selectedRegistration?.qr_code ? (
             <div className="flex flex-col items-center gap-4">
@@ -370,6 +401,11 @@ export const EventRegistrations = () => {
                   level="H"
                   className={selectedRegistration.qr_code_active ? "" : "opacity-50"}
                 />
+                {!selectedRegistration.qr_code_active && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Badge className="bg-red-500">INACTIVE</Badge>
+                  </div>
+                )}
               </div>
               
               <div className="text-center">
@@ -391,15 +427,16 @@ export const EventRegistrations = () => {
                   variant="outline" 
                   onClick={downloadQrCode}
                 >
-                  <Download className="h-4 w-4 mr-2" /> Download
+                  <Download className="h-4 w-4 mr-2" /> Download QR
                 </Button>
                 <Button 
                   onClick={() => handleToggleQrCode(
                     selectedRegistration.id, 
                     !selectedRegistration.qr_code_active
                   )}
+                  className={selectedRegistration.qr_code_active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
                 >
-                  {selectedRegistration.qr_code_active ? "Deactivate" : "Activate"}
+                  {selectedRegistration.qr_code_active ? "Deactivate QR" : "Activate QR"}
                 </Button>
               </div>
             </div>

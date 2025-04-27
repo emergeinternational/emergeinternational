@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
 import EventsSection from '@/components/admin/EventsSection';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
@@ -12,7 +13,7 @@ import { useEventsAdmin } from "@/hooks/useEvents";
 import { PaymentInstructionsManager } from '@/components/admin/PaymentInstructionsManager';
 
 const EventsPage = () => {
-  const [activeTab, setActiveTab] = useState('management');
+  const [activeTab, setActiveTab] = useState('registrations'); // Set default tab to registrations
   const { refetch } = useEventsAdmin();
   
   const {
@@ -32,13 +33,35 @@ const EventsPage = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Event Management</h1>
         
-        <Tabs defaultValue="management" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="management">Event Management</TabsTrigger>
-            <TabsTrigger value="registrations">Registrations</TabsTrigger>
-            <TabsTrigger value="discounts">Discount Codes</TabsTrigger>
-            <TabsTrigger value="payment">Payment Settings</TabsTrigger>
+        <Tabs defaultValue="registrations" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="mb-4 w-full justify-start">
+            <TabsTrigger value="registrations" className="text-base font-medium">
+              Registrations & Payments
+            </TabsTrigger>
+            <TabsTrigger value="management" className="text-base font-medium">
+              Event Management
+            </TabsTrigger>
+            <TabsTrigger value="discounts" className="text-base font-medium">
+              Discount Codes
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="text-base font-medium">
+              Payment Settings
+            </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="registrations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Event Registrations & Payments</CardTitle>
+                <CardDescription>
+                  Manage attendee registrations, approve payments, and manage QR code tickets
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EventRegistrations />
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="management" className="space-y-4">
             <Card>
@@ -49,10 +72,6 @@ const EventsPage = () => {
                 <EventsSection onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          <TabsContent value="registrations" className="space-y-4">
-            <EventRegistrations />
           </TabsContent>
           
           <TabsContent value="discounts" className="space-y-4">

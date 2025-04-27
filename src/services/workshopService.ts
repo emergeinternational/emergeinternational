@@ -123,6 +123,7 @@ export const updateRegistrationStatus = async (
 ): Promise<void> => {
   try {
     if (status === 'approved') {
+      // Generate a unique QR code when approving payment
       const qrCode = `EVENT-${registrationId}-${Date.now()}`;
       
       const { error } = await supabase
