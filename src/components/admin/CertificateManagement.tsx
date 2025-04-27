@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   getEligibleUsers,
@@ -6,7 +5,7 @@ import {
   generateCertificate,
   getCertificateSettings,
   getUsersByStatus
-} from "../services/certificateService";
+} from "@/services/certificate";
 import { useToast } from "@/hooks/use-toast";
 import CertificateSettings from "./CertificateSettings";
 import { Award, Loader2, CheckCircle, AlertTriangle, Eye, XCircle } from "lucide-react";

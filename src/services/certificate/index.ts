@@ -18,7 +18,8 @@ export {
 export {
   getEligibleUsers,
   updateCertificateApproval,
-  userMeetsRequirements
+  userMeetsRequirements,
+  getUsersByStatus
 } from './eligibility';
 
 // Type exports
