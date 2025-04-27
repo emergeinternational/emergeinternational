@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useFieldArray } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -18,18 +18,23 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
     name: "ticket_types"
   });
 
-  // Instead of using useMemo with fields as a dependency (which can cause hooks count mismatches),
-  // we'll use a more stable approach where each benefit field array is created directly within the render
-  const benefitsFieldArrays = fields.map((_, index) => {
-    // We need to use a stable key that doesn't change between renders
+  // Create an array of field arrays for each ticket type's benefits
+  // The key here is we're not using hooks inside a loop or condition
+  const benefitsFieldArrays = fields.map((field, index) => {
+    const key = `benefits-${field.id}`;
     return {
-      ...useFieldArray({
-        control: form.control,
-        name: `ticket_types.${index}.benefits`
-      }),
-      // Add a stable key to the object
-      fieldId: fields[index].id
+      index,
+      fieldId: field.id,
+      key
     };
+  });
+
+  // Create all the field arrays for benefits up front, outside of the render loop
+  const benefitsControls = benefitsFieldArrays.map(benefitField => {
+    return useFieldArray({
+      control: form.control,
+      name: `ticket_types.${benefitField.index}.benefits`
+    });
   });
 
   return (
@@ -53,8 +58,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
       </div>
 
       {fields.map((field, index) => {
-        // Find the corresponding benefits field array using the field id
-        const benefitsArray = benefitsFieldArrays.find(b => b.fieldId === field.id);
+        // Find the matching benefits control
+        const benefitsControl = benefitsControls[index];
         
         return (
           <div key={field.id} className="border rounded-md p-4 mb-4">
@@ -144,15 +149,15 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => benefitsArray?.append("")}
+                  onClick={() => benefitsControl.append("")}
                 >
                   <Plus className="h-3 w-3 mr-1" /> Add Benefit
                 </Button>
               </div>
               
-              {benefitsArray && benefitsArray.fields.length > 0 ? (
+              {benefitsControl && benefitsControl.fields.length > 0 ? (
                 <div className="space-y-2">
-                  {benefitsArray.fields.map((benefitField, benefitIndex) => (
+                  {benefitsControl.fields.map((benefitField, benefitIndex) => (
                     <div key={benefitField.id} className="flex items-center gap-2">
                       <FormField
                         control={form.control}
@@ -170,7 +175,7 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => benefitsArray.remove(benefitIndex)}
+                        onClick={() => benefitsControl.remove(benefitIndex)}
                         className="text-red-500"
                       >
                         <Trash className="h-4 w-4" />
