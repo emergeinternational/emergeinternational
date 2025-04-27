@@ -112,7 +112,7 @@ export const useEventForm = (onSuccess?: () => void) => {
           const ticketData: any = {
             name: ticket.name,
             price: ticket.price,
-            description: ticket.description,
+            description: ticket.description || '',
             quantity: ticket.quantity,
             benefits: ticket.benefits || []
           };
