@@ -1,9 +1,11 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import MainLayout from '@/layouts/MainLayout';
 import { useCurrency } from '@/hooks/useCurrency';
 import { CurrencySelector } from '@/components/CurrencySelector';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 // Mock events data - this would typically come from an API or prop
 const eventsList = [
@@ -42,13 +44,18 @@ const Events = () => {
               <CardContent className="p-6">
                 <h3 className="text-xl font-medium mb-2">{event.name}</h3>
                 <p className="text-gray-600 mb-4">{event.description}</p>
-                <div className="space-y-2">
+                <div className="space-y-2 mb-4">
                   <p><strong>Date:</strong> {event.date}</p>
                   <p><strong>Location:</strong> {event.location}</p>
                   <p className="text-lg font-semibold">
                     <strong>Price:</strong> {selectedCurrency?.symbol} 
                     {convertPrice(event.price).toFixed(2)}
                   </p>
+                </div>
+                <div className="flex justify-end">
+                  <Link to={`/event-payment/${event.id}`}>
+                    <Button>Buy Tickets</Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

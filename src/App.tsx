@@ -39,6 +39,7 @@ import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
 import TalentsPage from "./pages/admin/TalentsPage";
+import EventPayment from "./pages/EventPayment";
 
 const queryClient = new QueryClient();
 
@@ -84,11 +85,12 @@ const App = () => {
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/product/:id" element={<ProductDetail />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/event-payment/:eventId" element={<EventPayment />} />
+                <Route path="/payment" element={<Payment />} />
                 
                 {/* Protected routes */}
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
                 <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
-                <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
