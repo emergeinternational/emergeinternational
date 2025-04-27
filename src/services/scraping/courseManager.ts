@@ -72,19 +72,19 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
       return typedScrapedCourse.duplicate_of;
     }
     
-    // Create a new course from the scraped data
-    const courseData: Partial<Course> = {
+    // Create a new course from the scraped data ensuring required fields are present
+    const courseData = {
       title: typedScrapedCourse.title,
-      summary: typedScrapedCourse.summary,
+      summary: typedScrapedCourse.summary || '',
       category: typedScrapedCourse.category,
       level: typedScrapedCourse.level,
-      video_embed_url: typedScrapedCourse.video_embed_url,
-      external_link: typedScrapedCourse.external_link,
-      image_url: typedScrapedCourse.image_url,
+      video_embed_url: typedScrapedCourse.video_embed_url || '',
+      external_link: typedScrapedCourse.external_link || '',
+      image_url: typedScrapedCourse.image_url || '',
       hosting_type: typedScrapedCourse.hosting_type,
       is_published: true,
       source_platform: typedScrapedCourse.scraper_source,
-      source_url: typedScrapedCourse.external_link || typedScrapedCourse.video_embed_url,
+      source_url: typedScrapedCourse.external_link || typedScrapedCourse.video_embed_url || '',
       hash_identifier: typedScrapedCourse.hash_identifier || 
         generateCourseHash(typedScrapedCourse.title, typedScrapedCourse.scraper_source)
     };

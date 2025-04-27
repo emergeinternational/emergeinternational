@@ -1,7 +1,14 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { generateCourseHash } from "../courseTypes";
 import { calculateSimilarity } from "./courseScraperValidation";
 import { logScraperActivity } from "./courseScraperHelpers";
+
+type CourseMatch = {
+  id: string;
+  title: string;
+  scraper_source: string;
+};
 
 // Check if a course already exists in the database
 export const checkDuplicateCourse = async (
@@ -60,11 +67,11 @@ export const checkDuplicateCourse = async (
       console.error("Error checking course by title:", titleError);
     } else if (titleMatches && titleMatches.length > 0) {
       // Find the closest match by comparing titles
-      const closestMatch = titleMatches.reduce((closest, current) => {
+      const closestMatch = titleMatches.reduce((closest: CourseMatch, current: CourseMatch) => {
         const closestSimilarity = calculateSimilarity(title, closest.title);
         const currentSimilarity = calculateSimilarity(title, current.title);
         return currentSimilarity > closestSimilarity ? current : closest;
-      }, titleMatches[0]);
+      }, titleMatches[0] as CourseMatch);
       
       const similarity = calculateSimilarity(title, closestMatch.title);
       

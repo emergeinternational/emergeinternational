@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { AlertCircle, Check, X } from 'lucide-react';
-import { createVerifiedCourse } from '@/services/courseScraperService';
+import { createVerifiedCourse } from '@/services/scraping/courseScraperHelpers';
 import { useStorage } from '@/hooks/useStorage';
 import { Course, CourseCategory, CourseLevel, CourseHostingType } from '@/services/courseTypes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
