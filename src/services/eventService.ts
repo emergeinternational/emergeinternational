@@ -204,9 +204,13 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
       
       // Process each ticket type from the update payload
       for (const ticket of eventData.ticket_types) {
-        if (ticket.id && typeof ticket.id === 'string' && 
-            ticket.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          // Valid UUID format - update existing ticket
+        // Check if the ticket has a valid UUID format
+        const hasValidId = ticket.id && 
+                          typeof ticket.id === 'string' && 
+                          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticket.id);
+        
+        if (hasValidId && existingTicketsMap.has(ticket.id)) {
+          // Valid UUID format and exists in our map - update existing ticket
           console.log(`Updating existing ticket ${ticket.id}:`, ticket);
           const ticketUpdateData = {
             name: ticket.name,
@@ -228,8 +232,8 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
           
           // Remove from map to track which ones are processed
           existingTicketsMap.delete(ticket.id);
-        } else if (!ticket.id || (typeof ticket.id === 'string' && !ticket.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))) {
-          // No ID or invalid UUID format - create new ticket
+        } else {
+          // No valid ID or not found in existing tickets - create new ticket
           console.log(`Creating new ticket for event ${eventId}:`, ticket);
           const newTicketData = {
             name: ticket.name,
