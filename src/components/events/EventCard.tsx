@@ -13,6 +13,21 @@ interface EventCardProps {
 const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const { selectedCurrency, convertPrice } = useCurrency();
 
+  // Helper function to safely convert and format price
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined || price === null) {
+      return 'Free';
+    }
+    
+    try {
+      const converted = convertPrice(price);
+      return `${selectedCurrency?.symbol} ${converted.toFixed(2)}`;
+    } catch (error) {
+      console.error('Error converting price:', error);
+      return `${selectedCurrency?.symbol || ''} ${price.toFixed(2)}`;
+    }
+  };
+
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-6">
@@ -29,8 +44,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           )}
           {event.price !== undefined && (
             <p className="text-lg font-semibold">
-              <strong>Price:</strong> {selectedCurrency?.symbol} 
-              {convertPrice(event.price).toFixed(2)}
+              <strong>Price:</strong> {formatPrice(event.price)}
             </p>
           )}
         </div>
