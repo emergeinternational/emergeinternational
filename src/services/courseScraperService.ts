@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { trackCourseEngagement } from "./courseDataService";
@@ -195,11 +194,10 @@ export const logScraperActivity = async (
 // Create a verified course directly (for manual course creation)
 export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
   try {
-    // Ensure category and level are valid enum types
     const validatedData = {
       ...courseData,
       category: courseData.category as CourseCategory,
-      level: courseData.level as CourseLevel,
+      level: courseData.level || 'beginner' as CourseLevel,
       hosting_type: courseData.hosting_type as CourseHostingType
     };
     

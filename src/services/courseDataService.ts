@@ -93,7 +93,6 @@ export const trackCourseEngagement = async (courseId: string): Promise<boolean> 
 
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {
-    // First try to fetch from the courses table
     const { data: courseData, error: courseError } = await supabase
       .from("courses")
       .select("*")
@@ -102,22 +101,12 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 
     if (courseData) {
       return {
-        id: courseData.id,
-        title: courseData.title,
-        summary: courseData.summary,
-        category: courseData.category,
-        level: courseData.level,
-        image_url: courseData.image_url,
-        video_embed_url: courseData.video_embed_url,
-        external_link: courseData.external_link,
-        hosting_type: courseData.hosting_type,
-        is_published: courseData.is_published,
-        created_at: courseData.created_at,
-        updated_at: courseData.updated_at
+        ...courseData,
+        category: courseData.category as CourseCategory,
+        level: courseData.level as CourseLevel
       };
     }
 
-    // Fallback to education_content if not found in courses
     const { data, error } = await supabase
       .from("education_content")
       .select("*")
@@ -129,23 +118,21 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       return null;
     }
 
-    // Create a course object from the education_content data
     return {
       id: data.id,
       title: data.title,
       summary: data.summary,
-      category: (data.category_id || '') as CourseCategory,
-      level: (data.content_type || '') as CourseLevel,
+      category: (data.category_id as CourseCategory) || 'model',
+      level: (data.content_type as CourseLevel) || 'beginner',
       source_url: data.source_url,
       image_url: data.image_url,
       content_type: data.content_type,
       category_id: data.category_id,
       created_at: data.created_at,
       updated_at: data.updated_at,
-      // These fields might not exist in the database yet, provide defaults
-      video_embed_url: data.source_url, // Use source_url as fallback
-      external_link: data.source_url, // Use source_url as fallback
-      hosting_type: 'hosted' as CourseHostingType // Default to 'hosted'
+      video_embed_url: data.source_url,
+      external_link: data.source_url,
+      hosting_type: 'hosted' as CourseHostingType
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
@@ -155,7 +142,6 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 
 export const getAllCourses = async (): Promise<Course[]> => {
   try {
-    // First try to fetch from the courses table if it exists
     let { data: coursesData, error: coursesError } = await supabase
       .from("courses")
       .select("*");
@@ -178,7 +164,6 @@ export const getAllCourses = async (): Promise<Course[]> => {
       }));
     }
 
-    // Fallback to education_content
     const { data, error } = await supabase
       .from("education_content")
       .select("*");
@@ -200,10 +185,9 @@ export const getAllCourses = async (): Promise<Course[]> => {
       category_id: item.category_id,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      // Provide defaults for fields that might not exist in the database
-      video_embed_url: item.source_url, // Use source_url as fallback
-      external_link: item.source_url, // Use source_url as fallback
-      hosting_type: 'hosted' as CourseHostingType, // Default to 'hosted'
+      video_embed_url: item.source_url,
+      external_link: item.source_url,
+      hosting_type: 'hosted' as CourseHostingType,
       career_interests: []
     }));
   } catch (error) {
@@ -214,7 +198,6 @@ export const getAllCourses = async (): Promise<Course[]> => {
 
 export const getPopularCourses = async (): Promise<Course[]> => {
   try {
-    // First try from courses table if it exists
     let { data: coursesData, error: coursesError } = await supabase
       .from("courses")
       .select("*")
@@ -239,7 +222,6 @@ export const getPopularCourses = async (): Promise<Course[]> => {
       }));
     }
 
-    // Fallback to education_content
     const { data, error } = await supabase
       .from("education_content")
       .select("*")
@@ -329,7 +311,6 @@ export const getCourses = async (
   careerInterest?: string
 ): Promise<Course[]> => {
   try {
-    // Define valid career interests list to ensure type safety
     const validCareerInterests: CourseCategory[] = [
       "model", 
       "designer", 
@@ -340,7 +321,6 @@ export const getCourses = async (
       "event_planner"
     ];
     
-    // First try the courses table if it exists
     let courseQuery = supabase.from("courses").select("*");
 
     if (level && level !== "all") {
@@ -375,7 +355,6 @@ export const getCourses = async (
       }));
 
       if (careerInterest && careerInterest !== "all") {
-        // Fix: Check if careerInterest is in validCareerInterests
         const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
           ? careerInterest as CourseCategory 
           : "all";
@@ -391,7 +370,6 @@ export const getCourses = async (
       return coursesWithValidImages;
     }
 
-    // Fallback to education_content
     let query = supabase.from("education_content").select("*");
 
     if (level && level !== "all") {
@@ -433,17 +411,15 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
-          // Provide defaults for fields that might not exist
-          video_embed_url: item.source_url, // Use source_url as fallback
-          external_link: item.source_url, // Use source_url as fallback
-          hosting_type: 'hosted' as CourseHostingType, // Default to 'hosted'
+          video_embed_url: item.source_url,
+          external_link: item.source_url,
+          hosting_type: 'hosted' as CourseHostingType,
           career_interests: []
         };
       })
     );
 
     if (careerInterest && careerInterest !== "all") {
-      // Fix: Check if careerInterest is in validCareerInterests
       const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
         ? careerInterest as CourseCategory 
         : "all";
@@ -468,8 +444,7 @@ export const getStaticCourses = (): Course[] => {
       id: "1",
       title: "Fashion Design Fundamentals",
       summary: "Learn the basics of fashion design",
-      category: "beginner",
-      category_id: "beginner",
+      category: "designer",
       level: "beginner",
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
@@ -481,9 +456,8 @@ export const getStaticCourses = (): Course[] => {
       id: "2",
       title: "Advanced Pattern Making",
       summary: "Master the art of pattern making",
-      category: "advanced",
-      category_id: "advanced",
-      level: "advanced",
+      category: "designer",
+      level: "expert",
       duration: "12 weeks",
       image_url: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/pattern-making",
@@ -495,7 +469,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Fashion Photography Basics",
       summary: "Learn how to capture fashion photography",
       category: "beginner",
-      category_id: "beginner",
       level: "beginner",
       duration: "6 weeks",
       image_url: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop",
@@ -508,7 +481,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Runway Walk Techniques",
       summary: "Perfect your runway walk for fashion shows",
       category: "beginner",
-      category_id: "beginner",
       level: "beginner",
       duration: "4 weeks",
       image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
@@ -521,7 +493,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Video Production for Fashion",
       summary: "Create professional fashion videos",
       category: "intermediate",
-      category_id: "intermediate",
       level: "intermediate",
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
@@ -534,7 +505,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Songwriting for Fashion Shows",
       summary: "Create compelling music for runway shows",
       category: "intermediate",
-      category_id: "intermediate",
       level: "intermediate",
       duration: "6 weeks",
       image_url: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop",
@@ -547,7 +517,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Fashion Illustration Techniques",
       summary: "Master drawing and painting fashion illustrations",
       category: "beginner",
-      category_id: "beginner",
       level: "beginner",
       duration: "10 weeks",
       image_url: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop",
@@ -560,7 +529,6 @@ export const getStaticCourses = (): Course[] => {
       title: "Fashion Show Planning",
       summary: "Learn to plan and execute successful fashion events",
       category: "advanced",
-      category_id: "advanced",
       level: "advanced",
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop",
