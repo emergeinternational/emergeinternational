@@ -4,14 +4,9 @@ import { Course, ScrapedCourse } from "./courseTypes";
 import { trackCourseEngagement } from "./courseDataService";
 import { useToast } from "@/hooks/use-toast";
 
-// Constants for scraping configuration
-const SCRAPING_INTERVAL_DAYS = 14; // 2 weeks
-const REQUIRED_INACTIVITY_DAYS = 14; // 2 weeks of inactivity
-
-// Function to check if a course can be updated (no active students or inactive for 2 weeks)
+// Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
   try {
-    // Check if course has active students
     const { data: progressData, error: progressError } = await supabase
       .from("user_course_progress")
       .select("*")
@@ -23,14 +18,12 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
       return false;
     }
     
-    // If no active students, course can be updated
     if (!progressData || progressData.length === 0) {
       return true;
     }
     
-    // Check if there's been activity in the last 2 weeks
     const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - REQUIRED_INACTIVITY_DAYS);
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
     
     const { data: recentActivity, error: activityError } = await supabase
       .from("user_course_progress")
@@ -44,7 +37,6 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
       return false;
     }
     
-    // If no recent activity, course can be updated
     return !recentActivity || recentActivity.length === 0;
   } catch (error) {
     console.error("Error in canUpdateCourse:", error);
@@ -52,61 +44,7 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
   }
 };
 
-// Function to lock a course
-export const lockCourse = async (courseId: string, reason: string, lockUntil?: Date): Promise<boolean> => {
-  try {
-    const lockDate = lockUntil || new Date();
-    if (!lockUntil) {
-      // Default to 2 weeks from now if not specified
-      lockDate.setDate(lockDate.getDate() + REQUIRED_INACTIVITY_DAYS);
-    }
-    
-    const { error } = await supabase
-      .from("courses")
-      .update({
-        is_locked: true,
-        locked_reason: reason,
-        locked_until: lockDate.toISOString()
-      })
-      .eq("id", courseId);
-    
-    if (error) {
-      console.error("Error locking course:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in lockCourse:", error);
-    return false;
-  }
-};
-
-// Function to unlock a course
-export const unlockCourse = async (courseId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from("courses")
-      .update({
-        is_locked: false,
-        locked_reason: null,
-        locked_until: null
-      })
-      .eq("id", courseId);
-    
-    if (error) {
-      console.error("Error unlocking course:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in unlockCourse:", error);
-    return false;
-  }
-};
-
-// Function to submit a scraped course to the approval queue
+// Submit a scraped course to the approval queue
 export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>): Promise<string | null> => {
   try {
     const { data, error } = await supabase
@@ -116,7 +54,7 @@ export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'cr
         is_approved: false,
         is_reviewed: false
       })
-      .select('id')
+      .select()
       .single();
     
     if (error) {
@@ -131,7 +69,7 @@ export const submitScrapedCourse = async (course: Omit<ScrapedCourse, 'id' | 'cr
   }
 };
 
-// Function to get all pending scraped courses
+// Get all pending scraped courses
 export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
   try {
     const { data, error } = await supabase
@@ -152,10 +90,9 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
   }
 };
 
-// Function to approve a scraped course
+// Approve a scraped course
 export const approveScrapedCourse = async (id: string): Promise<string | null> => {
   try {
-    // First get the scraped course
     const { data: scrapedCourse, error: fetchError } = await supabase
       .from("scraped_courses")
       .select("*")
@@ -182,7 +119,7 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
         is_published: true,
         scraper_source: scrapedCourse.scraper_source
       })
-      .select('id')
+      .select()
       .single();
     
     if (insertError) {
@@ -201,8 +138,6 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
     
     if (updateError) {
       console.error("Error updating scraped course:", updateError);
-      // The course was created but we couldn't update the status
-      // This is not critical, so we return the new course ID anyway
     }
     
     return newCourse.id;
@@ -212,7 +147,7 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
   }
 };
 
-// Function to reject a scraped course
+// Reject a scraped course
 export const rejectScrapedCourse = async (id: string, reason: string): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -236,35 +171,11 @@ export const rejectScrapedCourse = async (id: string, reason: string): Promise<b
   }
 };
 
-// Manually create a new course (fully verified)
-export const createVerifiedCourse = async (course: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
-  try {
-    const { data, error } = await supabase
-      .from("courses")
-      .insert({
-        ...course,
-        is_published: true
-      })
-      .select('id')
-      .single();
-    
-    if (error) {
-      console.error("Error creating verified course:", error);
-      return null;
-    }
-    
-    return data.id;
-  } catch (error) {
-    console.error("Error in createVerifiedCourse:", error);
-    return null;
-  }
-};
-
-// Log scraper activity for monitoring
+// Log scraper activity
 export const logScraperActivity = async (
   source: string, 
   action: string, 
-  status: 'success' | 'error', 
+  status: 'success' | 'warning' | 'error', 
   details: any
 ): Promise<void> => {
   try {
@@ -275,10 +186,8 @@ export const logScraperActivity = async (
         action,
         status,
         details: JSON.stringify(details),
-        created_at: new Date().toISOString()
       });
   } catch (error) {
     console.error("Error logging scraper activity:", error);
-    // Don't throw - this is just logging
   }
 };

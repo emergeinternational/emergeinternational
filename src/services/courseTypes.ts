@@ -1,4 +1,3 @@
-
 export interface Course {
   id: string;
   title: string;
@@ -23,14 +22,12 @@ export interface Course {
   content_type?: string;
   category_id?: string;
   career_interests?: string[];
-  // Add the new fields
   video_embed_url?: string;
   external_link?: string;
   hosting_type?: 'hosted' | 'embedded' | 'external';
   is_published?: boolean;
   content?: string;
   location?: string;
-  // New fields for scraping management
   last_scraped_at?: string;
   is_locked?: boolean;
   locked_reason?: string;
@@ -50,7 +47,7 @@ export interface CourseProgress {
   date_completed: string;
   created_at: string;
   updated_at: string;
-  progress: number; // Ensure this field is explicitly defined
+  progress: number;
 }
 
 export interface Category {
@@ -70,20 +67,20 @@ export interface Review {
   created_at?: string;
 }
 
-// Interface for course scraping queue
 export interface ScrapedCourse {
   id: string;
   title: string;
   summary?: string;
-  category: string;
-  level: string;
+  category: 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
+  level: 'beginner' | 'intermediate' | 'expert';
   video_embed_url?: string;
   external_link?: string;
   image_url?: string;
   hosting_type: 'hosted' | 'embedded' | 'external';
   scraper_source: string;
-  created_at: string;
   is_approved: boolean;
   is_reviewed: boolean;
   review_notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
