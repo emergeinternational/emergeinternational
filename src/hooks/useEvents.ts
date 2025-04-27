@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { getEvents } from "@/services/eventService";
+import { getEvents, getEventById } from "@/services/eventService";
 
 export interface TicketType {
   id: string;
@@ -40,6 +40,16 @@ export const useEvents = () => {
     queryFn: getEvents,
     refetchOnWindowFocus: false,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+};
+
+export const useEvent = (eventId: string | undefined) => {
+  return useQuery({
+    queryKey: ['event', eventId],
+    queryFn: () => eventId ? getEventById(eventId) : Promise.reject('No event ID provided'),
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    enabled: !!eventId, // Only run the query if eventId is provided
   });
 };
 

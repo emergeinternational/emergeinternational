@@ -4,18 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader, Plus, Edit, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import CourseList from '@/components/premium-courses/CourseList';
+import DeleteCourseDialog from '@/components/premium-courses/DeleteCourseDialog';
 
 interface PremiumCourse {
   id: string;
@@ -28,10 +21,6 @@ interface PremiumCourse {
   enrollments_count: number;
   category: "model" | "designer" | "photographer" | "videographer" | "musical_artist" | "fine_artist" | "event_planner";
   created_by?: string;
-}
-
-interface EnrollmentData {
-  count: number;
 }
 
 const PremiumCoursesPage = () => {
@@ -111,25 +100,13 @@ const PremiumCoursesPage = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <Loader className="h-8 w-8 animate-spin text-emerge-gold" />
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="text-center text-red-500 p-4">
-          Error loading premium courses. Please try again.
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleEditCourse = (course: PremiumCourse) => {
+    // This would be implemented in a future feature
+    toast({
+      title: "Edit Course",
+      description: "Course editing will be implemented in a future update."
+    });
+  };
 
   return (
     <AdminLayout>
@@ -148,89 +125,23 @@ const PremiumCoursesPage = () => {
             <h2 className="font-medium">All Premium Courses</h2>
           </div>
           <div className="p-4">
-            {courses && courses.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-2 font-medium">Title</th>
-                      <th className="pb-2 font-medium">Price</th>
-                      <th className="pb-2 font-medium">Status</th>
-                      <th className="pb-2 font-medium">Enrollments</th>
-                      <th className="pb-2 font-medium">Created</th>
-                      {canEdit && <th className="pb-2 font-medium">Actions</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {courses.map((course) => (
-                      <tr key={course.id} className="border-b last:border-0">
-                        <td className="py-3 pr-4">{course.title}</td>
-                        <td className="py-3 pr-4">${course.price.toFixed(2)}</td>
-                        <td className="py-3 pr-4">
-                          {course.status === 'published' ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
-                              Published
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Draft</Badge>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4">{course.enrollments_count}</td>
-                        <td className="py-3 pr-4">
-                          {new Date(course.created_at).toLocaleDateString()}
-                        </td>
-                        {canEdit && (
-                          <td className="py-3">
-                            <div className="flex space-x-2">
-                              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                onClick={() => confirmDelete(course)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                No premium courses found. Add your first course to get started.
-              </div>
-            )}
+            <CourseList
+              courses={courses}
+              isLoading={isLoading}
+              error={error as Error}
+              onEditCourse={handleEditCourse}
+              onDeleteCourse={confirmDelete}
+            />
           </div>
         </div>
       </div>
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Are you sure you want to delete <strong>{courseToDelete?.title}</strong>?</p>
-            <p className="text-sm text-gray-500 mt-2">
-              This action cannot be undone. All associated enrollments and content will be permanently removed.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteCourse}>
-              Delete Course
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteCourseDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        course={courseToDelete}
+        onDelete={handleDeleteCourse}
+      />
     </AdminLayout>
   );
 };
