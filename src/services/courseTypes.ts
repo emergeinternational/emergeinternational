@@ -1,4 +1,3 @@
-
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
 export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
 export type CourseHostingType = 'hosted' | 'embedded' | 'external';
@@ -23,7 +22,7 @@ export interface Course {
   updated_at?: string;
   source_url?: string;
   image_url?: string;
-  image?: string; // Adding image field for backward compatibility
+  image?: string;
   content_type?: string;
   category_id?: string;
   career_interests?: string[];
@@ -33,6 +32,7 @@ export interface Course {
   is_published?: boolean;
   content?: string;
   location?: string;
+  price?: number;
 }
 
 export interface ScrapedCourse extends Omit<Course, 'id'> {
@@ -99,7 +99,7 @@ export const sanitizeCourseData = (data: any): Course => {
     level: getDefaultCourseLevel(data.level || data.content_type),
     duration: data.duration || '',
     image_url: data.image_url || '',
-    image: data.image_url || '', // Set image field for backward compatibility
+    image: data.image_url || '',
     source_url: data.source_url || '',
     content_type: data.content_type || '',
     category_id: data.category_id || '',
@@ -109,7 +109,8 @@ export const sanitizeCourseData = (data: any): Course => {
     video_embed_url: data.video_embed_url || data.source_url || '',
     external_link: data.external_link || data.source_url || '',
     hosting_type: getDefaultHostingType(data.hosting_type),
-    is_published: data.is_published !== undefined ? data.is_published : true
+    is_published: data.is_published !== undefined ? data.is_published : true,
+    price: data.price || 0
   };
 };
 

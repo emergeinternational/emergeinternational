@@ -167,6 +167,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_published: boolean
+          price: number | null
           summary: string | null
           title: string
           updated_at: string | null
@@ -180,6 +181,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_published?: boolean
+          price?: number | null
           summary?: string | null
           title: string
           updated_at?: string | null
@@ -193,6 +195,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_published?: boolean
+          price?: number | null
           summary?: string | null
           title?: string
           updated_at?: string | null
@@ -765,6 +768,7 @@ export type Database = {
           image_path: string | null
           is_published: boolean
           level: Database["public"]["Enums"]["course_level"]
+          price: number | null
           start_date: string | null
           student_capacity: number
           summary: string | null
@@ -782,6 +786,7 @@ export type Database = {
           image_path?: string | null
           is_published?: boolean
           level?: Database["public"]["Enums"]["course_level"]
+          price?: number | null
           start_date?: string | null
           student_capacity?: number
           summary?: string | null
@@ -799,6 +804,7 @@ export type Database = {
           image_path?: string | null
           is_published?: boolean
           level?: Database["public"]["Enums"]["course_level"]
+          price?: number | null
           start_date?: string | null
           student_capacity?: number
           summary?: string | null

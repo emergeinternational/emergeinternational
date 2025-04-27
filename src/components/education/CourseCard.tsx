@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { ChevronRight, AlertTriangle } from "lucide-react";
 
@@ -50,9 +49,7 @@ const CourseCard = ({
           <span className="text-xs text-gray-500 uppercase">
             {levelName}
           </span>
-          {duration && (
-            <span className="text-xs text-emerge-gold">{duration}</span>
-          )}
+          <span className="text-xs text-emerge-gold">Free</span>
         </div>
         <h3 className="font-medium text-lg mb-2">{name}</h3>
         <p className="text-gray-600 text-sm flex-grow">
