@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 interface TalentApplicationRowProps {
   app: TalentApplication;
   onViewDetails: (app: TalentApplication) => void;
-  onUpdateStatus: (id: string, status: string) => void;
+  onUpdateStatus: (id: string, status: 'pending' | 'approved' | 'rejected' | 'on_hold') => void;
 }
 
 export const TalentApplicationRow = ({

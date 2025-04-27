@@ -18,6 +18,6 @@ export interface TalentApplication {
   };
   skills?: string[];
   notes?: string;
-  status?: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'on_hold';
   created_at: string;
 }

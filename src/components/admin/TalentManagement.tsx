@@ -78,7 +78,7 @@ const TalentManagement = () => {
     }
   };
 
-  const updateApplicationStatus = async (id: string, status: string) => {
+  const updateApplicationStatus = async (id: string, status: 'pending' | 'approved' | 'rejected' | 'on_hold') => {
     try {
       const { error } = await supabase
         .from('talent_applications')
@@ -139,15 +139,15 @@ const TalentManagement = () => {
         <TableBody>
           {isLoading || isRefreshing ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <td colSpan={6} className="text-center py-8">
                 Loading applications...
-              </TableCell>
+              </td>
             </TableRow>
           ) : !applications?.length ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <td colSpan={6} className="text-center py-8">
                 No applications found
-              </TableCell>
+              </td>
             </TableRow>
           ) : (
             applications.map((app) => (
