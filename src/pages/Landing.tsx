@@ -1,7 +1,7 @@
 
 import MainLayout from "../layouts/MainLayout";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ShoppingBag } from "lucide-react";
 
 const Landing = () => {

@@ -82,14 +82,14 @@ const App = () => {
                 <Route path="/submit" element={<MediaSubmission />} />
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                 <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-                
-                {/* Protected routes */}
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/product/:id" element={<ProductDetail />} />
+                <Route path="/events" element={<Events />} />
+                
+                {/* Protected routes */}
                 <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
                 <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
                 <Route path="/payment" element={<PrivateRoute><Payment /></PrivateRoute>} />
-                <Route path="/events" element={<PrivateRoute><Events /></PrivateRoute>} />
                 <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                 <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
                 <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
