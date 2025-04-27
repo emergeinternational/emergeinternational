@@ -7,34 +7,38 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
+    // First, check if the QR code exists and is for an approved payment
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('id, qr_code_active')
+      .select('id, qr_code')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .maybeSingle();
 
     if (error) {
-      console.log("QR code validation error:", error);
+      console.error("QR code validation error:", error);
       return false;
     }
 
-    if (!data || data.qr_code_active === false) {
-      console.log("QR code inactive or not found");
+    if (!data) {
+      console.log("QR code not found");
       return false;
     }
 
-    // Deactivate the QR code after successful scan
+    // For now, since qr_code_active doesn't exist yet, we'll handle tickets differently
+    // We'll need to track used QR codes separately
+
+    // Mark this QR code as used by updating payment_status
     const { error: updateError } = await supabase
       .from('event_registrations')
       .update({ 
-        qr_code_active: false,
+        payment_status: 'used',
         updated_at: new Date().toISOString()
       })
       .eq('id', data.id);
 
     if (updateError) {
-      console.error("Error deactivating QR code:", updateError);
+      console.error("Error marking QR code as used:", updateError);
       return false;
     }
 

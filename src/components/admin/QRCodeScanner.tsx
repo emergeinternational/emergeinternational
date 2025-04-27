@@ -7,15 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QrCode } from 'lucide-react';
 
-interface ScannerComponentProps {
-  onResult?: (result: string | null) => void;
-  onError?: (error: Error) => void;
-}
-
 export const QRCodeScanner: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleScan = async (result: string | null) => {
+  const handleScan = async (result: string) => {
     if (!result) return;
     
     try {
@@ -61,7 +56,7 @@ export const QRCodeScanner: React.FC = () => {
           </Button>
         ) : (
           <Scanner
-            onResult={handleScan}
+            onDecode={handleScan}
             onError={handleError}
             constraints={{
               facingMode: 'environment'
