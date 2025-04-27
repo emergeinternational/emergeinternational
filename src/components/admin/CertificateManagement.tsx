@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Award, Loader2 } from "lucide-react";
+import { Award, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { 
   getEligibleUsers,
   updateCertificateApproval,
@@ -31,6 +31,7 @@ import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
 import { UserCourseDetails } from "./certificates/UserCourseDetails";
 import { CertificateActions } from "./certificates/CertificateActions";
 import CertificateStatusFilter from "./CertificateStatusFilter";
+import CertificateSettings from "./CertificateSettings";
 
 const CertificateManagement = () => {
   const { toast } = useToast();
