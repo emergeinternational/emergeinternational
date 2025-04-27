@@ -1,96 +1,70 @@
 
-import { useState } from "react";
-import { CheckCircle, Download, Printer, Share2 } from "lucide-react";
-import { extendedButtonVariants } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils/date";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { downloadCertificate } from "@/services/certificate/index";
+import { Button } from "@/components/ui/button";
+import { Award, CheckCircle, Eye, XCircle } from "lucide-react";
 
-export interface CertificateActionsProps {
-  userId: string;
-  courseId: string;
-  approvedDate?: string;
+interface CertificateActionsProps {
+  user: any;
+  hasMetRequirements: boolean;
+  onViewDetails: () => void;
+  onApprove: () => void;
+  onGenerate: () => void;
+  onRevoke: () => void;
 }
 
-export const CertificateActions = ({ userId, courseId, approvedDate }: CertificateActionsProps) => {
-  const [isDownloading, setIsDownloading] = useState(false);
-  const { toast } = useToast();
-
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      // In a real implementation, this would download the certificate PDF
-      await downloadCertificate(userId);
-      toast({
-        title: "Certificate downloaded",
-        description: "The certificate has been downloaded successfully.",
-      });
-    } catch (error) {
-      console.error("Error downloading certificate:", error);
-      toast({
-        title: "Download failed",
-        description: "There was an error downloading the certificate.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
+export const CertificateActions = ({
+  user,
+  hasMetRequirements,
+  onViewDetails,
+  onApprove,
+  onGenerate,
+  onRevoke,
+}: CertificateActionsProps) => {
   return (
-    <div className="mt-4 border-t pt-3">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-sm font-medium">Approved</span>
-          <Badge variant="success" className="ml-2">
-            Valid
-          </Badge>
-        </div>
-        {approvedDate && (
-          <span className="text-xs text-gray-500">
-            Issued on {formatDate(approvedDate)}
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={handleDownload}
-          className={extendedButtonVariants({
-            variant: "outline",
-            size: "sm",
-            className: "gap-1"
-          })}
-          disabled={isDownloading}
+    <div className="space-x-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-blue-600 border-blue-300 hover:bg-blue-50"
+        onClick={onViewDetails}
+      >
+        <Eye className="h-4 w-4 mr-1" />
+        Details
+      </Button>
+      
+      {/* Always show Generate button for testing */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-green-600 border-green-300 hover:bg-green-50"
+        onClick={onGenerate}
+      >
+        <Award className="h-4 w-4 mr-1" />
+        Generate
+      </Button>
+      
+      {!user.admin_approved && hasMetRequirements && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-green-600 border-green-300 hover:bg-green-50"
+          onClick={onApprove}
         >
-          <Download className="h-4 w-4" />
-          {isDownloading ? "Downloading..." : "Download Certificate"}
-        </button>
-        
-        <button
-          className={extendedButtonVariants({
-            variant: "outline",
-            size: "sm",
-            className: "gap-1"
-          })}
+          <CheckCircle className="h-4 w-4 mr-1" />
+          Approve
+        </Button>
+      )}
+      
+      {user.admin_approved && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-500 border-red-300 hover:bg-red-50"
+          onClick={onRevoke}
         >
-          <Printer className="h-4 w-4" />
-          Print Certificate
-        </button>
-        
-        <button
-          className={extendedButtonVariants({
-            variant: "outline",
-            size: "sm",
-            className: "gap-1"
-          })}
-        >
-          <Share2 className="h-4 w-4" />
-          Share Certificate
-        </button>
-      </div>
+          <XCircle className="h-4 w-4 mr-1" />
+          Revoke
+        </Button>
+      )}
     </div>
   );
 };

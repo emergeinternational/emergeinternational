@@ -18,20 +18,13 @@ import { Award, CheckCircle, ExternalLink, BookOpen, AlertTriangle } from "lucid
 
 interface UserCourseDetailsProps {
   user: any;
-  course?: any;
-  certification?: any;
-  certificateRequirements?: {
+  certificateRequirements: {
     min_courses_required: number;
     min_workshops_required: number;
   };
 }
 
-export const UserCourseDetails = ({ 
-  user, 
-  course,
-  certification,
-  certificateRequirements = { min_courses_required: 5, min_workshops_required: 3 } 
-}: UserCourseDetailsProps) => {
+export const UserCourseDetails = ({ user, certificateRequirements }: UserCourseDetailsProps) => {
   const getUserCourseDetails = (user: any) => ({
     embeddedCoursesWatched: [
       { title: "Fashion Design 101", watchPercent: 95, date: "2023-05-15" },

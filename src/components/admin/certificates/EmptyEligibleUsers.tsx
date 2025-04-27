@@ -1,36 +1,21 @@
 
-import { FileX } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
-export interface EmptyEligibleUsersProps {
-  status: string;
+interface EmptyEligibleUsersProps {
+  minCoursesRequired: number;
+  minWorkshopsRequired: number;
 }
 
-export const EmptyEligibleUsers = ({ status }: EmptyEligibleUsersProps) => {
-  const getMessage = () => {
-    switch (status) {
-      case "pending":
-        return "No pending certificate requests found";
-      case "approved":
-        return "No approved certificates found";
-      case "rejected":
-        return "No rejected certificate requests found";
-      default:
-        return "No certificate requests found";
-    }
-  };
-
+export const EmptyEligibleUsers = ({
+  minCoursesRequired,
+  minWorkshopsRequired
+}: EmptyEligibleUsersProps) => {
   return (
-    <div className="text-center py-12 border rounded-lg bg-gray-50">
-      <div className="flex justify-center mb-4">
-        <FileX className="h-12 w-12 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-medium text-gray-600">{getMessage()}</h3>
-      <p className="text-sm text-gray-500 mt-2">
-        {status === "pending"
-          ? "When users request certificates, they will appear here for review."
-          : status === "approved"
-          ? "Approved certificates will be listed here."
-          : "Rejected certificate requests will be listed here."}
+    <div className="bg-emerge-cream p-8 text-center rounded-md">
+      <BookOpen className="h-12 w-12 mx-auto mb-2 text-emerge-gold/60" />
+      <h3 className="text-lg font-medium mb-1">No Eligible Users Found</h3>
+      <p className="text-gray-600">
+        Users need to complete at least {minCoursesRequired} online courses and {minWorkshopsRequired} workshops to be eligible.
       </p>
     </div>
   );

@@ -1,21 +1,30 @@
 
-// This file re-exports functionality from the refactored certificate module
-// to maintain backward compatibility with existing imports
+// Export all certificate-related functions from the module files
 
-export * from './certificate';
-export * from './eligibility';
-export * from './settings';
-export * from './types';
+// Settings-related exports
+export { 
+  getCertificateSettings,
+  updateCertificateSettings 
+} from './settings';
 
-// Add these functions for use in CertificateManagement
-export const approveCertificate = async (userId: string, courseId: string) => {
-  // In a real implementation, this would make a request to approve the certificate
-  console.log(`Approving certificate for user ${userId} and course ${courseId}`);
-  return { success: true };
-};
+// Certificate management exports
+export {
+  generateCertificate,
+  getUserCertificates,
+  downloadCertificate
+} from './certificate';
 
-export const rejectCertificate = async (userId: string, courseId: string, reason: string) => {
-  // In a real implementation, this would make a request to reject the certificate
-  console.log(`Rejecting certificate for user ${userId} and course ${courseId}. Reason: ${reason}`);
-  return { success: true };
-};
+// Eligibility-related exports
+export {
+  getEligibleUsers,
+  updateCertificateApproval,
+  userMeetsRequirements,
+  getUsersByStatus
+} from './eligibility';
+
+// Type exports
+export type { 
+  CertificateSettings,
+  UserCertificate,
+  CertificateEligibility
+} from './types';

@@ -1,114 +1,157 @@
-
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import React, { useState, useEffect, useMemo } from "react";
+import { Award, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { 
+  getEligibleUsers,
+  updateCertificateApproval,
+  generateCertificate,
+  getCertificateSettings,
+  getUsersByStatus
+} from "@/services/certificate";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Clock, X } from "lucide-react";
-import { extendedButtonVariants } from "@/components/ui/button";
-import { approveCertificate, rejectCertificate, getCertificateSettings } from "@/services/certificate/index";
-import CertificateStatusFilter from "./CertificateStatusFilter";
+import { Button } from "@/components/ui/button";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { CertificateRequirementsBanner } from "./certificates/CertificateRequirementsBanner";
 import { EmptyEligibleUsers } from "./certificates/EmptyEligibleUsers";
 import { UserCourseDetails } from "./certificates/UserCourseDetails";
-import { CertificateRequirementsBanner } from "./certificates/CertificateRequirementsBanner";
 import { CertificateActions } from "./certificates/CertificateActions";
-import RejectionDialog from "./RejectionDialog";
+import CertificateStatusFilter from "./CertificateStatusFilter";
+import CertificateSettings from "./CertificateSettings";
 
-export function CertificateManagement() {
+const CertificateManagement = () => {
   const { toast } = useToast();
-  const { hasRole } = useAuth();
+  const [eligibleUsers, setEligibleUsers] = useState<any[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
+  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("pending");
-  const [isLoading, setIsLoading] = useState(false);
-  const [certificateSettings, setCertificateSettings] = useState({
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showRevocationDialog, setShowRevocationDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [generatingCertificate, setGeneratingCertificate] = useState(false);
+  const [certificateRequirements, setCertificateRequirements] = useState({
     min_courses_required: 5,
     min_workshops_required: 3
   });
-
-  // Fetch certificate settings on component mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const settings = await getCertificateSettings();
-        setCertificateSettings(settings);
-      } catch (error) {
-        console.error("Error fetching certificate settings:", error);
-      }
-    };
-    
-    fetchSettings();
-  }, []);
-
-  const dummyUsers = [
-    {
-      id: "1",
-      name: "Aster Aweke",
-      email: "aster@example.com",
-      online_courses_completed: 6,
-      workshops_completed: 4,
-      courses: [
-        {
-          id: "course1",
-          title: "Introduction to Fashion Design",
-          progress: 100,
-          certification: { status: "pending", requested_at: "2023-05-15" },
-        },
-      ],
-    },
-    {
-      id: "2",
-      name: "Teddy Afro",
-      email: "teddy@example.com",
-      online_courses_completed: 8,
-      workshops_completed: 5,
-      courses: [
-        {
-          id: "course2",
-          title: "Advanced Pattern Making",
-          progress: 90,
-          certification: { 
-            status: "approved", 
-            requested_at: "2023-05-10", 
-            approved_at: "2023-05-12" 
-          },
-        },
-      ],
-    },
-    {
-      id: "3",
-      name: "Gigi Hadid",
-      email: "gigi@example.com",
-      online_courses_completed: 4,
-      workshops_completed: 2,
-      courses: [
-        {
-          id: "course3",
-          title: "Fashion Photography Basics",
-          progress: 100,
-          certification: { 
-            status: "rejected", 
-            requested_at: "2023-05-08", 
-            rejected_at: "2023-05-11", 
-            reason: "Incomplete final project submission" 
-          },
-        },
-      ],
-    },
-  ];
-
-  // Filter users based on certification status
-  const filteredUsers = dummyUsers.filter((user) => {
-    return user.courses.some((course) => course.certification?.status === statusFilter);
+  const [statusCounts, setStatusCounts] = useState({
+    pending: 0,
+    approved: 0,
+    denied: 0
   });
 
-  const handleApprove = async (userId: string, courseId: string) => {
-    setIsLoading(true);
+  const handleManualCertificateIssue = async (user: any) => {
+    setActionLoading(true);
     try {
-      await approveCertificate(userId, courseId);
+      const courseTitle = "Fashion Design & Model Development";
+      const result = await generateCertificate(user.user_id, courseTitle);
+      
+      if (result.success) {
+        toast({
+          title: "Certificate Issued",
+          description: `Certificate has been manually issued for ${user.profiles?.full_name || user.profiles?.email || "User"}.`,
+        });
+        await fetchEligibleUsers();
+        await fetchStatusCounts();
+      } else {
+        throw new Error(result.error || "Failed to issue certificate");
+      }
+    } catch (error) {
+      console.error("Error issuing certificate:", error);
       toast({
-        title: "Certificate Approved",
-        description: "User has been notified and certificate has been generated.",
+        title: "Error",
+        description: "Failed to issue certificate. Please try again.",
+        variant: "destructive",
       });
-      // In a real app, we'd refetch the data here
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEligibleUsers();
+    fetchCertificateSettings();
+    fetchStatusCounts();
+  }, [selectedStatus]);
+
+  const fetchCertificateSettings = async () => {
+    try {
+      const settings = await getCertificateSettings();
+      setCertificateRequirements(settings);
+    } catch (error) {
+      console.error("Error fetching certificate settings:", error);
+    }
+  };
+
+  const fetchStatusCounts = async () => {
+    try {
+      const pending = await getUsersByStatus('pending');
+      const approved = await getUsersByStatus('approved');
+      const denied = await getUsersByStatus('denied');
+      
+      setStatusCounts({
+        pending: pending.length,
+        approved: approved.length,
+        denied: denied.length
+      });
+    } catch (error) {
+      console.error("Error fetching status counts:", error);
+    }
+  };
+
+  const fetchEligibleUsers = async () => {
+    setLoading(true);
+    try {
+      let users;
+      if (selectedStatus === 'all') {
+        users = await getEligibleUsers();
+      } else {
+        users = await getUsersByStatus(selectedStatus);
+      }
+      setEligibleUsers(users);
+    } catch (error) {
+      console.error("Error fetching eligible users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load certificate eligible users.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedUser) return;
+    
+    setActionLoading(true);
+    try {
+      const success = await updateCertificateApproval(selectedUser.user_id, true);
+      if (success) {
+        toast({
+          title: "Certificate Approved",
+          description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been approved.`,
+        });
+        await fetchEligibleUsers();
+        await fetchStatusCounts();
+      } else {
+        throw new Error("Failed to approve certificate");
+      }
     } catch (error) {
       console.error("Error approving certificate:", error);
       toast({
@@ -117,148 +160,449 @@ export function CertificateManagement() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setActionLoading(false);
+      setShowApprovalDialog(false);
     }
   };
 
-  const handleReject = async (userId: string, courseId: string, reason: string) => {
-    setIsLoading(true);
+  const handleRevoke = async () => {
+    if (!selectedUser) return;
+    
+    setActionLoading(true);
     try {
-      await rejectCertificate(userId, courseId, reason);
-      setShowRejectionDialog(false);
-      toast({
-        title: "Certificate Rejected",
-        description: "User has been notified about the rejection.",
-      });
-      // In a real app, we'd refetch the data here
+      const success = await updateCertificateApproval(selectedUser.user_id, false);
+      if (success) {
+        toast({
+          title: "Certificate Revoked",
+          description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been revoked.`,
+        });
+        await fetchEligibleUsers();
+        await fetchStatusCounts();
+      } else {
+        throw new Error("Failed to revoke certificate");
+      }
     } catch (error) {
-      console.error("Error rejecting certificate:", error);
+      console.error("Error revoking certificate:", error);
       toast({
         title: "Error",
-        description: "Failed to reject certificate. Please try again.",
+        description: "Failed to revoke certificate. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setActionLoading(false);
+      setShowRevocationDialog(false);
     }
   };
 
-  if (!hasRole(["admin", "editor"])) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-500">You don't have permission to access this page.</p>
-      </div>
-    );
-  }
+  const handleGenerateCertificate = async () => {
+    if (!selectedUser) return;
+    
+    setGeneratingCertificate(true);
+    try {
+      const courseTitle = "Fashion Design & Model Development";
+      
+      const result = await generateCertificate(
+        selectedUser.user_id,
+        courseTitle
+      );
+      
+      if (result.success) {
+        toast({
+          title: "Certificate Generated",
+          description: `Certificate has been successfully generated for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"}.`,
+        });
+        await fetchEligibleUsers();
+      } else {
+        throw new Error(result.error || "Failed to generate certificate");
+      }
+    } catch (error) {
+      console.error("Error generating certificate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate certificate. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingCertificate(false);
+      setShowGenerateDialog(false);
+    }
+  };
+
+  const handleSettingsChanged = () => {
+    fetchCertificateSettings();
+    fetchEligibleUsers();
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const hasMetRequirements = (user: any) => {
+    if (!user) return false;
+    const onlineCoursesCompleted = user.online_courses_completed || 0;
+    const workshopsCompleted = user.workshops_completed || 0;
+    return onlineCoursesCompleted >= certificateRequirements.min_courses_required && 
+           workshopsCompleted >= certificateRequirements.min_workshops_required;
+  };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Certificate Management</h2>
-      
-      <CertificateStatusFilter
-        activeFilter={statusFilter}
-        onChange={setStatusFilter}
-        counts={{
-          pending: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'pending')).length,
-          approved: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'approved')).length,
-          denied: filteredUsers.filter(u => u.courses.some(c => c.certification?.status === 'rejected')).length,
-        }}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold flex items-center">
+          <Award className="h-5 w-5 mr-2 text-emerge-gold" />
+          Certificate Management
+        </h2>
+        <div className="flex space-x-2">
+          <CertificateSettings onSettingsChanged={handleSettingsChanged} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchEligibleUsers();
+              fetchStatusCounts();
+            }}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading
+              </>
+            ) : (
+              "Refresh"
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <CertificateRequirementsBanner
+        minCoursesRequired={certificateRequirements.min_courses_required}
+        minWorkshopsRequired={certificateRequirements.min_workshops_required}
       />
-      
-      <CertificateRequirementsBanner 
-        minCoursesRequired={certificateSettings.min_courses_required} 
-        minWorkshopsRequired={certificateSettings.min_workshops_required} 
+
+      <CertificateStatusFilter 
+        currentStatus={selectedStatus}
+        onChange={setSelectedStatus}
+        counts={statusCounts}
       />
-      
-      {filteredUsers.length === 0 ? (
-        <EmptyEligibleUsers status={statusFilter} />
+
+      {!loading && eligibleUsers.length === 0 ? (
+        <EmptyEligibleUsers
+          minCoursesRequired={certificateRequirements.min_courses_required}
+          minWorkshopsRequired={certificateRequirements.min_workshops_required}
+        />
       ) : (
-        <div className="space-y-4">
-          {filteredUsers.map((user) => {
-            const course = user.courses.find((c) => c.certification?.status === statusFilter);
-            if (!course) return null;
-            
-            return (
-              <div 
-                key={`${user.id}-${course.id}`} 
-                className="border rounded-lg p-4 bg-white shadow-sm"
-              >
-                <UserCourseDetails 
-                  user={user} 
-                  certificateRequirements={certificateSettings}
-                />
-                
-                {statusFilter === "pending" && (
-                  <div className="mt-4 flex justify-end gap-3">
-                    <button
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowRejectionDialog(true);
-                      }}
-                      className={extendedButtonVariants({ 
-                        variant: "outline", 
-                        size: "sm",
-                        className: "gap-1"
-                      })}
-                      disabled={isLoading}
-                    >
-                      <X size={16} />
-                      Reject
-                    </button>
-                    <button
-                      onClick={() => handleApprove(user.id, course.id)}
-                      className={extendedButtonVariants({ 
-                        variant: "success", 
-                        size: "sm",
-                        className: "gap-1" 
-                      })}
-                      disabled={isLoading}
-                    >
-                      <Check size={16} />
-                      Approve
-                    </button>
-                  </div>
-                )}
-                
-                {statusFilter === "approved" && (
-                  <CertificateActions 
-                    userId={user.id}
-                    courseId={course.id}
-                    approvedDate={course.certification?.approved_at}
-                  />
-                )}
-                
-                {statusFilter === "rejected" && (
-                  <div className="mt-4 border-t pt-3">
-                    <p className="text-sm font-medium">Rejection reason:</p>
-                    <p className="text-sm text-gray-600">{course.certification?.reason || "No reason provided"}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Rejected on {new Date(course.certification?.rejected_at || Date.now()).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="bg-white rounded-md border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Online Courses</TableHead>
+                <TableHead>Workshops</TableHead>
+                <TableHead>Requirements</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    <p className="mt-2 text-sm text-gray-500">Loading eligible users...</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                eligibleUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{user.profiles?.full_name || "Unnamed User"}</p>
+                        <p className="text-sm text-gray-500">{user.profiles?.email || "No email"}</p>
+                        <p className="text-xs text-gray-400">Eligible since: {formatDate(user.created_at)}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className={`h-2 w-2 rounded-full ${(user.online_courses_completed || 0) >= certificateRequirements.min_courses_required ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.online_courses_completed || 0} online courses</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div className={`h-2 w-2 rounded-full ${(user.workshops_completed || 0) >= certificateRequirements.min_workshops_required ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <span>{user.workshops_completed || 0} workshops</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {hasMetRequirements(user) ? (
+                        <Badge variant="success" className="flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          All Met
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center text-amber-600 border-amber-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Not Met
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.admin_approved ? (
+                        <Badge variant="success" className="flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Approved
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="flex items-center text-amber-600 border-amber-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Pending Approval
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <CertificateActions 
+                          user={user}
+                          hasMetRequirements={hasMetRequirements(user)}
+                          onViewDetails={() => {
+                            setSelectedUser(user);
+                            setShowDetailsDialog(true);
+                          }}
+                          onApprove={() => {
+                            setSelectedUser(user);
+                            setShowApprovalDialog(true);
+                          }}
+                          onGenerate={() => {
+                            setSelectedUser(user);
+                            setShowGenerateDialog(true);
+                          }}
+                          onRevoke={() => {
+                            setSelectedUser(user);
+                            setShowRevocationDialog(true);
+                          }}
+                        />
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleManualCertificateIssue(user)}
+                          disabled={actionLoading}
+                          className="border-yellow-300 hover:bg-yellow-50"
+                        >
+                          <Award className="h-4 w-4 mr-2 text-yellow-600" />
+                          Manual Issue
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Certificate</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}?
+              This will allow the user to download their certificate immediately.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="my-4 p-4 bg-gray-50 rounded border">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="font-medium">Online Courses:</p>
+                  <p>{selectedUser.online_courses_completed || 0} completed</p>
+                  <p className="text-xs text-gray-500">Required: {certificateRequirements.min_courses_required}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Workshops:</p>
+                  <p>{selectedUser.workshops_completed || 0} completed</p>
+                  <p className="text-xs text-gray-500">Required: {certificateRequirements.min_workshops_required}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowApprovalDialog(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApprove}
+              disabled={actionLoading || (selectedUser && !hasMetRequirements(selectedUser))}
+              className="bg-emerge-gold hover:bg-emerge-gold/90"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                "Approve Certificate"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Certificate</DialogTitle>
+            <DialogDescription>
+              Generate a certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}.
+              This will create a downloadable certificate for the user.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="my-4 p-4 bg-gray-50 rounded border">
+              <div className="space-y-4">
+                <div>
+                  <p className="font-medium">User:</p>
+                  <p>{selectedUser.profiles?.full_name || selectedUser.profiles?.email || "Unnamed User"}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Course:</p>
+                  <p>Fashion Design & Model Development</p>
+                </div>
+                <div>
+                  <p className="font-medium">Certificate Format:</p>
+                  <p>PDF - Professional Design with Signature</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowGenerateDialog(false)}
+              disabled={generatingCertificate}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateCertificate}
+              disabled={generatingCertificate || !selectedUser?.admin_approved}
+              className="bg-emerge-gold hover:bg-emerge-gold/90"
+            >
+              {generatingCertificate ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Award className="h-4 w-4 mr-2" />
+                  Generate Certificate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRevocationDialog} onOpenChange={setShowRevocationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke Certificate</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revoke the certificate for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}?
+              The user will no longer be able to download their certificate.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowRevocationDialog(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRevoke}
+              disabled={actionLoading}
+              variant="destructive"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Revoking...
+                </>
+              ) : (
+                "Revoke Certificate"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
-      {/* Rejection dialog */}
-      {showRejectionDialog && selectedUser && (
-        <RejectionDialog
-          open={showRejectionDialog}
-          onOpenChange={setShowRejectionDialog}
-          onConfirm={(reason) => {
-            const course = selectedUser.courses.find((c) => c.certification?.status === statusFilter);
-            if (course) {
-              handleReject(selectedUser.id, course.id, reason);
-            }
-          }}
-        />
-      )}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>User Course & Workshop Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about course completion and workshop attendance for {selectedUser?.profiles?.full_name || selectedUser?.profiles?.email || "this user"}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <UserCourseDetails
+              user={selectedUser}
+              certificateRequirements={certificateRequirements}
+            />
+          )}
+          
+          <DialogFooter>
+            {selectedUser && !selectedUser.admin_approved && hasMetRequirements(selectedUser) && (
+              <Button 
+                onClick={() => {
+                  setShowDetailsDialog(false);
+                  setShowApprovalDialog(true);
+                }}
+                className="bg-emerge-gold hover:bg-emerge-gold/90"
+              >
+                Approve Certificate
+              </Button>
+            )}
+            
+            {selectedUser && selectedUser.admin_approved && (
+              <Button 
+                onClick={() => {
+                  setShowDetailsDialog(false);
+                  setShowGenerateDialog(true);
+                }}
+                className="bg-emerge-gold hover:bg-emerge-gold/90"
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Generate Certificate
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDetailsDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
 
-// Add default export for CertificateManagement
 export default CertificateManagement;
