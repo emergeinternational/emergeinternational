@@ -37,4 +37,3 @@ export {
 } from './scraping/courseScraperHelpers';
 
 export type { Course, CourseProgress, Category, Review } from './courseTypes';
-
