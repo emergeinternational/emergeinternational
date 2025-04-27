@@ -11,7 +11,7 @@ import {
 export { 
   getEligibleUsers,
   updateCertificateApproval 
-} from './certificate';
+} from './certificateService';
 
 export { trackCourseEngagement } from './courseEngagementService';
 
