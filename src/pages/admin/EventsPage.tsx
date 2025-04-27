@@ -11,6 +11,10 @@ import { z } from "zod";
 import { Event } from "@/hooks/useEvents";
 import EventForm from '@/components/events/EventForm';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useEventsAdmin } from "@/hooks/useEvents";
+import { createEvent, updateEvent } from "@/services/eventService";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 // Schema for event form validation
 const eventFormSchema = z.object({
@@ -43,6 +47,9 @@ const EventsPage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { refetch: refetchEvents } = useEventsAdmin();
   
   // Initialize form with react-hook-form and zod validation
   const form = useForm<EventFormValues>({
@@ -62,14 +69,67 @@ const EventsPage = () => {
     }
   });
 
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: createEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Success",
+        description: "Event created successfully!"
+      });
+      setIsDialogOpen(false);
+      refetchEvents();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to create event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Update event mutation
+  const updateEventMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => updateEvent(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({
+        title: "Success",
+        description: "Event updated successfully!"
+      });
+      setIsDialogOpen(false);
+      refetchEvents();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Function to handle form submission
   const onSubmit = async (values: EventFormValues) => {
     setIsSubmitting(true);
     try {
-      // Handle event creation/update with ticket types in one operation
-      console.log("Form submitted with values:", values);
-      // Add API call here
-      setIsDialogOpen(false);
+      if (isEditMode && currentEvent) {
+        // Handle event update
+        await updateEventMutation.mutateAsync({
+          id: currentEvent.id,
+          data: {
+            ...values,
+            // Handle ticket types if needed
+          }
+        });
+      } else {
+        // Handle event creation
+        await createEventMutation.mutateAsync(values);
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
@@ -162,7 +222,7 @@ const EventsPage = () => {
           form={form}
           isEditMode={isEditMode}
           onSubmit={onSubmit}
-          isSubmitting={isSubmitting}
+          isSubmitting={isSubmitting || createEventMutation.isPending || updateEventMutation.isPending}
           currentEvent={currentEvent}
         />
       </div>

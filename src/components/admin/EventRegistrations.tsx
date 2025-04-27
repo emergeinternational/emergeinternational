@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -10,10 +11,13 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, X, Eye, QrCode, Download, RefreshCw } from "lucide-react";
 import QRCode from 'qrcode.react';
+import { useEventsAdmin } from "@/hooks/useEvents";
+import { Event } from "@/hooks/useEvents";
 
 interface EventRegistration {
   id: string;
@@ -128,10 +132,12 @@ export const EventRegistrations = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedEventId, setSelectedEventId] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: events } = useEventsAdmin();
 
-  const { data: registrations, isLoading } = useQuery({
+  const { data: registrations, isLoading, refetch } = useQuery({
     queryKey: ['event-registrations'],
     queryFn: fetchEventRegistrations,
   });
@@ -213,6 +219,10 @@ export const EventRegistrations = () => {
   };
 
   const filteredRegistrations = registrations?.filter(registration => {
+    if (selectedEventId !== 'all' && registration.event_id !== selectedEventId) {
+      return false;
+    }
+    
     if (activeTab === 'all') return true;
     if (activeTab === 'pending') return registration.payment_status === 'pending';
     if (activeTab === 'approved') return registration.payment_status === 'approved';
@@ -232,10 +242,6 @@ export const EventRegistrations = () => {
     }
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center p-8">Loading...</div>;
-  }
-
   return (
     <div className="space-y-6">
       <Card>
@@ -243,12 +249,32 @@ export const EventRegistrations = () => {
           <CardTitle>Event Registrations</CardTitle>
           <Button 
             variant="outline" 
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['event-registrations'] })}
+            onClick={() => refetch()}
           >
             <RefreshCw className="h-4 w-4 mr-2" /> Refresh
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="text-sm mb-2">Filter by Event:</div>
+            <Select
+              value={selectedEventId}
+              onValueChange={setSelectedEventId}
+            >
+              <SelectTrigger className="w-full sm:w-72">
+                <SelectValue placeholder="Select Event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                {events?.map(event => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="all">All</TabsTrigger>
@@ -257,90 +283,100 @@ export const EventRegistrations = () => {
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
             </TabsList>
             
-            {filteredRegistrations && filteredRegistrations.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Ticket Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRegistrations.map((registration) => (
-                    <TableRow key={registration.id}>
-                      <TableCell>{registration.events?.name || 'Unknown'}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{registration.profiles?.full_name || 'Anonymous'}</div>
-                          <div className="text-sm text-gray-500">{registration.profiles?.email || 'No email'}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{registration.ticket_type || 'Standard'}</TableCell>
-                      <TableCell>ETB {registration.amount.toFixed(2)}</TableCell>
-                      <TableCell>{getStatusBadge(registration.payment_status)}</TableCell>
-                      <TableCell>
-                        {new Date(registration.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          {registration.payment_proof_url && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => openViewDialog(registration)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {registration.payment_status === 'pending' && (
-                            <>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-green-600"
-                                onClick={() => handleApprove(registration.id)}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-red-600"
-                                onClick={() => handleReject(registration.id)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          {registration.payment_status === 'approved' && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => openQrCodeDialog(registration)}
-                            >
-                              <QrCode className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+            {isLoading ? (
+              <div className="text-center py-8">Loading registrations...</div>
+            ) : registrations && registrations.length > 0 ? (
+              filteredRegistrations && filteredRegistrations.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Ticket Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRegistrations.map((registration) => (
+                      <TableRow key={registration.id}>
+                        <TableCell>{registration.events?.name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{registration.profiles?.full_name || 'Anonymous'}</div>
+                            <div className="text-sm text-gray-500">{registration.profiles?.email || 'No email'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{registration.ticket_type || 'Standard'}</TableCell>
+                        <TableCell>ETB {registration.amount.toFixed(2)}</TableCell>
+                        <TableCell>{getStatusBadge(registration.payment_status)}</TableCell>
+                        <TableCell>
+                          {new Date(registration.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            {registration.payment_proof_url && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openViewDialog(registration)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {registration.payment_status === 'pending' && (
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-green-600"
+                                  onClick={() => handleApprove(registration.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-red-600"
+                                  onClick={() => handleReject(registration.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {registration.payment_status === 'approved' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openQrCodeDialog(registration)}
+                              >
+                                <QrCode className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No registrations found with the selected filters.
+                </div>
+              )
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                No registrations found with the selected filter.
+              <div className="text-center py-8">
+                <p className="text-gray-500">No registrations found for any events.</p>
+                <p className="text-sm text-gray-400 mt-2">Once users register for events, they will appear here.</p>
               </div>
             )}
           </Tabs>
         </CardContent>
       </Card>
 
+      {/* Payment Proof Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -400,6 +436,7 @@ export const EventRegistrations = () => {
         </DialogContent>
       </Dialog>
 
+      {/* QR Code Dialog */}
       <Dialog open={isQrCodeDialogOpen} onOpenChange={setIsQrCodeDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

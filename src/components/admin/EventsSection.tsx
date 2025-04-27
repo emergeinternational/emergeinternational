@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEventsAdmin } from "@/hooks/useEvents";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, CalendarIcon } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,7 +26,7 @@ interface EventsSectionProps {
 const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
   const { hasRole } = useAuth();
   const { toast } = useToast();
-  const { data: events, isLoading } = useEventsAdmin();
+  const { data: events, isLoading, refetch } = useEventsAdmin();
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -43,6 +43,7 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
         description: "The event has been deleted successfully."
       });
       setIsDeleteDialogOpen(false);
+      refetch(); // Refresh events list after deletion
     },
     onError: (error) => {
       toast({
@@ -81,10 +82,23 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
             className="flex items-center text-emerge-gold"
             variant="ghost"
             disabled={!canEdit}
-            onClick={onCreateEvent}
+            onClick={() => {
+              if (onCreateEvent) {
+                onCreateEvent();
+                // After event creation dialog is closed, refetch data
+                setTimeout(() => refetch(), 500);
+              }
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             <span>ADD NEW EVENT</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            className="text-sm"
+          >
+            Refresh Events
           </Button>
         </div>
       </div>
