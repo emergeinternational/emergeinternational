@@ -7,14 +7,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import RoleDropdown from './RoleDropdown';
+import { UserRole } from '@/types/user';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,16 +22,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface UserManagementActionsProps {
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: boolean) => void;
-  onRoleChange: (role: string) => void;
+  onRoleChange: (userId: string, role: UserRole) => void;
   isCurrentUser: boolean;
-  currentRole?: string;
+  currentRole?: UserRole;
   isActive?: boolean;
+  userId: string;
 }
 
 const UserManagementActions = ({
@@ -44,7 +42,8 @@ const UserManagementActions = ({
   onRoleChange,
   isCurrentUser,
   currentRole = 'user',
-  isActive = true
+  isActive = true,
+  userId
 }: UserManagementActionsProps) => {
   return (
     <DropdownMenu>
@@ -59,20 +58,14 @@ const UserManagementActions = ({
           Edit
         </DropdownMenuItem>
 
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Shield className="mr-2 h-4 w-4" />
-            Role
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={currentRole} onValueChange={onRoleChange}>
-              <DropdownMenuRadioItem value="admin">Admin</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="editor">Editor</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="viewer">Viewer</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="user">User</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuItem>
+          <Shield className="mr-2 h-4 w-4" />
+          <RoleDropdown 
+            user={{ id: userId, role: currentRole, email: '', full_name: null }}
+            onRoleChange={onRoleChange}
+            disabled={isCurrentUser}
+          />
+        </DropdownMenuItem>
 
         <DropdownMenuItem 
           onSelect={(e) => {

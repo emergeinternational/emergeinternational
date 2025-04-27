@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { UserWithRole } from '../types/user';
+import { UserWithRole, UserRole } from '../types/user';
 
 interface UserManagementContextType {
   users: UserWithRole[];
@@ -14,7 +13,7 @@ interface UserManagementContextType {
     role: string;
     status: string;
   };
-  updateUserRole: (userId: string, newRole: string) => Promise<void>;
+  updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
   updateUserStatus: (userId: string, isActive: boolean) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   setFilters: (filters: Partial<{ search: string; role: string; status: string }>) => void;
@@ -53,9 +52,18 @@ export const UserManagementProvider = ({ children }: { children: React.ReactNode
 
       if (error) throw error;
 
-      setUsers(profiles);
-      // Calculate total pages based on your pagination logic
-      setTotalPages(Math.ceil(profiles.length / 10));
+      if (profiles) {
+        const formattedUsers: UserWithRole[] = profiles.map(profile => ({
+          id: profile.id,
+          email: profile.email || '',
+          full_name: profile.full_name,
+          role: (profile.role as UserRole) || 'user',
+          is_active: profile.is_active,
+          created_at: profile.created_at
+        }));
+        setUsers(formattedUsers);
+        setTotalPages(Math.ceil(formattedUsers.length / 10));
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Failed to fetch users');
@@ -64,7 +72,7 @@ export const UserManagementProvider = ({ children }: { children: React.ReactNode
     }
   }, []);
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -72,6 +80,12 @@ export const UserManagementProvider = ({ children }: { children: React.ReactNode
         .eq('id', userId);
 
       if (error) throw error;
+
+      await supabase.rpc('log_user_action', {
+        action_type: 'role_updated',
+        target_user_id: userId,
+        action_details: { new_role: newRole }
+      });
 
       await refreshUsers();
       toast.success('User role updated successfully');
