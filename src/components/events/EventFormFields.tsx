@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -86,9 +85,18 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({ form }) => {
           name="capacity"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Capacity</FormLabel>
+              <FormLabel>Venue Capacity</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="Event capacity" {...field} />
+                <Input 
+                  type="number" 
+                  min="0"
+                  placeholder="Maximum venue capacity" 
+                  {...field}
+                  onChange={e => {
+                    const value = e.target.value;
+                    field.onChange(value === '' ? undefined : parseInt(value, 10));
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -99,9 +107,18 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({ form }) => {
           name="max_tickets"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Max Tickets</FormLabel>
+              <FormLabel>Maximum Tickets per Person</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="Maximum ticket limit" {...field} />
+                <Input 
+                  type="number" 
+                  min="1"
+                  placeholder="Maximum tickets per person" 
+                  {...field}
+                  onChange={e => {
+                    const value = e.target.value;
+                    field.onChange(value === '' ? undefined : parseInt(value, 10));
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
