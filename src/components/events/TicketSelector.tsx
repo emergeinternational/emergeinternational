@@ -29,6 +29,21 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
 }) => {
   const { convertPrice } = useCurrency();
 
+  // Helper function to safely convert and format price
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined || price === null) {
+      return 'Free';
+    }
+    
+    try {
+      const converted = convertPrice(price);
+      return `${currency?.symbol || ''} ${converted.toFixed(2)}`;
+    } catch (error) {
+      console.error('Error converting price:', error);
+      return `${currency?.symbol || ''} ${price.toFixed(2)}`;
+    }
+  };
+
   if (!tickets || tickets.length === 0) {
     return (
       <div className="text-center p-4 border rounded bg-gray-50">
@@ -80,7 +95,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
                       </Badge>
                     )}
                     <span className="font-bold">
-                      {currency?.symbol} {convertPrice(ticket.price).toFixed(2)}
+                      {formatPrice(ticket.price)}
                     </span>
                   </div>
                 </div>
@@ -95,6 +110,7 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
                   </Badge>
                 )}
                 
+                {/* Add ticket benefits if available */}
                 {ticket.benefits && ticket.benefits.length > 0 && (
                   <ul className="text-xs text-gray-600 mt-2 space-y-1">
                     {ticket.benefits.map((benefit, idx) => (

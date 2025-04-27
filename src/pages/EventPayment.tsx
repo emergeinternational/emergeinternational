@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader } from "lucide-react";
@@ -31,6 +32,12 @@ const EventPayment = () => {
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    code: string;
+    amount: number;
+    type: 'percent' | 'amount';
+    value: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!eventId) return;
@@ -65,11 +72,8 @@ const EventPayment = () => {
         setEvent(eventData as Event);
         setTicketTypes(formattedTickets);
         
-        // Select the first ticket by default if available
-        if (formattedTickets.length > 0) {
-          setSelectedTicket(formattedTickets[0]);
-          setFinalPrice(formattedTickets[0].price);
-        }
+        // Don't auto-select a ticket - make user explicitly choose
+        setIsLoading(false);
       } catch (error) {
         console.error('Error fetching event details:', error);
         toast({
@@ -77,7 +81,6 @@ const EventPayment = () => {
           description: "Unable to load event information. Please try again.",
           variant: "destructive"
         });
-      } finally {
         setIsLoading(false);
       }
     };
@@ -112,7 +115,7 @@ const EventPayment = () => {
       if (error || !data) {
         toast({
           title: "Invalid discount code",
-          description: "The code you entered is not valid.",
+          description: "The code you entered is not valid or doesn't apply to this event.",
           variant: "destructive",
         });
         return;
@@ -141,19 +144,45 @@ const EventPayment = () => {
 
       // Calculate discount amount
       let discount = 0;
+      let discountType: 'percent' | 'amount' = 'amount';
+      let discountValue = 0;
+      
       if (data.discount_amount) {
         discount = data.discount_amount;
+        discountType = 'amount';
+        discountValue = data.discount_amount;
       } else if (data.discount_percent && selectedTicket) {
         discount = selectedTicket.price * (data.discount_percent / 100);
+        discountType = 'percent';
+        discountValue = data.discount_percent;
       }
       
       setDiscountAmount(discount);
       calculateFinalPrice(selectedTicket?.price || 0, discount);
       
+      setAppliedDiscount({
+        code: data.code,
+        amount: discount,
+        type: discountType,
+        value: discountValue
+      });
+      
       toast({
         title: "Discount code applied!",
         description: `A discount of ${selectedCurrency?.symbol} ${discount.toFixed(2)} has been applied.`,
       });
+      
+      // Increment usage count for the discount code
+      const { error: updateError } = await supabase
+        .from('discount_codes')
+        .update({ 
+          current_uses: data.current_uses + 1 
+        })
+        .eq('id', data.id);
+      
+      if (updateError) {
+        console.error('Error updating discount code usage:', updateError);
+      }
       
     } catch (error) {
       console.error('Error validating discount code:', error);
@@ -165,6 +194,18 @@ const EventPayment = () => {
     } finally {
       setIsValidatingDiscount(false);
     }
+  };
+
+  const handleRemoveDiscount = () => {
+    setDiscountAmount(0);
+    setAppliedDiscount(null);
+    setDiscountCode('');
+    calculateFinalPrice(selectedTicket?.price || 0, 0);
+    
+    toast({
+      title: "Discount removed",
+      description: "The discount has been removed from your order.",
+    });
   };
 
   const handlePayNow = async () => {
@@ -195,7 +236,11 @@ const EventPayment = () => {
         amount: finalPrice,
         description: `${event?.name} - ${selectedTicket.name}`,
         eventId: eventId,
-        ticketType: selectedTicket.id
+        ticketType: selectedTicket.id,
+        discountApplied: appliedDiscount ? {
+          code: appliedDiscount.code,
+          amount: appliedDiscount.amount
+        } : null
       };
       
       // Navigate to payment page with details
@@ -270,45 +315,95 @@ const EventPayment = () => {
                   currency={selectedCurrency}
                 />
                 
-                <div className="mt-6">
-                  <DiscountCodeInput
-                    discountCode={discountCode}
-                    onDiscountCodeChange={setDiscountCode}
-                    onApplyDiscount={handleDiscountCodeApply}
-                    isValidating={isValidatingDiscount}
-                  />
-                </div>
+                {selectedTicket && (
+                  <>
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Apply Discount Code</h3>
+                      {appliedDiscount ? (
+                        <div className="bg-emerald-50 p-3 rounded-md border border-emerald-200">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-emerald-800">{appliedDiscount.code}</p>
+                              <p className="text-sm text-emerald-700">
+                                {appliedDiscount.type === 'percent' 
+                                  ? `${appliedDiscount.value}% off` 
+                                  : `${selectedCurrency?.symbol} ${appliedDiscount.value} off`}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-sm text-red-600"
+                              onClick={handleRemoveDiscount}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <DiscountCodeInput
+                          discountCode={discountCode}
+                          onDiscountCodeChange={setDiscountCode}
+                          onApplyDiscount={handleDiscountCodeApply}
+                          isValidating={isValidatingDiscount}
+                        />
+                      )}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-2">Choose Payment Method</h3>
+                      <PaymentMethodSelector 
+                        paymentMethod={paymentMethod}
+                        onMethodChange={setPaymentMethod}
+                      />
+                    </div>
+                    
+                    <div className="mt-6 space-y-3">
+                      <div className="flex justify-between py-2">
+                        <span className="text-gray-600">Ticket Price:</span>
+                        <span>
+                          {selectedCurrency?.symbol} {convertPrice(selectedTicket.price).toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      {appliedDiscount && (
+                        <div className="flex justify-between py-2 text-emerald-600">
+                          <span>Discount:</span>
+                          <span>
+                            -{selectedCurrency?.symbol} {convertPrice(appliedDiscount.amount).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between py-2 border-t border-b font-bold">
+                        <span>Total Payment:</span>
+                        <span className="text-lg">
+                          {selectedCurrency?.symbol} {convertPrice(finalPrice).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      className="w-full mt-6 bg-black hover:bg-gray-800 text-white"
+                      onClick={handlePayNow}
+                      disabled={isProcessing || !selectedTicket}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                        </>
+                      ) : (
+                        'Pay Now'
+                      )}
+                    </Button>
+                  </>
+                )}
                 
-                <div className="mt-6">
-                  <h3 className="font-semibold mb-2">Choose Payment Method</h3>
-                  <PaymentMethodSelector 
-                    paymentMethod={paymentMethod}
-                    onMethodChange={setPaymentMethod}
-                  />
-                </div>
-                
-                <div className="mt-6">
-                  <div className="flex justify-between py-2 border-t border-b">
-                    <span className="font-medium">Total Payment:</span>
-                    <span className="font-bold text-lg">
-                      {selectedCurrency?.symbol} {convertPrice(finalPrice).toFixed(2)}
-                    </span>
+                {!selectedTicket && (
+                  <div className="mt-6 text-center p-4 bg-gray-50 rounded-md">
+                    <p className="text-gray-500">Please select a ticket type to continue to payment.</p>
                   </div>
-                </div>
-                
-                <Button
-                  className="w-full mt-6 bg-black hover:bg-gray-800"
-                  onClick={handlePayNow}
-                  disabled={isProcessing || !selectedTicket}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" /> Processing...
-                    </>
-                  ) : (
-                    'Pay Now'
-                  )}
-                </Button>
+                )}
               </CardContent>
             </Card>
           </div>

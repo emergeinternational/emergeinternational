@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle } from "lucide-react";
@@ -6,13 +7,22 @@ import Logo from "../components/Logo";
 import { QRCodeSVG } from "qrcode.react";
 import { saveEventRegistration, updatePaymentProof } from "@/services/workshopService";
 import { useAuth } from "@/hooks/useAuth";
-import { useDiscountCode } from '@/hooks/useDiscountCode';
 import { usePaymentProof } from '@/hooks/usePaymentProof';
 import { PaymentMethodSelector } from "@/components/payment/PaymentMethodSelector";
 import { PaymentInstructions } from "@/components/payment/PaymentInstructions";
 import { ScreenshotUploader } from "@/components/payment/ScreenshotUploader";
 import { CardPaymentForm } from "@/components/payment/CardPaymentForm";
-import { DiscountCodeInput } from "@/components/payment/DiscountCodeInput";
+
+interface PaymentDetails {
+  amount: number;
+  description: string;
+  eventId: string | null;
+  ticketType: string | null;
+  discountApplied?: {
+    code: string;
+    amount: number;
+  } | null;
+}
 
 const Payment = () => {
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
@@ -24,15 +34,13 @@ const Payment = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const paymentDetails = location.state || {
+  const paymentDetails = location.state as PaymentDetails || {
     amount: 0,
     description: "Payment",
     eventId: null,
     ticketType: null
   };
 
-  const [discountCode, setDiscountCode] = useState('');
-  const { validateDiscountCode, isValidating } = useDiscountCode(paymentDetails.eventId);
   const { uploadPaymentProof, isUploading } = usePaymentProof();
 
   useEffect(() => {
@@ -106,19 +114,14 @@ const Payment = () => {
             description: "Your payment screenshot has been uploaded successfully.",
           });
         }
-      } finally {
+      } catch (error) {
+        console.error("Error updating payment proof:", error);
+        toast({
+          title: "Upload Error",
+          description: "There was an error uploading your payment proof. Please try again.",
+          variant: "destructive"
+        });
       }
-    }
-  };
-
-  const handleDiscountCodeSubmit = async () => {
-    if (!discountCode.trim()) return;
-    
-    const discountAmount = await validateDiscountCode(discountCode);
-    if (discountAmount > 0) {
-      // Update the payment amount with the discount
-      // Note: This assumes paymentDetails is properly typed with amount
-      paymentDetails.amount -= discountAmount;
     }
   };
 
@@ -169,7 +172,7 @@ const Payment = () => {
     <div className="min-h-screen bg-white">
       <div className="max-w-md mx-auto px-4 py-8">
         <div className="mb-6">
-          <Link to="/events" className="flex items-center text-black">
+          <Link to={`/event-payment/${paymentDetails.eventId}`} className="flex items-center text-black">
             <ArrowLeft size={24} className="mr-2" />
           </Link>
         </div>
@@ -188,13 +191,13 @@ const Payment = () => {
         <div className="text-center mb-8">
           <h2 className="text-4xl font-bold mb-2">ETB {paymentDetails.amount}</h2>
           
-          <DiscountCodeInput
-            discountCode={discountCode}
-            onDiscountCodeChange={setDiscountCode}
-            onApplyDiscount={handleDiscountCodeSubmit}
-            isValidating={isValidating}
-          />
-
+          {paymentDetails.discountApplied && (
+            <div className="bg-emerald-50 p-2 rounded-md inline-block text-sm text-emerald-700 mb-2">
+              Discount code <span className="font-medium">{paymentDetails.discountApplied.code}</span> applied
+              <span className="text-xs ml-1">(-ETB {paymentDetails.discountApplied.amount.toFixed(2)})</span>
+            </div>
+          )}
+          
           <p className="text-gray-600">
             {paymentDetails.description}<br />
             {paymentMethod === "telebirr" && "Expected within 8 hours"}
@@ -230,7 +233,7 @@ const Payment = () => {
             <button 
               onClick={handleConfirmPurchase}
               className="w-full bg-black text-white py-4 rounded font-semibold disabled:bg-gray-400"
-              disabled={isUploading}
+              disabled={isUploading || !screenshot}
             >
               {isUploading ? "UPLOADING..." : "CONFIRM PURCHASE"}
             </button>
