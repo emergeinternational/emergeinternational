@@ -4,3 +4,6 @@ project_id = "dqfnetchkvnzrtacgvfw"
 
 [functions.course-scraper]
 verify_jwt = true
+
+[functions.send-course-expiration-emails]
+verify_jwt = false
