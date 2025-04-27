@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -136,6 +135,12 @@ export async function getUserEnrolledCourses(): Promise<PremiumCourseEnrollment[
 
 export async function enrollInPremiumCourse(courseId: string): Promise<boolean> {
   try {
+    const isAlreadyEnrolled = await isUserEnrolled(courseId);
+    if (isAlreadyEnrolled) {
+      console.log('User already enrolled in this course');
+      return true;
+    }
+    
     const { error } = await supabase
       .from('premium_course_enrollments')
       .insert([{
@@ -148,6 +153,8 @@ export async function enrollInPremiumCourse(courseId: string): Promise<boolean> 
       return false;
     }
 
+    await updateCourseActiveStudentsFlag(courseId);
+    
     return true;
   } catch (error) {
     console.error('Error in enrollInPremiumCourse:', error);
@@ -172,6 +179,51 @@ export async function isUserEnrolled(courseId: string): Promise<boolean> {
     return !!data;
   } catch (error) {
     console.error('Error in isUserEnrolled:', error);
+    return false;
+  }
+}
+
+export async function updateCourseActiveStudentsFlag(courseId: string): Promise<boolean> {
+  try {
+    const { count, error: countError } = await supabase
+      .from('premium_course_enrollments')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', courseId);
+    
+    if (countError) {
+      console.error('Error checking enrollments count:', countError);
+      return false;
+    }
+    
+    const { error: updateError } = await supabase
+      .from('premium_courses')
+      .update({ has_active_students: count > 0 })
+      .eq('id', courseId);
+      
+    if (updateError) {
+      console.error('Error updating course has_active_students flag:', updateError);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in updateCourseActiveStudentsFlag:', error);
+    return false;
+  }
+}
+
+export async function triggerExpirationNotifications(): Promise<boolean> {
+  try {
+    const { error } = await supabase.functions.invoke('generate-course-expiration-notifications');
+    
+    if (error) {
+      console.error('Error triggering expiration notifications:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in triggerExpirationNotifications:', error);
     return false;
   }
 }

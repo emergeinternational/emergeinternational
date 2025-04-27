@@ -7,3 +7,6 @@ verify_jwt = true
 
 [functions.send-course-expiration-emails]
 verify_jwt = false
+
+[functions.generate-course-expiration-notifications]
+verify_jwt = false
