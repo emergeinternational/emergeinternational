@@ -14,13 +14,12 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { AlertCircle, Check, X } from 'lucide-react';
-import { createVerifiedCourse } from '@/services/scraping/courseScraperHelpers';
+import { createVerifiedCourse } from '@/services/courseScraperService';
 import { useStorage } from '@/hooks/useStorage';
 import { Course, CourseCategory, CourseLevel, CourseHostingType } from '@/services/courseTypes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { submitScrapedCourse } from '@/services/scraping/courseScraperCore';
 
 const CourseUploadForm = () => {
   const [isLoading, setIsLoading] = useState(false);

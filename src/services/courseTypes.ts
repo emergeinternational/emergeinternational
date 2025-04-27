@@ -1,4 +1,3 @@
-
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
 export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
 export type CourseHostingType = 'hosted' | 'embedded' | 'external';
