@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse } from "../courseTypes";
 import { logScraperActivity } from "./courseScraperHelpers";
@@ -133,3 +132,24 @@ export const rejectScrapedCourse = async (id: string, reason: string): Promise<b
   }
 };
 
+// Function to manually trigger the scraper
+export const triggerManualScrape = async (): Promise<{ success: boolean, message: string }> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('course-scraper', {
+      body: { scheduled: false }
+    });
+    
+    if (error) {
+      console.error("Error triggering scraper:", error);
+      return { success: false, message: "Failed to trigger scraper" };
+    }
+
+    return { 
+      success: true, 
+      message: `Scraper completed. Results: ${JSON.stringify(data.results)}` 
+    };
+  } catch (error) {
+    console.error("Unexpected error triggering scraper:", error);
+    return { success: false, message: "Unexpected error occurred" };
+  }
+};
