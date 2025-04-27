@@ -132,7 +132,8 @@ export const createEvent = async (eventData: CreateEventPayload): Promise<Event>
         price: ticket.price,
         description: ticket.description,
         quantity: ticket.quantity,
-        event_id: eventData_.id
+        event_id: eventData_.id,
+        benefits: ticket.benefits || []
       }));
 
       const { data: ticketData, error: ticketError } = await supabase
@@ -210,8 +211,8 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
             name: ticket.name,
             price: ticket.price,
             description: ticket.description,
-            quantity: ticket.quantity
-            // Note: benefits field is removed as it's not in the database schema
+            quantity: ticket.quantity,
+            benefits: ticket.benefits || []
           };
           
           const { error: updateTicketError } = await supabase
@@ -234,8 +235,8 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
             price: ticket.price,
             description: ticket.description,
             quantity: ticket.quantity,
-            event_id: eventId
-            // Note: benefits field is removed as it's not in the database schema
+            event_id: eventId,
+            benefits: ticket.benefits || []
           };
           
           const { error: insertTicketError } = await supabase

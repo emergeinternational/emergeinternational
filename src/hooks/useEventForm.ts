@@ -22,6 +22,7 @@ export const eventFormSchema = z.object({
   is_featured: z.boolean().default(false),
   ticket_types: z.array(
     z.object({
+      id: z.string().optional(),
       name: z.string().min(1, "Ticket name is required"),
       price: z.number().min(0, "Price must be a positive number"),
       description: z.string().optional(),
@@ -105,6 +106,25 @@ export const useEventForm = (onSuccess?: () => void) => {
     setIsSubmitting(true);
     try {
       if (isEditMode && currentEvent) {
+        // Ensure we're passing the correct ticket types with proper IDs
+        const ticketTypes = values.ticket_types.map(ticket => {
+          // Make sure we're not passing numeric IDs as strings
+          const ticketData: any = {
+            name: ticket.name,
+            price: ticket.price,
+            description: ticket.description,
+            quantity: ticket.quantity,
+            benefits: ticket.benefits || []
+          };
+          
+          // Only include ID if it's a valid UUID
+          if (ticket.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticket.id)) {
+            ticketData.id = ticket.id;
+          }
+          
+          return ticketData;
+        });
+        
         await updateEventMutation.mutateAsync({
           id: currentEvent.id,
           data: {
@@ -118,13 +138,7 @@ export const useEventForm = (onSuccess?: () => void) => {
             image_url: values.image_url,
             currency_code: values.currency_code,
             is_featured: values.is_featured,
-            ticket_types: values.ticket_types.map(ticket => ({
-              name: ticket.name,
-              price: ticket.price,
-              description: ticket.description,
-              quantity: ticket.quantity,
-              benefits: ticket.benefits
-            }))
+            ticket_types: ticketTypes
           }
         });
       } else {
@@ -175,6 +189,16 @@ export const useEventForm = (onSuccess?: () => void) => {
   };
 
   const handleEditEvent = (event: Event) => {
+    // Make sure ticket types are correctly initialized with IDs
+    const formattedTicketTypes = event.ticket_types?.map(ticket => ({
+      id: ticket.id,
+      name: ticket.name,
+      price: ticket.price,
+      description: ticket.description || '',
+      quantity: ticket.quantity,
+      benefits: Array.isArray(ticket.benefits) ? ticket.benefits : defaultBenefits
+    })) || [];
+    
     form.reset({
       name: event.name,
       date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
@@ -186,13 +210,7 @@ export const useEventForm = (onSuccess?: () => void) => {
       image_url: event.image_url || '',
       currency_code: event.currency_code || 'ETB',
       is_featured: event.is_featured || false,
-      ticket_types: event.ticket_types?.map(ticket => ({
-        name: ticket.name,
-        price: ticket.price,
-        description: ticket.description || '',
-        quantity: ticket.quantity,
-        benefits: ticket.benefits || []
-      })) || []
+      ticket_types: formattedTicketTypes
     });
     setIsEditMode(true);
     setCurrentEvent(event);
@@ -211,3 +229,6 @@ export const useEventForm = (onSuccess?: () => void) => {
     handleEditEvent
   };
 };
+
+// Default benefits for ticket types
+const defaultBenefits = ["Event Access", "Networking", "Certificate"];

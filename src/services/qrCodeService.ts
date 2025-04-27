@@ -7,14 +7,16 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
+    // First check if the QR code exists and is for an approved payment
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('id')
+      .select('id, qr_code_active')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error || !data || data.qr_code_active === false) {
+      console.log("QR code validation failed:", error || "Code inactive or not found");
       return false;
     }
 
