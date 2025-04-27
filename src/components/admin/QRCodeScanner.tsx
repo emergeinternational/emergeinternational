@@ -56,7 +56,7 @@ export const QRCodeScanner: React.FC = () => {
           </Button>
         ) : (
           <Scanner
-            onDecode={handleScan}
+            onResult={handleScan}
             onError={handleError}
             constraints={{
               facingMode: 'environment'

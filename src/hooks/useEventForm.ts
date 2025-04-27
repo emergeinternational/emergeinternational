@@ -102,23 +102,27 @@ export const useEventForm = (onSuccess?: () => void) => {
     }
   });
 
+  // Define UUID regex pattern
+  const isValidUuid = (uuid: string) => {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid);
+  };
+
   const onSubmit = async (values: EventFormValues) => {
     setIsSubmitting(true);
     try {
       if (isEditMode && currentEvent) {
-        // Ensure we're passing the correct ticket types with proper IDs
+        // Process ticket types to ensure proper ID handling
         const ticketTypes = values.ticket_types.map(ticket => {
           const ticketData: any = {
             name: ticket.name,
             price: ticket.price,
-            description: ticket.description,
+            description: ticket.description || '',
             quantity: ticket.quantity,
-            benefits: ticket.benefits || []
+            benefits: ticket.benefits || defaultBenefits
           };
           
           // Only include ID if it's a valid UUID string
-          if (ticket.id && typeof ticket.id === 'string' && 
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticket.id)) {
+          if (ticket.id && isValidUuid(ticket.id)) {
             ticketData.id = ticket.id;
           }
           
@@ -130,14 +134,14 @@ export const useEventForm = (onSuccess?: () => void) => {
           data: {
             name: values.name,
             date: values.date,
-            description: values.description,
-            location: values.location,
-            category: values.category,
+            description: values.description || '',
+            location: values.location || '',
+            category: values.category || '',
             capacity: values.capacity,
             max_tickets: values.max_tickets,
-            image_url: values.image_url,
-            currency_code: values.currency_code,
-            is_featured: values.is_featured,
+            image_url: values.image_url || '',
+            currency_code: values.currency_code || 'ETB',
+            is_featured: values.is_featured || false,
             ticket_types: ticketTypes
           }
         });
@@ -145,20 +149,20 @@ export const useEventForm = (onSuccess?: () => void) => {
         await createEventMutation.mutateAsync({
           name: values.name,
           date: values.date,
-          description: values.description,
-          location: values.location,
-          category: values.category,
+          description: values.description || '',
+          location: values.location || '',
+          category: values.category || '',
           capacity: values.capacity,
           max_tickets: values.max_tickets,
-          image_url: values.image_url,
-          currency_code: values.currency_code,
-          is_featured: values.is_featured,
+          image_url: values.image_url || '',
+          currency_code: values.currency_code || 'ETB',
+          is_featured: values.is_featured || false,
           ticket_types: values.ticket_types.map(ticket => ({
             name: ticket.name,
             price: ticket.price,
-            description: ticket.description,
+            description: ticket.description || '',
             quantity: ticket.quantity,
-            benefits: ticket.benefits
+            benefits: ticket.benefits || defaultBenefits
           }))
         });
       }
