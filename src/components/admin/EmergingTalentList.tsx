@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +11,9 @@ import {
   TableCell
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ArrowUpDown } from "lucide-react";
+import { DateRangeFilter } from "./talents/DateRangeFilter";
+import { format } from "date-fns";
 
 interface EmergingTalent {
   id: string;
@@ -32,15 +33,29 @@ interface EmergingTalent {
 
 const EmergingTalentList = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
 
   const { data: submissions, isLoading, refetch } = useQuery({
-    queryKey: ['emerge-submissions'],
+    queryKey: ['emerge-submissions', startDate, endDate, sortDirection],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('emerge_submissions')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: sortDirection === 'asc' });
+
+      if (startDate) {
+        query = query.gte('created_at', startDate.toISOString());
+      }
+      if (endDate) {
+        const nextDay = new Date(endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        query = query.lt('created_at', nextDay.toISOString());
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching submissions:", error);
@@ -71,6 +86,10 @@ const EmergingTalentList = () => {
     }
   };
 
+  const toggleSort = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -83,6 +102,24 @@ const EmergingTalentList = () => {
         >
           <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
           {isRefreshing ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleSort}
+          className="flex items-center gap-1"
+        >
+          <ArrowUpDown className="h-4 w-4" />
+          Sort by Date ({sortDirection === 'asc' ? 'Oldest first' : 'Newest first'})
         </Button>
       </div>
 
@@ -114,7 +151,14 @@ const EmergingTalentList = () => {
           ) : (
             submissions.map((submission) => (
               <TableRow key={submission.id}>
-                <TableCell className="font-medium">{submission.full_name}</TableCell>
+                <TableCell className="font-medium">
+                  <div>
+                    {submission.full_name}
+                    <div className="text-sm text-gray-500">
+                      Submitted on {format(new Date(submission.created_at), "PPp")}
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell>{submission.category}</TableCell>
                 <TableCell>{submission.gender}</TableCell>
                 <TableCell>{submission.age}</TableCell>
