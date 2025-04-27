@@ -53,6 +53,11 @@ interface Certificate {
   updated_at: string;
 }
 
+interface CertificateData {
+  certificate_data: string;
+  course_title: string;
+}
+
 export const generateCertificate = async (
   userId: string,
   courseTitle: string,
@@ -83,8 +88,20 @@ export const generateCertificate = async (
 
 export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
+    type GetUserCertificatesResponse = {
+      id: string;
+      user_id: string;
+      course_title: string;
+      issue_date: string;
+      certificate_data: string;
+      status: string;
+      last_downloaded_at: string | null;
+      created_at: string;
+      updated_at: string;
+    }[];
+
     const { data, error } = await supabase
-      .rpc('get_user_certificates', { p_user_id: userId });
+      .rpc<GetUserCertificatesResponse>('get_user_certificates', { p_user_id: userId });
 
     if (error) {
       console.error("Error fetching user certificates:", error);
@@ -101,7 +118,7 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
 export const downloadCertificate = async (certificateId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
   try {
     const { data, error } = await supabase
-      .rpc('get_certificate_data', { p_certificate_id: certificateId });
+      .rpc<CertificateData>('get_certificate_data', { p_certificate_id: certificateId });
 
     if (error || !data) {
       console.error("Error fetching certificate:", error);
