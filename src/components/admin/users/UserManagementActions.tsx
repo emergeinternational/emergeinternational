@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import RoleDropdown from './RoleDropdown';
 import { UserRole } from '@/types/user';
 import {
   AlertDialog,
@@ -23,15 +22,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import RoleDropdown from './RoleDropdown';
 
 interface UserManagementActionsProps {
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: boolean) => void;
-  onRoleChange: (userId: string, role: UserRole) => void;
+  onRoleChange: (role: UserRole) => void;
   isCurrentUser: boolean;
-  currentRole?: UserRole;
-  isActive?: boolean;
+  currentRole: UserRole;
+  isActive: boolean;
   userId: string;
 }
 
@@ -62,7 +62,7 @@ const UserManagementActions = ({
           <Shield className="mr-2 h-4 w-4" />
           <RoleDropdown 
             user={{ id: userId, role: currentRole, email: '', full_name: null }}
-            onRoleChange={onRoleChange}
+            onRoleChange={(userId, role) => onRoleChange(role)}
             disabled={isCurrentUser}
           />
         </DropdownMenuItem>
