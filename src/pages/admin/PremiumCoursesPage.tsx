@@ -1,191 +1,400 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  createPremiumCourse,
+  getPremiumCourses,
+  updatePremiumCourse,
+  deletePremiumCourse,
+  getCourseCategories
+} from "@/services/premiumCourseService";
+import { PremiumCourse } from "@/types";
+import MainLayout from '@/layouts/MainLayout';
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import AdminLayout from "@/layouts/AdminLayout";
-import PremiumCourseUploadForm from "@/components/admin/PremiumCourseUploadForm";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { PremiumCourse, triggerExpirationNotifications } from "@/services/premiumCourseService";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: "Title must be at least 2 characters.",
+  }),
+  description: z.string().min(10, {
+    message: "Description must be at least 10 characters.",
+  }),
+  price: z.number().min(1, {
+    message: "Price must be greater than 0.",
+  }),
+  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+  categoryId: z.string().min(1, {
+    message: "Category must be selected.",
+  }),
+  imageUrl: z.string().url({ message: "Invalid URL" }),
+  videoUrl: z.string().url({ message: "Invalid URL" }),
+});
+
+const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+  switch (status) {
+    case 'pending':
+      return 'outline';
+    case 'approved':
+      return 'secondary';
+    default:
+      return 'default';
+  }
+};
 
 const PremiumCoursesPage = () => {
-  const { hasRole } = useAuth();
-  const [courses, setCourses] = useState<PremiumCourse[]>([]);
-  const [activeTab, setActiveTab] = useState("active");
-  const [processingNotification, setProcessingNotification] = useState<string | null>(null);
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [courseIdToEdit, setCourseIdToEdit] = useState<string | null>(null);
+
+  const { data: courses, isLoading, isError } = useQuery({
+    queryKey: ['premiumCourses'],
+    queryFn: getPremiumCourses,
+  });
+
+  const { data: categories, isLoading: isCategoriesLoading, isError: isCategoriesError } = useQuery({
+    queryKey: ['courseCategories'],
+    queryFn: getCourseCategories,
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      price: 0,
+      status: 'pending',
+      categoryId: "",
+      imageUrl: "",
+      videoUrl: "",
+    },
+  });
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  const fetchCourses = async () => {
-    const { data, error } = await supabase
-      .from('premium_courses')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching courses:', error);
-      return;
-    }
-
-    setCourses(data || []);
-  };
-
-  const togglePublishStatus = async (courseId: string, currentStatus: boolean) => {
-    const { error } = await supabase
-      .from('premium_courses')
-      .update({ is_published: !currentStatus })
-      .eq('id', courseId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update course status",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "Success",
-      description: `Course ${!currentStatus ? 'published' : 'unpublished'} successfully`
-    });
-
-    fetchCourses();
-  };
-
-  const isCourseExpired = (course: PremiumCourse) => {
-    if (!course.end_date) return false;
-    return new Date(course.end_date) < new Date();
-  };
-
-  const getDaysUntilExpiration = (course: PremiumCourse) => {
-    if (!course.end_date) return null;
-    const endDate = new Date(course.end_date);
-    const today = new Date();
-    const differenceInTime = endDate.getTime() - today.getTime();
-    return Math.ceil(differenceInTime / (1000 * 3600 * 24));
-  };
-
-  const handleTestNotifications = async (courseId: string) => {
-    setProcessingNotification(courseId);
-    
-    try {
-      const result = await triggerExpirationNotifications(courseId);
-      
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Notification test triggered successfully. Check logs for details.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to trigger notifications",
-          variant: "destructive"
+    if (courseIdToEdit && courses) {
+      const courseToEdit = courses.find((course) => course.id === courseIdToEdit);
+      if (courseToEdit) {
+        form.reset({
+          title: courseToEdit.title,
+          description: courseToEdit.description,
+          price: courseToEdit.price,
+          status: courseToEdit.status,
+          categoryId: courseToEdit.categoryId,
+          imageUrl: courseToEdit.imageUrl,
+          videoUrl: courseToEdit.videoUrl,
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingNotification(null);
+    }
+  }, [courseIdToEdit, courses, form]);
+
+  const { mutate: createCourse } = useMutation(createPremiumCourse, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['premiumCourses']);
+      setIsDialogOpen(false);
+      form.reset();
+    },
+  });
+
+  const { mutate: updateCourse } = useMutation(updatePremiumCourse, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['premiumCourses']);
+      setIsDialogOpen(false);
+      setIsEditing(false);
+      setCourseIdToEdit(null);
+      form.reset();
+    },
+  });
+
+  const { mutate: removeCourse } = useMutation(deletePremiumCourse, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['premiumCourses']);
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (isEditing && courseIdToEdit) {
+      updateCourse({ id: courseIdToEdit, ...values });
+    } else {
+      createCourse({ ...values, price: Number(values.price) });
     }
   };
 
-  const filterCourses = (courses: PremiumCourse[], tab: string) => {
-    return courses.filter(course => {
-      const isExpired = isCourseExpired(course);
-      if (tab === "expired") return isExpired;
-      return !isExpired;
-    });
+  const handleOpenDialog = () => {
+    setIsDialogOpen(true);
+    setIsEditing(false);
+    setCourseIdToEdit(null);
+    form.reset();
   };
 
-  if (!hasRole(['admin', 'editor'])) {
-    return null;
-  }
+  const handleEditCourse = (courseId: string) => {
+    setIsDialogOpen(true);
+    setIsEditing(true);
+    setCourseIdToEdit(courseId);
+  };
+
+  const handleDeleteCourse = (courseId: string) => {
+    removeCourse(courseId);
+  };
+
+  if (isLoading || isCategoriesLoading) return <div>Loading...</div>;
+  if (isError || isCategoriesError) return <div>Error fetching data</div>;
 
   return (
-    <AdminLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Premium Courses Management</h1>
-        
-        <div className="mb-8">
-          <PremiumCourseUploadForm />
+    <MainLayout>
+      <div className="container py-10">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">Premium Courses</h1>
+          <Button onClick={handleOpenDialog}>
+            <Plus className="mr-2 h-4 w-4" /> Add Course
+          </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="active">Active Courses</TabsTrigger>
-            <TabsTrigger value="expired">Expired Courses</TabsTrigger>
-          </TabsList>
-
-          {["active", "expired"].map((tab) => (
-            <TabsContent key={tab} value={tab}>
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">
-                  {tab === "active" ? "Active" : "Expired"} Courses
-                </h2>
-                <div className="grid gap-4">
-                  {filterCourses(courses, tab).map((course) => (
-                    <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{course.title}</h3>
-                          {course.end_date && (
-                            <Badge variant={isCourseExpired(course) ? "secondary" : "pending"} className="ml-2">
-                              {isCourseExpired(course) 
-                                ? "Expired" 
-                                : `${getDaysUntilExpiration(course)} days remaining`}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {course.is_published ? 'Published' : 'Draft'} • 
-                          {course.end_date 
-                            ? ` Ends on ${new Date(course.end_date).toLocaleDateString()}` 
-                            : ' No end date'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTestNotifications(course.id)}
-                          disabled={processingNotification === course.id || !course.end_date}
-                          title={!course.end_date ? "Course needs an end date to test notifications" : "Test expiration notifications"}
-                        >
-                          <Bell className="w-4 h-4 mr-1" />
-                          {processingNotification === course.id ? "Sending..." : "Test Notifications"}
+        <ScrollArea>
+          <Table>
+            <TableCaption>A list of your premium courses.</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[200px]">Title</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {courses?.map((course) => (
+                <TableRow key={course.id}>
+                  <TableCell className="font-medium">{course.title}</TableCell>
+                  <TableCell>{course.description}</TableCell>
+                  <TableCell>{course.price}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadgeVariant(course.status)}>
+                      {course.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{categories?.find(cat => cat.id === course.categoryId)?.name}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditCourse(course.id)}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
                         </Button>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">
-                            {course.is_published ? 'Published' : 'Draft'}
-                          </span>
-                          <Switch
-                            checked={course.is_published}
-                            onCheckedChange={() => togglePublishStatus(course.id, course.is_published)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete
+                            the course from our servers.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteCourse(course.id)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center">
+                  {courses?.length} courses total
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </ScrollArea>
+
+        <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{isEditing ? "Edit Course" : "Add Course"}</AlertDialogTitle>
+            </AlertDialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Course Title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Course Description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Course Price"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories?.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Image URL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="videoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Video URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Video URL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <Button type="submit">{isEditing ? "Update" : "Create"}</Button>
+                </AlertDialogFooter>
+              </form>
+            </Form>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </AdminLayout>
+    </MainLayout>
   );
 };
 

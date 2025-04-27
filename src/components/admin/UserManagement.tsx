@@ -359,6 +359,17 @@ const UserManagement = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'verified':
+        return 'secondary';
+      case 'pending':
+        return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -462,11 +473,9 @@ const UserManagement = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {user.is_verified ? (
-                    <Badge variant="verified">Verified</Badge>
-                  ) : (
-                    <Badge variant="pending">Unverified</Badge>
-                  )}
+                  <Badge variant={getBadgeVariant(user.is_verified ? 'verified' : 'pending')}>
+                    {user.is_verified ? 'Verified' : 'Unverified'}
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-sm">
                   <div>{formatDate(user.created_at)}</div>

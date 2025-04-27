@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader } from "lucide-react";
+import { Loader } from "lucide-react";
 import MainLayout from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrency } from "@/hooks/useCurrency";
 
-interface TicketType {
-  id: string;
-  type: string;
-  price: number;
-  description?: string;
-  available_quantity: number;
-  benefits?: string[];
-}
-
 const EventPayment = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -33,8 +24,8 @@ const EventPayment = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [event, setEvent] = useState<any>(null);
-  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
+  const [ticketTypes, setTicketTypes] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
   const [discountCode, setDiscountCode] = useState('');
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
@@ -47,7 +38,6 @@ const EventPayment = () => {
     const fetchEventDetails = async () => {
       setIsLoading(true);
       try {
-        // Fetch event details
         const { data: eventData, error: eventError } = await supabase
           .from('events')
           .select('*')
@@ -56,7 +46,6 @@ const EventPayment = () => {
         
         if (eventError) throw eventError;
         
-        // Fetch ticket types
         const { data: ticketsData, error: ticketsError } = await supabase
           .from('ticket_types')
           .select('*')
@@ -68,7 +57,6 @@ const EventPayment = () => {
         setEvent(eventData);
         setTicketTypes(ticketsData);
         
-        // Select the first ticket by default if available
         if (ticketsData.length > 0) {
           setSelectedTicket(ticketsData[0]);
           setFinalPrice(ticketsData[0].price);
@@ -88,7 +76,7 @@ const EventPayment = () => {
     fetchEventDetails();
   }, [eventId, toast]);
 
-  const handleTicketChange = (ticket: TicketType) => {
+  const handleTicketChange = (ticket: any) => {
     setSelectedTicket(ticket);
     calculateFinalPrice(ticket.price, discountAmount);
   };
@@ -142,7 +130,6 @@ const EventPayment = () => {
         return;
       }
 
-      // Calculate discount amount
       let discount = 0;
       if (data.discount_amount) {
         discount = data.discount_amount;
@@ -155,7 +142,7 @@ const EventPayment = () => {
       
       toast({
         title: "Discount code applied!",
-        description: `A discount of ${selectedCurrency?.symbol} ${discount.toFixed(2)} has been applied.`,
+        description: `A discount of ${selectedCurrency?.symbol} ${convertPrice(discount).toFixed(2)} has been applied.`,
       });
       
     } catch (error) {
@@ -193,7 +180,6 @@ const EventPayment = () => {
     setIsProcessing(true);
     
     try {
-      // Prepare payment details
       const paymentDetails = {
         amount: finalPrice,
         description: `${event.name} - ${selectedTicket.type}`,
@@ -201,7 +187,6 @@ const EventPayment = () => {
         ticketType: selectedTicket.id
       };
       
-      // Navigate to payment page with details
       navigate('/payment', { state: paymentDetails });
       
     } catch (error) {
@@ -251,7 +236,7 @@ const EventPayment = () => {
           onClick={() => navigate(-1)}
           className="flex items-center text-sm text-gray-600 hover:text-black mb-6"
         >
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          Back
         </button>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
