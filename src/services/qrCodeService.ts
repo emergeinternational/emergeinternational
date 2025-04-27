@@ -15,21 +15,15 @@ export const generateQRCode = (registration: { id: string, event_id: string }): 
 
 export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
   try {
-    // Use a more explicit type definition to avoid infinite type instantiation
-    const { data, error } = await supabase
+    const { data: registration } = await supabase
       .from('event_registrations')
-      .select('id, qr_code_active')
+      .select<string, QrRegistration>('id, qr_code_active')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .single();
 
-    if (error) {
-      console.error("QR code validation error:", error);
-      return false;
-    }
-
     // If no data found or QR is inactive, validation fails
-    if (!data || data.qr_code_active === false) {
+    if (!registration || registration.qr_code_active === false) {
       console.log("QR code not found or inactive");
       return false;
     }
@@ -41,7 +35,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
         qr_code_active: false,
         updated_at: new Date().toISOString()
       })
-      .eq('id', data.id);
+      .eq('id', registration.id);
 
     if (updateError) {
       console.error("Error deactivating QR code:", updateError);
