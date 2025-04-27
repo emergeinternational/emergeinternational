@@ -1,7 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Currency {
+  id: string;
   code: string;
   name: string;
   symbol: string;
@@ -11,11 +11,9 @@ export interface Currency {
 
 export const fetchCurrencies = async (): Promise<Currency[]> => {
   try {
-    // Using a raw query instead of the typed query builder
-    // until the Supabase types are updated to include the new tables
     const { data, error } = await supabase
-      .from('currencies')
-      .select('*')
+      .from("currencies")
+      .select()
       .eq('is_active', true)
       .order('code');
 
@@ -24,8 +22,7 @@ export const fetchCurrencies = async (): Promise<Currency[]> => {
       throw error;
     }
 
-    // Type cast the returned data to our Currency interface
-    return (data || []) as unknown as Currency[];
+    return data || [];
   } catch (error) {
     console.error("Unexpected error in fetchCurrencies:", error);
     return [];

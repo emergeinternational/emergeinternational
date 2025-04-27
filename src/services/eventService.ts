@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TicketType {
@@ -19,7 +18,6 @@ export interface Event {
   location: string;
   description?: string;
   capacity?: number;
-  price?: number;
   currency_code: string;
   organizer?: string;
   event_type?: string;
@@ -43,10 +41,9 @@ export interface EventWithTickets extends Event {
 
 export const fetchEvents = async (): Promise<EventWithTickets[]> => {
   try {
-    // First fetch all events
     const { data: events, error: eventsError } = await supabase
-      .from('events')
-      .select('*')
+      .from("events")
+      .select()
       .order('date', { ascending: true });
     
     if (eventsError) {
@@ -58,11 +55,10 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
       return [];
     }
 
-    // Then fetch ticket types for these events using a raw query
     const eventIds = events.map(event => event.id);
     const { data: tickets, error: ticketsError } = await supabase
-      .from('ticket_types')
-      .select('*')
+      .from("ticket_types")
+      .select()
       .in('event_id', eventIds);
 
     if (ticketsError) {
@@ -71,20 +67,10 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
     }
 
     // Combine events with their tickets
-    const eventsWithTickets: EventWithTickets[] = events.map(event => {
-      // Cast the event to the Event interface
-      const typedEvent = event as unknown as Event;
-      // For TypeScript, we need to explicitly filter tickets by event_id
-      const eventTickets = (tickets || []).filter(ticket => {
-        const typedTicket = ticket as unknown as TicketType;
-        return typedTicket.event_id === typedEvent.id;
-      });
-      
-      return {
-        ...typedEvent,
-        tickets: eventTickets as unknown as TicketType[]
-      };
-    });
+    const eventsWithTickets = events.map(event => ({
+      ...event,
+      tickets: (tickets || []).filter(ticket => ticket.event_id === event.id)
+    }));
 
     return eventsWithTickets;
   } catch (error) {
@@ -95,10 +81,9 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
 
 export const fetchEventDetails = async (eventId: string): Promise<EventWithTickets | null> => {
   try {
-    // Fetch event details
     const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
+      .from("events")
+      .select()
       .eq('id', eventId)
       .single();
 
@@ -107,10 +92,9 @@ export const fetchEventDetails = async (eventId: string): Promise<EventWithTicke
       return null;
     }
 
-    // Fetch ticket types for this event
     const { data: tickets, error: ticketsError } = await supabase
-      .from('ticket_types')
-      .select('*')
+      .from("ticket_types")
+      .select()
       .eq('event_id', eventId);
 
     if (ticketsError) {
@@ -118,10 +102,9 @@ export const fetchEventDetails = async (eventId: string): Promise<EventWithTicke
       throw ticketsError;
     }
 
-    // Return event with tickets
     return {
-      ...(event as unknown as Event),
-      tickets: (tickets || []) as unknown as TicketType[]
+      ...event,
+      tickets: tickets || []
     };
   } catch (error) {
     console.error("Error in fetchEventDetails:", error);

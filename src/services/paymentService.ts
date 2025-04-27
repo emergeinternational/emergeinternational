@@ -11,11 +11,24 @@ export interface PaymentMethod {
   countries: string[];
 }
 
+export interface DiscountCode {
+  id: string;
+  event_id: string;
+  code: string;
+  discount_percent?: number;
+  discount_amount?: number;
+  valid_from: string;
+  valid_until?: string;
+  max_uses?: number;
+  current_uses: number;
+  is_active: boolean;
+}
+
 export const fetchPaymentMethods = async (): Promise<PaymentMethod[]> => {
   try {
     const { data, error } = await supabase
-      .from('payment_methods')
-      .select('*')
+      .from("payment_methods")
+      .select()
       .eq('is_active', true);
 
     if (error) {
@@ -23,7 +36,7 @@ export const fetchPaymentMethods = async (): Promise<PaymentMethod[]> => {
       throw error;
     }
 
-    return (data || []) as unknown as PaymentMethod[];
+    return data || [];
   } catch (error) {
     console.error("Unexpected error in fetchPaymentMethods:", error);
     return [];
@@ -80,8 +93,8 @@ export const verifyDiscountCode = async (
 ): Promise<{ valid: boolean; discountPercent?: number; discountAmount?: number; codeId?: string }> => {
   try {
     const { data, error } = await supabase
-      .from('discount_codes')
-      .select('*')
+      .from("discount_codes")
+      .select()
       .eq('code', code)
       .eq('event_id', eventId)
       .eq('is_active', true)
