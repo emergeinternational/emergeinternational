@@ -72,7 +72,7 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
 
     // Combine events with their tickets
     const eventsWithTickets: EventWithTickets[] = events.map(event => ({
-      ...event as Event,
+      ...(event as unknown as Event),
       tickets: (tickets || []).filter(ticket => ticket.event_id === event.id) as TicketType[]
     }));
 
@@ -110,7 +110,7 @@ export const fetchEventDetails = async (eventId: string): Promise<EventWithTicke
 
     // Return event with tickets
     return {
-      ...event as Event,
+      ...(event as unknown as Event),
       tickets: (tickets || []) as TicketType[]
     };
   } catch (error) {

@@ -75,4 +75,3 @@ url = ""
 [functions]
 [functions.increment-discount-code-usage]
 verify_jwt = true
-
