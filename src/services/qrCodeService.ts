@@ -10,7 +10,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
     // First check if the QR code exists and get the registration ID
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('id')
+      .select('id, qr_code')
       .eq('qr_code', qrCodeValue)
       .eq('payment_status', 'approved')
       .single();
@@ -28,7 +28,7 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
     // If record exists, check if the QR code is still active
     const { data: activeData, error: activeError } = await supabase
       .from('event_registrations')
-      .select('qr_code_active')
+      .select('*')
       .eq('id', data.id)
       .single();
 
