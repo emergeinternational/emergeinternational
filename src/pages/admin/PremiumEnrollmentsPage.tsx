@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/hooks/useAuth";
 import AdminLayout from "@/layouts/AdminLayout";
-import { FileExport } from "lucide-react";
+import { FileText } from "lucide-react"; // Changed from FileExport to FileText
 import { format } from 'date-fns';
 import { 
   Table, TableBody, TableCell, TableHead, 
@@ -41,7 +41,7 @@ const PremiumEnrollmentsPage = () => {
     };
 
     fetchEnrollments();
-  }, [page, courseTitle, activeFilter]);
+  }, [page, courseTitle, activeFilter, hasRole]);
 
   const handleExportCSV = () => {
     const headers = ['Course Title', 'User Email', 'Enrollment Date', 'Last Activity Date', 'Status'];
@@ -85,7 +85,7 @@ const PremiumEnrollmentsPage = () => {
             variant="outline"
             className="flex items-center gap-2"
           >
-            <FileExport className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             Export CSV
           </Button>
         </div>

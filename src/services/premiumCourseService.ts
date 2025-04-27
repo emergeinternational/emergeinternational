@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -65,15 +66,15 @@ export async function uploadPremiumCourseImage(file: File): Promise<string | nul
   }
 }
 
-export async function createPremiumCourse(courseData: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
+export async function createPremiumCourse(data: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
   try {
     const { data: courseData, error } = await supabase
       .from('premium_courses')
       .insert([{
-        ...courseData,
+        ...data,
         created_by: (await supabase.auth.getUser()).data.user?.id,
-        student_capacity: courseData.student_capacity || 20,
-        level: courseData.level || 'beginner'
+        student_capacity: data.student_capacity || 20,
+        level: data.level || 'beginner'
       }])
       .select('*')
       .single();
@@ -217,7 +218,7 @@ export async function getAdminPremiumEnrollments({
     if (error) throw error;
 
     return {
-      enrollments: data as PremiumEnrollment[],
+      enrollments: data as unknown as PremiumEnrollment[],
       totalCount: count || 0
     };
   } catch (error) {
