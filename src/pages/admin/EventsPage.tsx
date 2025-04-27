@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
 import EventsSection from '@/components/admin/EventsSection';
+import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import EventRegistrations from '@/components/admin/EventRegistrations';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -131,6 +133,7 @@ const EventsPage = () => {
           <TabsList>
             <TabsTrigger value="management">Event Management</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
+            <TabsTrigger value="discounts">Discount Codes</TabsTrigger>
           </TabsList>
           
           <TabsContent value="management" className="space-y-4">
@@ -146,6 +149,10 @@ const EventsPage = () => {
           
           <TabsContent value="registrations" className="space-y-4">
             <EventRegistrations />
+          </TabsContent>
+          
+          <TabsContent value="discounts" className="space-y-4">
+            <DiscountCodeManager />
           </TabsContent>
         </Tabs>
 
