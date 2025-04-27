@@ -116,7 +116,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       content_type: data.content_type,
       category_id: data.category_id,
       created_at: data.created_at,
-      updated_at: data.updated_at
+      updated_at: data.updated_at,
+      video_embed_url: data.video_embed_url
     };
 
     return course;
@@ -289,7 +290,10 @@ export const getCourses = async (
           category_id: item.category_id,
           created_at: item.created_at,
           updated_at: item.updated_at,
-          career_interests: []
+          career_interests: [],
+          video_embed_url: item.video_embed_url,
+          external_link: item.external_link,
+          hosting_type: item.hosting_type
         };
       })
     );
