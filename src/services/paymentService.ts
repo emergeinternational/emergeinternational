@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PaymentMethod {
@@ -125,10 +126,41 @@ export const verifyDiscountCode = async (
 
 export const useDiscountCode = async (codeId: string): Promise<boolean> => {
   try {
+    // Use the rpc method to call a database function that increments the discount code usage
     const { error } = await supabase
-      .from('discount_codes')
-      .update({ current_uses: supabase.raw('current_uses + 1') })
-      .eq('id', codeId);
+      .rpc('increment_discount_code_usage', { code_id: codeId });
+    
+    // If there's no database function available, we can use a different approach
+    // by first getting the current count and then updating with the incremented value
+    if (error && error.message.includes('function "increment_discount_code_usage" does not exist')) {
+      console.log("Fallback: Using get and update instead of rpc function");
+      
+      // Get current uses first
+      const { data: codeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', codeId)
+        .single();
+      
+      if (codeData) {
+        const newUses = (codeData.current_uses || 0) + 1;
+        
+        // Then update with new value
+        const { error: updateError } = await supabase
+          .from('discount_codes')
+          .update({ current_uses: newUses })
+          .eq('id', codeId);
+        
+        if (updateError) {
+          console.error("Error incrementing discount code usage:", updateError);
+          return false;
+        }
+        
+        return true;
+      }
+      
+      return false;
+    }
     
     if (error) {
       console.error("Error incrementing discount code usage:", error);
