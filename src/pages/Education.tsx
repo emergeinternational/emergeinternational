@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, AlertTriangle } from "lucide-react";
@@ -12,7 +13,6 @@ import {
 import { getWorkshops, Workshop } from "../services/workshopService";
 import { 
   getAllCourses, 
-  getCourses,
   getStaticCourses,
   Course 
 } from "../services/courseService";
@@ -57,12 +57,26 @@ const Education = () => {
       const categoriesData = await getEducationCategories();
       setCategories(categoriesData);
       
-      const contentData = await getCourses(
-        activeLevel === "all" ? undefined : activeLevel,
-        20,
-        false,
-        activeCareerInterest === "all" ? undefined : activeCareerInterest
-      );
+      let contentData: Course[] = [];
+
+      // Use getAllCourses instead of getCourses
+      if (activeLevel === "all" && activeCareerInterest === "all") {
+        contentData = await getAllCourses();
+      } else {
+        let staticCourses = getStaticCourses();
+        
+        if (activeLevel !== "all") {
+          staticCourses = staticCourses.filter(course => course.category === activeLevel);
+        }
+        
+        if (activeCareerInterest !== "all") {
+          staticCourses = staticCourses.filter(course => 
+            course.career_interests?.includes(activeCareerInterest)
+          );
+        }
+        
+        contentData = staticCourses;
+      }
       
       if (contentData && contentData.length > 0) {
         setEducationContent(contentData);
