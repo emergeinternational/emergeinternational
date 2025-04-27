@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Camera, Upload, CheckCircle } from "lucide-react";
@@ -8,6 +7,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { saveEventRegistration, updatePaymentProof } from "@/services/workshopService";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useDiscountCode } from '@/hooks/useDiscountCode';
+import { usePaymentProof } from '@/hooks/usePaymentProof';
 
 const Payment = () => {
   const [paymentMethod, setPaymentMethod] = useState<"telebirr" | "card" | "cbebirr">("telebirr");
@@ -26,6 +29,21 @@ const Payment = () => {
     description: "Payment",
     eventId: null,
     ticketType: null
+  };
+
+  const [discountCode, setDiscountCode] = useState('');
+  const { validateDiscountCode, isValidating } = useDiscountCode(paymentDetails.eventId);
+  const { uploadPaymentProof, isUploading } = usePaymentProof();
+
+  const handleDiscountCodeSubmit = async () => {
+    if (!discountCode.trim()) return;
+    
+    const discountAmount = await validateDiscountCode(discountCode);
+    if (discountAmount > 0) {
+      // Update the payment amount with the discount
+      // Note: This assumes paymentDetails is properly typed with amount
+      paymentDetails.amount -= discountAmount;
+    }
   };
 
   useEffect(() => {
@@ -89,54 +107,20 @@ const Payment = () => {
     if (registrationId) {
       setUploading(true);
       try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${registrationId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `payment_proofs/${fileName}`;
+        const paymentProofUrl = await uploadPaymentProof(file);
         
-        // Create storage bucket if it doesn't exist yet
-        const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('payment_proofs');
-        if (bucketError && bucketError.message.includes('does not exist')) {
-          // Bucket doesn't exist, try to create it
-          await supabase.storage.createBucket('payment_proofs', {
-            public: false,
-            fileSizeLimit: 5242880 // 5MB
+        if (paymentProofUrl) {
+          // Update the registration with the payment proof URL
+          await updatePaymentProof(registrationId, paymentProofUrl);
+          
+          toast({
+            title: "Payment proof uploaded",
+            description: "Your payment screenshot has been uploaded successfully.",
           });
         }
-        
-        const { error: uploadError } = await supabase.storage
-          .from('payment_proofs')
-          .upload(filePath, file);
-          
-        if (uploadError) throw uploadError;
-        
-        // Get public URL for the uploaded file
-        const { data } = supabase.storage
-          .from('payment_proofs')
-          .getPublicUrl(filePath);
-          
-        // Update the registration with the payment proof URL
-        await updatePaymentProof(registrationId, data.publicUrl);
-        
-        toast({
-          title: "Payment proof uploaded",
-          description: "Your payment screenshot has been uploaded successfully.",
-        });
-      } catch (error) {
-        console.error("Upload error:", error);
-        toast({
-          title: "Upload failed",
-          description: "There was an error uploading your payment proof. Please try again.",
-          variant: "destructive"
-        });
       } finally {
         setUploading(false);
       }
-    } else {
-      toast({
-        title: "Registration not found",
-        description: "Please refresh and try again.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -237,6 +221,26 @@ const Payment = () => {
 
         <div className="text-center mb-8">
           <h2 className="text-4xl font-bold mb-2">ETB {paymentDetails.amount}</h2>
+          
+          {/* Add discount code section */}
+          <div className="mb-4">
+            <div className="flex gap-2 justify-center">
+              <Input
+                type="text"
+                placeholder="Enter discount code"
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value)}
+                className="max-w-[200px]"
+              />
+              <Button 
+                onClick={handleDiscountCodeSubmit}
+                disabled={isValidating || !discountCode.trim()}
+              >
+                {isValidating ? "Validating..." : "Apply"}
+              </Button>
+            </div>
+          </div>
+
           <p className="text-gray-600">
             {paymentDetails.description}<br />
             {paymentMethod === "telebirr" && "Expected within 8 hours"}
