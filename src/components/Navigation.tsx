@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Settings } from "lucide-react";
@@ -59,15 +58,22 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
             </Link>
           )}
           
-          {/* Admin link - only visible to admin users */}
           {user && hasRole('admin') && (
-            <Link
-              to="/admin"
-              className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium flex items-center"
-            >
-              <Settings size={16} className="mr-1" />
-              Admin
-            </Link>
+            <>
+              <Link
+                to="/admin"
+                className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium flex items-center"
+              >
+                <Settings size={16} className="mr-1" />
+                Admin Dashboard
+              </Link>
+              <Link
+                to="/admin/premium-enrollments"
+                className="text-emerge-gold hover:text-emerge-gold transition-colors font-medium"
+              >
+                Premium Enrollments
+              </Link>
+            </>
           )}
         </div>
 
@@ -105,16 +111,24 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
               </Link>
             )}
             
-            {/* Admin link in mobile menu - only visible to admin users */}
             {user && hasRole('admin') && (
-              <Link
-                to="/admin"
-                onClick={() => setIsMenuOpen(false)}
-                className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
-              >
-                <Settings size={16} className="mr-2" />
-                Admin Panel
-              </Link>
+              <>
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Admin Dashboard
+                </Link>
+                <Link
+                  to="/admin/premium-enrollments"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="py-2 border-b border-gray-700 text-emerge-gold"
+                >
+                  Premium Enrollments
+                </Link>
+              </>
             )}
           </div>
         </div>

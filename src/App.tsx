@@ -1,3 +1,4 @@
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import TalentRegistration from "./pages/TalentRegistration";
 import MediaSubmission from "./pages/MediaSubmission";
 import PremiumCoursesListPage from "./pages/PremiumCoursesListPage";
 import MyPremiumCourses from "./pages/MyPremiumCourses";
+import PremiumEnrollmentsPage from "./pages/admin/PremiumEnrollmentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 import Login from "./pages/Login";
@@ -133,6 +135,15 @@ const App = () => {
                   element={
                     <RoleBasedRoute allowedRoles={['admin', 'editor']}>
                       <PremiumCoursesPage />
+                    </RoleBasedRoute>
+                  } 
+                />
+                
+                <Route 
+                  path="/admin/premium-enrollments" 
+                  element={
+                    <RoleBasedRoute allowedRoles={['admin']}>
+                      <PremiumEnrollmentsPage />
                     </RoleBasedRoute>
                   } 
                 />

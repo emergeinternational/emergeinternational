@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -25,6 +24,19 @@ export interface PremiumCourseEnrollment {
   user_id: string;
   created_at: string;
   course?: PremiumCourse;
+}
+
+export interface PremiumEnrollment {
+  id: string;
+  course_id: string;
+  user_id: string;
+  last_activity_date: string;
+  created_at: string;
+  course?: PremiumCourse;
+  user?: {
+    email?: string;
+    full_name?: string;
+  };
 }
 
 export async function uploadPremiumCourseImage(file: File): Promise<string | null> {
@@ -160,5 +172,56 @@ export async function isUserEnrolled(courseId: string): Promise<boolean> {
   } catch (error) {
     console.error('Error in isUserEnrolled:', error);
     return false;
+  }
+}
+
+export async function getAdminPremiumEnrollments({
+  page = 1, 
+  pageSize = 20, 
+  courseTitle,
+  activeFilter
+}: {
+  page?: number;
+  pageSize?: number;
+  courseTitle?: string;
+  activeFilter?: 'active' | 'inactive';
+}): Promise<{
+  enrollments: PremiumEnrollment[];
+  totalCount: number;
+}> {
+  try {
+    let query = supabase
+      .from('premium_course_enrollments')
+      .select(`
+        *,
+        course:premium_courses(id, title),
+        user:profiles(email, full_name)
+      `, { count: 'exact' });
+
+    if (courseTitle) {
+      query = query.filter('course.title', 'ilike', `%${courseTitle}%`);
+    }
+
+    if (activeFilter === 'active') {
+      query = query.gt('last_activity_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
+    } else if (activeFilter === 'inactive') {
+      query = query.lte('last_activity_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
+    }
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+
+    if (error) throw error;
+
+    return {
+      enrollments: data as PremiumEnrollment[],
+      totalCount: count || 0
+    };
+  } catch (error) {
+    console.error('Error fetching premium enrollments:', error);
+    return { enrollments: [], totalCount: 0 };
   }
 }

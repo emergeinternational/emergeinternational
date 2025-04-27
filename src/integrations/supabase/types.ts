@@ -469,6 +469,95 @@ export type Database = {
           },
         ]
       }
+      premium_course_enrollments: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          id: string
+          last_activity_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_course_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "premium_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premium_courses: {
+        Row: {
+          category: Database["public"]["Enums"]["course_category"]
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          has_active_students: boolean
+          hosting_type: Database["public"]["Enums"]["course_hosting_type"]
+          id: string
+          image_path: string | null
+          is_published: boolean
+          level: Database["public"]["Enums"]["course_level"]
+          start_date: string | null
+          student_capacity: number
+          summary: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["course_category"]
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          has_active_students?: boolean
+          hosting_type?: Database["public"]["Enums"]["course_hosting_type"]
+          id?: string
+          image_path?: string | null
+          is_published?: boolean
+          level?: Database["public"]["Enums"]["course_level"]
+          start_date?: string | null
+          student_capacity?: number
+          summary?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["course_category"]
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          has_active_students?: boolean
+          hosting_type?: Database["public"]["Enums"]["course_hosting_type"]
+          id?: string
+          image_path?: string | null
+          is_published?: boolean
+          level?: Database["public"]["Enums"]["course_level"]
+          start_date?: string | null
+          student_capacity?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
