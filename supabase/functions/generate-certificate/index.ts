@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, StandardFonts, rgb } from "https://cdn.skypack.dev/pdf-lib@1.17.1";
@@ -13,14 +12,19 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+interface CertificateGenerationParams {
+  userId: string;
+  courseTitle: string;
+  completionDate?: string;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { userId, courseTitle, completionDate } = await req.json();
+    const { userId, courseTitle, completionDate }: CertificateGenerationParams = await req.json();
     
     if (!userId || !courseTitle) {
       return new Response(
@@ -34,10 +38,7 @@ serve(async (req) => {
     
     // Get user profile data
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", userId)
-      .single();
+      .rpc('get_profile_for_certificate', { p_user_id: userId });
     
     if (profileError || !profile) {
       return new Response(
@@ -158,18 +159,14 @@ serve(async (req) => {
     const pdfBytes = await pdfDoc.save();
     const pdfBase64 = base64Encode(pdfBytes);
     
-    // Store the certificate in the database
+    // Store certificate in database using secure RPC call
     const { data: certificate, error: certificateError } = await supabase
-      .from('certificates')
-      .insert({
-        user_id: userId,
-        course_title: courseTitle,
-        issue_date: currentDate.toISOString(),
-        certificate_data: pdfBase64,
-        status: 'generated'
-      })
-      .select()
-      .single();
+      .rpc('create_certificate', {
+        p_user_id: userId,
+        p_course_title: courseTitle,
+        p_certificate_data: pdfBase64,
+        p_completion_date: completionDate || new Date().toISOString()
+      });
     
     if (certificateError) {
       console.error("Error storing certificate:", certificateError);
@@ -178,12 +175,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
-    // Update certificate eligibility table to mark certificate as generated
-    await supabase
-      .from('certificate_eligibility')
-      .update({ certificate_generated: true })
-      .eq('user_id', userId);
     
     return new Response(
       JSON.stringify({ 

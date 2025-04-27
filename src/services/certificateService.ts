@@ -41,6 +41,18 @@ export const updateCertificateApproval = async (
   }
 };
 
+interface Certificate {
+  id: string;
+  user_id: string;
+  course_title: string;
+  issue_date: string;
+  certificate_data: string;
+  status: string;
+  last_downloaded_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const generateCertificate = async (
   userId: string,
   courseTitle: string,
@@ -69,13 +81,10 @@ export const generateCertificate = async (
   }
 };
 
-export const getUserCertificates = async (userId: string): Promise<any[]> => {
+export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
     const { data, error } = await supabase
-      .from("certificates")
-      .select("*")
-      .eq("user_id", userId)
-      .order("issue_date", { ascending: false });
+      .rpc('get_user_certificates', { p_user_id: userId });
 
     if (error) {
       console.error("Error fetching user certificates:", error);
@@ -92,21 +101,17 @@ export const getUserCertificates = async (userId: string): Promise<any[]> => {
 export const downloadCertificate = async (certificateId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
   try {
     const { data, error } = await supabase
-      .from("certificates")
-      .select("certificate_data, course_title")
-      .eq("id", certificateId)
-      .single();
+      .rpc('get_certificate_data', { p_certificate_id: certificateId });
 
     if (error || !data) {
       console.error("Error fetching certificate:", error);
       return { success: false, error: error?.message || "Certificate not found" };
     }
 
-    // Update the downloaded timestamp
-    await supabase
-      .from("certificates")
-      .update({ last_downloaded_at: new Date().toISOString() })
-      .eq("id", certificateId);
+    // Update the downloaded timestamp using RPC to maintain security
+    await supabase.rpc('update_certificate_download_timestamp', {
+      p_certificate_id: certificateId
+    });
 
     return { 
       success: true, 
