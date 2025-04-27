@@ -1,6 +1,4 @@
-
 import React, { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AdminLayout from '@/layouts/AdminLayout';
 import EventsSection from '@/components/admin/EventsSection';
@@ -11,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Event } from "@/hooks/useEvents";
 import EventForm from '@/components/events/EventForm';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 // Schema for event form validation
 const eventFormSchema = z.object({
@@ -38,7 +37,7 @@ const eventFormSchema = z.object({
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
 const EventsPage = () => {
-  const [activeTab, setActiveTab] = useState('events');
+  const [activeTab, setActiveTab] = useState('management');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
@@ -127,19 +126,19 @@ const EventsPage = () => {
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Events Management</h1>
+        <h1 className="text-3xl font-bold mb-6">Event Management</h1>
         
-        <Tabs defaultValue="events" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs defaultValue="management" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="events">Events</TabsTrigger>
+            <TabsTrigger value="management">Event Management</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
             <TabsTrigger value="discounts">Discount Codes</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="events" className="space-y-4">
+          <TabsContent value="management" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Manage Events</CardTitle>
+                <CardTitle>Manage Events & Tickets</CardTitle>
               </CardHeader>
               <CardContent>
                 <EventsSection onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
