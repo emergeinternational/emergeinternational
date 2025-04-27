@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { deleteEvent } from "@/services/eventService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Event } from "@/hooks/useEvents";
-import { useEventForm } from "@/hooks/useEventForm";
 
 interface EventsSectionProps {
   onCreateEvent?: () => void;
@@ -31,15 +30,6 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  // Get form handling from the hook
-  const {
-    handleCreateEvent: openCreateEventDialog,
-    handleEditEvent: openEditEventDialog
-  } = useEventForm(() => {
-    // Refetch events after form actions
-    refetch();
-  });
 
   const canEdit = hasRole(['admin', 'editor']);
   
@@ -69,21 +59,9 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
     deleteEventMutation.mutate(selectedEvent.id);
   };
 
-  const handleCreateEvent = () => {
-    if (onCreateEvent) {
-      onCreateEvent();
-    } else {
-      // Use the form hook directly
-      openCreateEventDialog();
-    }
-  };
-
-  const handleEditEvent = (event: Event) => {
+  const openEditDialog = (event: Event) => {
     if (onEditEvent) {
       onEditEvent(event);
-    } else {
-      // Use the form hook directly
-      openEditEventDialog(event);
     }
   };
 
@@ -104,7 +82,13 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
             className="flex items-center text-emerge-gold"
             variant="ghost"
             disabled={!canEdit}
-            onClick={handleCreateEvent}
+            onClick={() => {
+              if (onCreateEvent) {
+                onCreateEvent();
+                // After event creation dialog is closed, refetch data
+                setTimeout(() => refetch(), 500);
+              }
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             <span>ADD NEW EVENT</span>
@@ -150,7 +134,7 @@ const EventsSection = ({ onCreateEvent, onEditEvent }: EventsSectionProps) => {
                       variant="outline"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => handleEditEvent(event)}
+                      onClick={() => openEditDialog(event)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
