@@ -8,7 +8,7 @@ import {
   TableBody,
   TableCell
 } from "@/components/ui/table";
-import { UserWithRole } from '../../../types/user';
+import { UserWithRole, UserRole } from '../../../types/user';
 import UserStatusBadge from './UserStatusBadge';
 import UserManagementActions from './UserManagementActions';
 
@@ -19,7 +19,7 @@ interface UserListProps {
   onEditUser: (user: UserWithRole) => void;
   onDeleteUser: (userId: string) => void;
   onStatusChange: (userId: string, status: boolean) => void;
-  onRoleChange: (userId: string, role: string) => void;
+  onRoleChange: (userId: string, role: UserRole) => void;
 }
 
 const UserList = ({
@@ -77,6 +77,7 @@ const UserList = ({
               <TableCell>{formatDate(user.created_at)}</TableCell>
               <TableCell>
                 <UserManagementActions
+                  userId={user.id}
                   onEdit={() => onEditUser(user)}
                   onDelete={() => onDeleteUser(user.id)}
                   onStatusChange={(status) => onStatusChange(user.id, status)}
