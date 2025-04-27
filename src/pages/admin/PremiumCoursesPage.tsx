@@ -24,7 +24,9 @@ interface PremiumCourse {
   status: 'published' | 'draft';
   created_at: string;
   updated_at: string;
-  enrollments_count?: number;
+  enrollments_count: number;
+  category: "model" | "designer" | "photographer" | "videographer" | "musical_artist" | "fine_artist" | "event_planner";
+  created_by?: string;
 }
 
 const PremiumCoursesPage = () => {
@@ -49,6 +51,9 @@ const PremiumCoursesPage = () => {
 
       return data.map(course => ({
         ...course,
+        description: course.summary || '',
+        status: course.is_published ? 'published' : 'draft',
+        price: 0,
         enrollments_count: course.enrollments?.[0]?.count || 0
       })) as PremiumCourse[];
     }

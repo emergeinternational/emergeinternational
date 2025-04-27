@@ -6,7 +6,6 @@ export interface TicketType {
   id: string;
   event_id: string;
   name: string;
-  type: string;
   price: number;
   description?: string;
   quantity: number;
@@ -49,13 +48,9 @@ export const useEvents = () => {
 
       if (error) throw error;
 
-      // Transform the data to match our interface
       const eventsWithTickets = data.map(event => ({
         ...event,
-        ticket_types: event.ticket_types?.map(ticket => ({
-          ...ticket,
-          type: ticket.name // Map name to type for backwards compatibility
-        }))
+        ticket_types: event.ticket_types || []
       }));
 
       return eventsWithTickets as Event[];
