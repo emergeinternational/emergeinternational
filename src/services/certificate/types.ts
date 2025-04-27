@@ -1,5 +1,12 @@
 
-import { User } from "@/types/auth";
+// Define types for certificate-related data
+
+// Define User type since @/types/auth doesn't exist
+export interface User {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, any>;
+}
 
 export interface CertificateSettings {
   id: string;
@@ -31,4 +38,8 @@ export interface CertificateEligibility {
   status: 'pending' | 'approved' | 'denied';
   created_at: string;
   updated_at: string;
+  profiles?: {
+    full_name?: string;
+    email?: string;
+  };
 }

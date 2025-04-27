@@ -15,6 +15,7 @@ import MyPremiumCourses from "./pages/MyPremiumCourses";
 import PremiumEnrollmentsPage from "./pages/admin/PremiumEnrollmentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
+import CertificateAdminPage from "./pages/admin/CertificateAdminPage"; // New import
 import Login from "./pages/Login";
 import EmailLogin from "./pages/EmailLogin";
 import Home from "./pages/Home";
@@ -143,6 +144,11 @@ const App = () => {
                 <Route path="/admin/premium-enrollments" element={
                   <RoleBasedRoute allowedRoles={['admin']}>
                     <PremiumEnrollmentsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/certificates" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <CertificateAdminPage />
                   </RoleBasedRoute>
                 } />
                 

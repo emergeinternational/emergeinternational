@@ -5,8 +5,8 @@ import {
   updateCertificateApproval,
   generateCertificate,
   getCertificateSettings,
-  userMeetsRequirements
-} from "../../services/certificateService";
+  userMeetsRequirements,
+} from "../../services/certificate"; // Updated import path
 import { useToast } from "@/hooks/use-toast";
 import CertificateSettings from "./CertificateSettings";
 import { 
