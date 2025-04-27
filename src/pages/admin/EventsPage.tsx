@@ -16,7 +16,17 @@ const EventsPage = () => {
   const [activeTab, setActiveTab] = useState('registrations');
   const { refetch } = useEventsAdmin();
   
-  const eventFormProps = useEventForm(() => refetch());
+  const { 
+    form,
+    isDialogOpen,
+    setIsDialogOpen,
+    isEditMode,
+    currentEvent,
+    isSubmitting,
+    onSubmit,
+    handleCreateEvent,
+    handleEditEvent
+  } = useEventForm(() => refetch());
 
   return (
     <AdminLayout>
@@ -67,7 +77,7 @@ const EventsPage = () => {
                 <CardTitle>Manage Events & Tickets</CardTitle>
               </CardHeader>
               <CardContent>
-                <EventsSection onCreateEvent={eventFormProps.handleCreateEvent} onEditEvent={eventFormProps.handleEditEvent} />
+                <EventsSection onCreateEvent={handleCreateEvent} onEditEvent={handleEditEvent} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -92,7 +102,15 @@ const EventsPage = () => {
           </TabsContent>
         </Tabs>
 
-        <EventForm {...eventFormProps} />
+        <EventForm 
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          form={form}
+          isEditMode={isEditMode}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          currentEvent={currentEvent}
+        />
       </div>
     </AdminLayout>
   );

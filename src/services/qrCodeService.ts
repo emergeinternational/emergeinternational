@@ -22,7 +22,10 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
     // Deactivate the QR code after successful scan
     const { error: updateError } = await supabase
       .from('event_registrations')
-      .update({ qr_code_active: false })
+      .update({ 
+        qr_code_active: false,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', registration.id);
 
     if (updateError) {
