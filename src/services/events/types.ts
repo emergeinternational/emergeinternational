@@ -20,6 +20,7 @@ export interface Event {
   image_url?: string;
   currency_code?: string;
   max_tickets?: number;
+  price?: number;
   ticket_types?: TicketType[];
 }
 
@@ -34,6 +35,7 @@ export interface CreateEventPayload {
   image_url?: string;
   currency_code?: string;
   max_tickets?: number;
+  price?: number;
   ticket_types?: TicketType[];
 }
 
@@ -48,6 +50,7 @@ export interface UpdateEventPayload {
   image_url?: string;
   currency_code?: string;
   max_tickets?: number;
+  price?: number;
   ticket_types?: TicketType[];
 }
 
