@@ -198,14 +198,14 @@ const EventsPage = () => {
         price: ticket.price,
         description: ticket.description || '',
         quantity: ticket.quantity,
-        benefits: []
+        benefits: ticket.benefits || []
       })) || []
     });
     setIsEditMode(true);
     setCurrentEvent(event);
     setIsDialogOpen(true);
   };
-  
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
