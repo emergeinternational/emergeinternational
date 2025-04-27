@@ -180,14 +180,16 @@ export const logScraperActivity = async (
   details: any
 ): Promise<void> => {
   try {
-    await supabase
-      .from("scraper_logs")
+    await (supabase
+      .from("automation_logs")
       .insert({
-        source,
-        action,
-        status,
-        details: JSON.stringify(details),
-      });
+        function_name: `scraper:${source}`,
+        results: {
+          action,
+          status,
+          details
+        }
+      }) as any);
   } catch (error) {
     console.error("Error logging scraper activity:", error);
   }
@@ -196,9 +198,17 @@ export const logScraperActivity = async (
 // Create a verified course directly (for manual course creation)
 export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
   try {
+    // Need to cast the courseData to make TypeScript happy with the strict category types
+    const typedCourseData = {
+      ...courseData,
+      category: courseData.category as any,
+      level: courseData.level as any,
+      hosting_type: courseData.hosting_type as 'hosted' | 'embedded' | 'external'
+    };
+    
     const { data, error } = await supabase
       .from("courses")
-      .insert(courseData)
+      .insert(typedCourseData)
       .select()
       .single();
     
