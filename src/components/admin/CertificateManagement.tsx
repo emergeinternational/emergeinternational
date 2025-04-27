@@ -3,9 +3,12 @@ import { useState, useEffect } from "react";
 import {
   getEligibleUsers,
   updateCertificateApproval,
-  generateCertificate
+  generateCertificate,
+  getCertificateSettings,
+  userMeetsRequirements
 } from "../../services/certificateService";
 import { useToast } from "@/hooks/use-toast";
+import CertificateSettings from "./CertificateSettings";
 import { 
   Loader2, 
   CheckCircle, 
@@ -15,7 +18,8 @@ import {
   AlertTriangle,
   Eye,
   Link as ExternalLink,
-  Download
+  Download,
+  Settings
 } from "lucide-react";
 import { 
   Table, 
@@ -53,10 +57,24 @@ const CertificateManagement = () => {
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [generatingCertificate, setGeneratingCertificate] = useState(false);
+  const [certificateRequirements, setCertificateRequirements] = useState({
+    min_courses_required: 5,
+    min_workshops_required: 3
+  });
 
   useEffect(() => {
     fetchEligibleUsers();
+    fetchCertificateSettings();
   }, []);
+
+  const fetchCertificateSettings = async () => {
+    try {
+      const settings = await getCertificateSettings();
+      setCertificateRequirements(settings);
+    } catch (error) {
+      console.error("Error fetching certificate settings:", error);
+    }
+  };
 
   const fetchEligibleUsers = async () => {
     setLoading(true);
@@ -167,6 +185,11 @@ const CertificateManagement = () => {
     }
   };
 
+  const handleSettingsChanged = () => {
+    fetchCertificateSettings();
+    fetchEligibleUsers();
+  };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
@@ -194,7 +217,8 @@ const CertificateManagement = () => {
     // Add null check for online_courses_completed and workshops_completed
     const onlineCoursesCompleted = user.online_courses_completed || 0;
     const workshopsCompleted = user.workshops_completed || 0;
-    return onlineCoursesCompleted >= 5 && workshopsCompleted >= 3;
+    return onlineCoursesCompleted >= certificateRequirements.min_courses_required && 
+           workshopsCompleted >= certificateRequirements.min_workshops_required;
   };
 
   return (
@@ -204,21 +228,24 @@ const CertificateManagement = () => {
           <Award className="h-5 w-5 mr-2 text-emerge-gold" />
           Certificate Management
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchEligibleUsers}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Loading
-            </>
-          ) : (
-            "Refresh"
-          )}
-        </Button>
+        <div className="flex space-x-2">
+          <CertificateSettings onSettingsChanged={handleSettingsChanged} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchEligibleUsers}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading
+              </>
+            ) : (
+              "Refresh"
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="bg-emerge-cream p-4 rounded border border-amber-200">
@@ -227,8 +254,8 @@ const CertificateManagement = () => {
           Certificate Requirements
         </h3>
         <ul className="mt-2 text-sm space-y-1">
-          <li>• Minimum of 5 online courses completed</li>
-          <li>• Minimum of 3 workshops attended</li>
+          <li>• Minimum of {certificateRequirements.min_courses_required} online courses completed</li>
+          <li>• Minimum of {certificateRequirements.min_workshops_required} workshops attended</li>
           <li>• Manual admin verification required for all certificates</li>
         </ul>
       </div>
@@ -238,7 +265,7 @@ const CertificateManagement = () => {
           <BookOpen className="h-12 w-12 mx-auto mb-2 text-emerge-gold/60" />
           <h3 className="text-lg font-medium mb-1">No Eligible Users Found</h3>
           <p className="text-gray-600">
-            Users need to complete at least 5 online courses and 3 workshops to be eligible.
+            Users need to complete at least {certificateRequirements.min_courses_required} online courses and {certificateRequirements.min_workshops_required} workshops to be eligible.
           </p>
         </div>
       ) : (
@@ -274,13 +301,13 @@ const CertificateManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className={`h-2 w-2 rounded-full ${(user.online_courses_completed || 0) >= 5 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <div className={`h-2 w-2 rounded-full ${(user.online_courses_completed || 0) >= certificateRequirements.min_courses_required ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
                         <span>{user.online_courses_completed || 0} online courses</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <div className={`h-2 w-2 rounded-full ${(user.workshops_completed || 0) >= 3 ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
+                        <div className={`h-2 w-2 rounded-full ${(user.workshops_completed || 0) >= certificateRequirements.min_workshops_required ? "bg-green-500" : "bg-amber-500"} mr-2`}></div>
                         <span>{user.workshops_completed || 0} workshops</span>
                       </div>
                     </TableCell>
@@ -394,10 +421,12 @@ const CertificateManagement = () => {
                 <div>
                   <p className="font-medium">Online Courses:</p>
                   <p>{selectedUser.online_courses_completed || 0} completed</p>
+                  <p className="text-xs text-gray-500">Required: {certificateRequirements.min_courses_required}</p>
                 </div>
                 <div>
                   <p className="font-medium">Workshops:</p>
                   <p>{selectedUser.workshops_completed || 0} completed</p>
+                  <p className="text-xs text-gray-500">Required: {certificateRequirements.min_workshops_required}</p>
                 </div>
               </div>
             </div>
@@ -543,7 +572,7 @@ const CertificateManagement = () => {
                     Online Course Progress
                   </h3>
                   <p className="text-lg font-bold mt-1">{selectedUser.online_courses_completed || 0} courses</p>
-                  <p className="text-xs text-gray-500">Minimum required: 5</p>
+                  <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_courses_required}</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded border">
                   <h3 className="font-medium flex items-center">
@@ -551,7 +580,7 @@ const CertificateManagement = () => {
                     Workshop Attendance
                   </h3>
                   <p className="text-lg font-bold mt-1">{selectedUser.workshops_completed || 0} workshops</p>
-                  <p className="text-xs text-gray-500">Minimum required: 3</p>
+                  <p className="text-xs text-gray-500">Minimum required: {certificateRequirements.min_workshops_required}</p>
                 </div>
               </div>
               
