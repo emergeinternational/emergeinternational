@@ -1,4 +1,3 @@
-
 // This file re-exports functionality from the refactored service files
 // to maintain backward compatibility with existing imports
 export { 
@@ -24,11 +23,14 @@ export {
   submitScrapedCourse,
   getPendingScrapedCourses,
   approveScrapedCourse,
-  rejectScrapedCourse
+  rejectScrapedCourse,
+  getScrapedCoursesBySource,
+  getDuplicateStats
 } from './scraping/courseScraperCore';
 
 export {
-  canUpdateCourse
+  canUpdateCourse,
+  checkDuplicateCourse
 } from './scraping/courseScraperValidation';
 
 export {

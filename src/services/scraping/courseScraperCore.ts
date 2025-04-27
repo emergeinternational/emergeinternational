@@ -39,7 +39,7 @@ export const submitScrapedCourse = async (
       return null;
     }
     
-    // Log the duplicates for analysis
+    // Log duplicates for analysis
     if (isDuplicate) {
       await logScraperActivity(
         course.scraper_source,
@@ -217,12 +217,12 @@ export const triggerManualScrape = async (): Promise<{ success: boolean, message
 };
 
 // Get all courses that were automatically scraped from a specific source
-export const getScrapedCoursesBySource = async (source: string): Promise<Course[]> => {
+export const getScrapedCoursesBySource = async (source: string): Promise<ScrapedCourse[]> => {
   try {
     const { data, error } = await supabase
-      .from("courses")
+      .from("scraped_courses")
       .select("*")
-      .eq("source_platform", source)
+      .eq("scraper_source", source)
       .order("created_at", { ascending: false });
     
     if (error) {
@@ -230,7 +230,7 @@ export const getScrapedCoursesBySource = async (source: string): Promise<Course[
       return [];
     }
     
-    return data || [];
+    return (data || []).map(course => sanitizeScrapedCourse(course));
   } catch (error) {
     console.error("Error in getScrapedCoursesBySource:", error);
     return [];

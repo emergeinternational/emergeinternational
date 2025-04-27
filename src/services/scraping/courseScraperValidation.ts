@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Course, generateCourseHash } from "../courseTypes";
+import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
@@ -54,8 +53,8 @@ export const checkDuplicateCourse = async (
     
     // First check by hash (most accurate)
     const { data: hashMatches, error: hashError } = await supabase
-      .from("courses")
-      .select("id, title, source_platform, hash_identifier")
+      .from("scraped_courses")
+      .select("id, title, scraper_source, hash_identifier")
       .eq("hash_identifier", courseHash)
       .limit(1);
     
@@ -72,9 +71,9 @@ export const checkDuplicateCourse = async (
     // If no hash match, check by source URL if available
     if (source_url) {
       const { data: urlMatches, error: urlError } = await supabase
-        .from("courses")
-        .select("id, title, source_platform")
-        .eq("source_url", source_url)
+        .from("scraped_courses")
+        .select("id, title, scraper_source")
+        .or(`external_link.eq.${source_url},video_embed_url.eq.${source_url}`)
         .limit(1);
       
       if (urlError) {
@@ -90,8 +89,8 @@ export const checkDuplicateCourse = async (
     
     // If still no match, check by title similarity
     const { data: titleMatches, error: titleError } = await supabase
-      .from("courses")
-      .select("id, title, source_platform")
+      .from("scraped_courses")
+      .select("id, title, scraper_source")
       .ilike("title", `%${title.substring(0, Math.min(title.length, 10))}%`) // Look for partial title match
       .limit(5);
     
@@ -108,7 +107,7 @@ export const checkDuplicateCourse = async (
       const similarity = calculateSimilarity(title, closestMatch.title);
       
       // If high confidence match with same source platform
-      if (similarity > 0.8 && closestMatch.source_platform === source_platform) {
+      if (similarity > 0.8 && closestMatch.scraper_source === source_platform) {
         return {
           isDuplicate: true,
           existingCourseId: closestMatch.id,

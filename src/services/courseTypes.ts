@@ -148,3 +148,19 @@ export const sanitizeCourseProgress = (data: any): CourseProgress => {
     updated_at: data.updated_at || null
   };
 };
+
+export const sanitizeScrapedCourse = (data: any): ScrapedCourse => {
+  const courseData = sanitizeCourseData(data);
+  return {
+    ...courseData,
+    id: data.id || '',
+    scraper_source: data.scraper_source || '',
+    is_reviewed: data.is_reviewed || false,
+    is_approved: data.is_approved || false,
+    review_notes: data.review_notes,
+    is_duplicate: data.is_duplicate || false,
+    duplicate_of: data.duplicate_of,
+    duplicate_confidence: data.duplicate_confidence || 0,
+    hash_identifier: data.hash_identifier || generateCourseHash(data.title || '', data.source_platform || '')
+  };
+};
