@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Event, TicketType } from "@/hooks/useEvents";
 
@@ -204,7 +203,7 @@ export const updateEvent = async (eventId: string, eventData: UpdateEventPayload
       
       // Process each ticket type from the update payload
       for (const ticket of eventData.ticket_types) {
-        if (ticket.id && existingTicketsMap.has(ticket.id)) {
+        if (ticket.id && typeof ticket.id === 'string' && existingTicketsMap.has(ticket.id)) {
           // Update existing ticket
           console.log(`Updating existing ticket ${ticket.id}:`, ticket);
           const ticketUpdateData = {

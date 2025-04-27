@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import EventsSection from "@/components/admin/EventsSection";
 import { QRCodeScanner } from "@/components/admin/QRCodeScanner";
 import EventRegistrations from "@/components/admin/EventRegistrations";
+import EventFormDialog from "@/components/admin/EventFormDialog";
 
 const EventsPage = () => {
   const [activeTab, setActiveTab] = useState("events");
@@ -36,6 +37,7 @@ const EventsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <EventFormDialog />
     </AdminLayout>
   );
 };

@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { deleteEvent } from "@/services/eventService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Event } from "@/hooks/useEvents";
+import EventFormDialog from "@/components/admin/EventFormDialog";
 
 interface EventsSectionProps {
   onCreateEvent?: () => void;

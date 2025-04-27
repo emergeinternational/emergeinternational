@@ -25,9 +25,6 @@ export const validateQRCode = async (qrCodeValue: string): Promise<boolean> => {
       return false;
     }
 
-    // For now, since qr_code_active doesn't exist yet, we'll handle tickets differently
-    // We'll need to track used QR codes separately
-
     // Mark this QR code as used by updating payment_status
     const { error: updateError } = await supabase
       .from('event_registrations')
