@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
+import { getDefaultCourseCategory, getDefaultCourseLevel, getDefaultHostingType } from "./courseTypes";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
@@ -100,7 +101,12 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       .maybeSingle();
 
     if (courseData) {
-      return courseData as Course;
+      return {
+        ...courseData,
+        category: getDefaultCourseCategory(courseData.category),
+        level: getDefaultCourseLevel(courseData.level),
+        hosting_type: getDefaultHostingType(courseData.hosting_type)
+      } as Course;
     }
 
     const { data, error } = await supabase
@@ -118,8 +124,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       id: data.id,
       title: data.title,
       summary: data.summary,
-      category: (data.category_id as CourseCategory) || 'model',
-      level: (data.content_type as CourseLevel) || 'beginner',
+      category: getDefaultCourseCategory(data.category_id),
+      level: getDefaultCourseLevel(data.content_type),
       source_url: data.source_url,
       image_url: data.image_url,
       content_type: data.content_type,
@@ -128,7 +134,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       updated_at: data.updated_at,
       video_embed_url: data.source_url,
       external_link: data.source_url,
-      hosting_type: 'hosted' as CourseHostingType
+      hosting_type: getDefaultHostingType('hosted')
     };
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
@@ -307,20 +313,10 @@ export const getCourses = async (
   careerInterest?: string
 ): Promise<Course[]> => {
   try {
-    const validCareerInterests: CourseCategory[] = [
-      "model", 
-      "designer", 
-      "photographer", 
-      "videographer", 
-      "musical_artist", 
-      "fine_artist", 
-      "event_planner"
-    ];
-    
     let courseQuery = supabase.from("courses").select("*");
 
     if (level && level !== "all") {
-      courseQuery = courseQuery.eq("level", level as CourseLevel);
+      courseQuery = courseQuery.eq("level", level);
     }
 
     if (featured) {
@@ -334,36 +330,13 @@ export const getCourses = async (
     let { data: coursesData, error: coursesError } = await courseQuery;
     
     if (coursesData && coursesData.length > 0) {
-      const coursesWithValidImages = coursesData.map(item => ({
-        id: item.id,
-        title: item.title,
-        summary: item.summary || "",
-        category: item.category,
-        level: item.level,
-        image_url: item.image_url,
-        video_embed_url: item.video_embed_url,
-        external_link: item.external_link,
-        hosting_type: item.hosting_type,
-        is_published: item.is_published,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        career_interests: [item.category]
-      }));
-
-      if (careerInterest && careerInterest !== "all") {
-        const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
-          ? careerInterest as CourseCategory 
-          : "all";
-        
-        if (safeCareerInterest !== "all") {
-          return coursesWithValidImages.filter(course => 
-            course.category === safeCareerInterest || 
-            course.career_interests?.includes(safeCareerInterest)
-          );
-        }
-      }
-
-      return coursesWithValidImages;
+      return coursesData.map(item => ({
+        ...item,
+        category: getDefaultCourseCategory(item.category),
+        level: getDefaultCourseLevel(item.level),
+        hosting_type: getDefaultHostingType(item.hosting_type),
+        career_interests: item.career_interests || []
+      })) as Course[];
     }
 
     let query = supabase.from("education_content").select("*");
@@ -416,8 +389,8 @@ export const getCourses = async (
     );
 
     if (careerInterest && careerInterest !== "all") {
-      const safeCareerInterest = validCareerInterests.includes(careerInterest as CourseCategory) 
-        ? careerInterest as CourseCategory 
+      const safeCareerInterest = getDefaultCourseCategory(careerInterest) 
+        ? careerInterest 
         : "all";
       
       if (safeCareerInterest !== "all") {
@@ -440,14 +413,14 @@ export const getStaticCourses = (): Course[] => {
       id: "1",
       title: "Fashion Design Fundamentals",
       summary: "Learn the basics of fashion design",
-      category: "designer",
-      level: "beginner",
+      category: 'designer',
+      level: 'beginner',
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-design",
       content_type: "course",
       career_interests: ["designer"],
-      hosting_type: "hosted"
+      hosting_type: 'hosted'
     } as Course,
     {
       id: "2",

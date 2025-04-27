@@ -1,4 +1,3 @@
-
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
 export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
 export type CourseHostingType = 'hosted' | 'embedded' | 'external';
@@ -71,3 +70,18 @@ export interface Review {
   comment?: string;
   created_at: string;
 }
+
+export const getDefaultCourseCategory = (category?: string): CourseCategory => {
+  const validCategories: CourseCategory[] = ['model', 'designer', 'photographer', 'videographer', 'musical_artist', 'fine_artist', 'event_planner'];
+  return validCategories.includes(category as CourseCategory) ? (category as CourseCategory) : 'model';
+};
+
+export const getDefaultCourseLevel = (level?: string): CourseLevel => {
+  const validLevels: CourseLevel[] = ['beginner', 'intermediate', 'expert'];
+  return validLevels.includes(level as CourseLevel) ? (level as CourseLevel) : 'beginner';
+};
+
+export const getDefaultHostingType = (type?: string): CourseHostingType => {
+  const validTypes: CourseHostingType[] = ['hosted', 'embedded', 'external'];
+  return validTypes.includes(type as CourseHostingType) ? (type as CourseHostingType) : 'hosted';
+};
