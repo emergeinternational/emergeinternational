@@ -1,8 +1,15 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 import { getUserCourseProgress } from "./courseProgressService";
-import { getDefaultCourseCategory, getDefaultCourseLevel, getDefaultHostingType } from "./courseTypes";
+import { 
+  getDefaultCourseCategory, 
+  getDefaultCourseLevel, 
+  getDefaultHostingType, 
+  sanitizeCourseData,
+  sanitizeCourseProgress
+} from "./courseTypes";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
@@ -101,12 +108,7 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       .maybeSingle();
 
     if (courseData) {
-      return {
-        ...courseData,
-        category: getDefaultCourseCategory(courseData.category),
-        level: getDefaultCourseLevel(courseData.level),
-        hosting_type: getDefaultHostingType(courseData.hosting_type)
-      } as Course;
+      return sanitizeCourseData(courseData);
     }
 
     const { data, error } = await supabase
@@ -120,12 +122,12 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       return null;
     }
 
-    return {
+    return sanitizeCourseData({
       id: data.id,
       title: data.title,
       summary: data.summary,
-      category: getDefaultCourseCategory(data.category_id),
-      level: getDefaultCourseLevel(data.content_type),
+      category: data.category_id,
+      level: data.content_type,
       source_url: data.source_url,
       image_url: data.image_url,
       content_type: data.content_type,
@@ -134,8 +136,8 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
       updated_at: data.updated_at,
       video_embed_url: data.source_url,
       external_link: data.source_url,
-      hosting_type: getDefaultHostingType('hosted')
-    };
+      hosting_type: 'hosted'
+    });
   } catch (error) {
     console.error("Unexpected error in getCourseById:", error);
     return null;
@@ -149,21 +151,7 @@ export const getAllCourses = async (): Promise<Course[]> => {
       .select("*");
 
     if (coursesData && coursesData.length > 0) {
-      return coursesData.map(item => ({
-        id: item.id,
-        title: item.title,
-        summary: item.summary,
-        category: item.category,
-        level: item.level,
-        image_url: item.image_url,
-        video_embed_url: item.video_embed_url,
-        external_link: item.external_link,
-        hosting_type: item.hosting_type,
-        is_published: item.is_published,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        career_interests: []
-      }));
+      return coursesData.map(item => sanitizeCourseData(item));
     }
 
     const { data, error } = await supabase
@@ -175,12 +163,12 @@ export const getAllCourses = async (): Promise<Course[]> => {
       return [];
     }
 
-    return data.map(item => ({
+    return data.map(item => sanitizeCourseData({
       id: item.id,
       title: item.title,
       summary: item.summary,
-      category: (item.category_id as CourseCategory) || '',
-      level: (item.content_type as CourseLevel) || '',
+      category: item.category_id,
+      level: item.content_type,
       source_url: item.source_url,
       image_url: item.image_url,
       content_type: item.content_type,
@@ -189,7 +177,7 @@ export const getAllCourses = async (): Promise<Course[]> => {
       updated_at: item.updated_at,
       video_embed_url: item.source_url,
       external_link: item.source_url,
-      hosting_type: 'hosted' as CourseHostingType,
+      hosting_type: 'hosted',
       career_interests: []
     }));
   } catch (error) {
@@ -207,19 +195,8 @@ export const getPopularCourses = async (): Promise<Course[]> => {
       .limit(8);
 
     if (coursesData && coursesData.length > 0) {
-      return coursesData.map(item => ({
-        id: item.id,
-        title: item.title,
-        summary: item.summary || "",
-        category: item.category,
-        level: item.level,
-        image_url: item.image_url,
-        video_embed_url: item.video_embed_url,
-        external_link: item.external_link,
-        hosting_type: item.hosting_type,
-        is_published: item.is_published,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
+      return coursesData.map(item => sanitizeCourseData({
+        ...item,
         isPopular: true
       }));
     }
@@ -234,19 +211,20 @@ export const getPopularCourses = async (): Promise<Course[]> => {
       return [];
     }
 
-    return data.map(item => ({
+    return data.map(item => sanitizeCourseData({
       id: item.id,
       title: item.title,
       summary: item.summary,
-      category: item.category_id || '',
-      level: item.content_type || '',
+      category: item.category_id,
+      level: item.content_type,
       source_url: item.source_url,
       image_url: item.image_url,
       content_type: item.content_type,
       category_id: item.category_id,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      isPopular: item.is_featured
+      isPopular: item.is_featured,
+      hosting_type: 'hosted'
     }));
   } catch (error) {
     console.error("Unexpected error in getPopularCourses:", error);
@@ -330,13 +308,15 @@ export const getCourses = async (
     let { data: coursesData, error: coursesError } = await courseQuery;
     
     if (coursesData && coursesData.length > 0) {
-      return coursesData.map(item => ({
-        ...item,
-        category: getDefaultCourseCategory(item.category),
-        level: getDefaultCourseLevel(item.level),
-        hosting_type: getDefaultHostingType(item.hosting_type),
-        career_interests: item.career_interests || []
-      })) as Course[];
+      const sanitizedCourses = coursesData.map(item => sanitizeCourseData(item));
+      
+      if (careerInterest && careerInterest !== "all") {
+        return sanitizedCourses.filter(course => 
+          course.career_interests?.includes(careerInterest)
+        );
+      }
+      
+      return sanitizedCourses;
     }
 
     let query = supabase.from("education_content").select("*");
@@ -360,50 +340,62 @@ export const getCourses = async (
       return [];
     }
 
-    const coursesWithValidImages = await Promise.all(
-      data.map(async (item) => {
-        const validatedImageUrl = await validateAndUpdateCourseImage(
-          item.id, 
-          item.title, 
-          item.image_url
-        );
+    try {
+      const coursesWithValidImages = await Promise.all(
+        data.map(async (item) => {
+          let validatedImageUrl = item.image_url;
+          
+          try {
+            validatedImageUrl = await validateAndUpdateCourseImage(
+              item.id, 
+              item.title, 
+              item.image_url
+            );
+          } catch (imgError) {
+            console.error("Error validating image:", imgError);
+            validatedImageUrl = item.image_url || "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&auto=format&fit=crop";
+          }
 
-        return {
-          id: item.id,
-          title: item.title,
-          summary: item.summary,
-          category: item.category_id || '',
-          level: item.content_type || '',
-          source_url: item.source_url,
-          image_url: validatedImageUrl,
-          content_type: item.content_type,
-          category_id: item.category_id,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          video_embed_url: item.source_url,
-          external_link: item.source_url,
-          hosting_type: 'hosted' as CourseHostingType,
-          career_interests: []
-        };
-      })
-    );
+          return sanitizeCourseData({
+            id: item.id,
+            title: item.title,
+            summary: item.summary,
+            category: item.category_id,
+            level: item.content_type,
+            source_url: item.source_url,
+            image_url: validatedImageUrl,
+            content_type: item.content_type,
+            category_id: item.category_id,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            video_embed_url: item.source_url,
+            external_link: item.source_url,
+            hosting_type: 'hosted',
+            career_interests: []
+          });
+        })
+      );
 
-    if (careerInterest && careerInterest !== "all") {
-      const safeCareerInterest = getDefaultCourseCategory(careerInterest) 
-        ? careerInterest 
-        : "all";
-      
-      if (safeCareerInterest !== "all") {
-        return coursesWithValidImages.filter(course => 
-          course.career_interests?.includes(safeCareerInterest)
-        );
+      if (careerInterest && careerInterest !== "all") {
+        const safeCareerInterest = getDefaultCourseCategory(careerInterest) 
+          ? careerInterest 
+          : "all";
+        
+        if (safeCareerInterest !== "all") {
+          return coursesWithValidImages.filter(course => 
+            course.career_interests?.includes(safeCareerInterest)
+          );
+        }
       }
-    }
 
-    return coursesWithValidImages;
+      return coursesWithValidImages;
+    } catch (processError) {
+      console.error("Error processing courses:", processError);
+      return getStaticCourses();
+    }
   } catch (error) {
     console.error("Unexpected error in getCourses:", error);
-    return [];
+    return getStaticCourses();
   }
 };
 
@@ -417,11 +409,12 @@ export const getStaticCourses = (): Course[] => {
       level: 'beginner',
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1626497764746-6dc36546b388?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-design",
       content_type: "course",
       career_interests: ["designer"],
       hosting_type: 'hosted'
-    } as Course,
+    },
     {
       id: "2",
       title: "Advanced Pattern Making",
@@ -430,6 +423,7 @@ export const getStaticCourses = (): Course[] => {
       level: "expert",
       duration: "12 weeks",
       image_url: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/pattern-making",
       content_type: "course",
       career_interests: ["designer"],
@@ -439,10 +433,11 @@ export const getStaticCourses = (): Course[] => {
       id: "3",
       title: "Fashion Photography Basics",
       summary: "Learn how to capture fashion photography",
-      category: "beginner",
+      category: "photographer",
       level: "beginner",
       duration: "6 weeks",
       image_url: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1506901437675-cde80ff9c746?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-photography",
       content_type: "course",
       career_interests: ["photographer"],
@@ -452,10 +447,11 @@ export const getStaticCourses = (): Course[] => {
       id: "4",
       title: "Runway Walk Techniques",
       summary: "Perfect your runway walk for fashion shows",
-      category: "beginner",
+      category: "model",
       level: "beginner",
       duration: "4 weeks",
       image_url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/runway-walk",
       content_type: "course",
       career_interests: ["model"],
@@ -465,10 +461,11 @@ export const getStaticCourses = (): Course[] => {
       id: "5",
       title: "Video Production for Fashion",
       summary: "Create professional fashion videos",
-      category: "intermediate",
+      category: "videographer",
       level: "intermediate",
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/video-production",
       content_type: "course",
       career_interests: ["videographer"],
@@ -478,10 +475,11 @@ export const getStaticCourses = (): Course[] => {
       id: "6",
       title: "Songwriting for Fashion Shows",
       summary: "Create compelling music for runway shows",
-      category: "intermediate",
+      category: "musical_artist",
       level: "intermediate",
       duration: "6 weeks",
       image_url: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-music",
       content_type: "course",
       career_interests: ["musical_artist"],
@@ -491,10 +489,11 @@ export const getStaticCourses = (): Course[] => {
       id: "7",
       title: "Fashion Illustration Techniques",
       summary: "Master drawing and painting fashion illustrations",
-      category: "beginner",
+      category: "fine_artist",
       level: "beginner",
       duration: "10 weeks",
       image_url: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-illustration",
       content_type: "course",
       career_interests: ["fine_artist"],
@@ -504,10 +503,11 @@ export const getStaticCourses = (): Course[] => {
       id: "8",
       title: "Fashion Show Planning",
       summary: "Learn to plan and execute successful fashion events",
-      category: "advanced",
-      level: "advanced",
+      category: "event_planner",
+      level: "expert",
       duration: "8 weeks",
       image_url: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop",
+      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop",
       source_url: "https://example.com/course/fashion-show-planning",
       content_type: "course",
       career_interests: ["event_planner"],

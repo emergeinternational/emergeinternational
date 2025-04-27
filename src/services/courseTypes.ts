@@ -1,3 +1,4 @@
+
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
 export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
 export type CourseHostingType = 'hosted' | 'embedded' | 'external';
@@ -22,6 +23,7 @@ export interface Course {
   updated_at?: string;
   source_url?: string;
   image_url?: string;
+  image?: string; // Adding image field for backward compatibility
   content_type?: string;
   category_id?: string;
   career_interests?: string[];
@@ -84,4 +86,48 @@ export const getDefaultCourseLevel = (level?: string): CourseLevel => {
 export const getDefaultHostingType = (type?: string): CourseHostingType => {
   const validTypes: CourseHostingType[] = ['hosted', 'embedded', 'external'];
   return validTypes.includes(type as CourseHostingType) ? (type as CourseHostingType) : 'hosted';
+};
+
+// Helper function to safely convert any course data to valid Course type
+export const sanitizeCourseData = (data: any): Course => {
+  return {
+    id: data.id || '',
+    title: data.title || 'Coming Soon',
+    summary: data.summary || '',
+    description: data.description || '',
+    category: getDefaultCourseCategory(data.category || data.category_id),
+    level: getDefaultCourseLevel(data.level || data.content_type),
+    duration: data.duration || '',
+    image_url: data.image_url || '',
+    image: data.image_url || '', // Set image field for backward compatibility
+    source_url: data.source_url || '',
+    content_type: data.content_type || '',
+    category_id: data.category_id || '',
+    created_at: data.created_at || '',
+    updated_at: data.updated_at || '',
+    career_interests: data.career_interests || [],
+    video_embed_url: data.video_embed_url || data.source_url || '',
+    external_link: data.external_link || data.source_url || '',
+    hosting_type: getDefaultHostingType(data.hosting_type),
+    is_published: data.is_published !== undefined ? data.is_published : true
+  };
+};
+
+// Helper function to safely convert any course progress data 
+export const sanitizeCourseProgress = (data: any): CourseProgress => {
+  const validStatuses = ['not_started', 'started', 'in_progress', 'completed'];
+  const status = validStatuses.includes(data.status) ? data.status : 'not_started';
+  
+  return {
+    id: data.id || '',
+    user_id: data.user_id || '',
+    course_id: data.course_id || '',
+    progress: typeof data.progress === 'number' ? data.progress : 0,
+    status: status as 'not_started' | 'started' | 'in_progress' | 'completed',
+    date_started: data.date_started || null,
+    date_completed: data.date_completed || null,
+    course_category: data.course_category || null,
+    created_at: data.created_at || null,
+    updated_at: data.updated_at || null
+  };
 };
