@@ -1,10 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CertificateSettings } from "./types";
 
-/**
- * Gets certificate settings from the database
- * @returns Object containing certificate settings
- */
 export const getCertificateSettings = async (): Promise<CertificateSettings> => {
   try {
     const { data, error } = await supabase
@@ -23,16 +20,10 @@ export const getCertificateSettings = async (): Promise<CertificateSettings> => 
   }
 };
 
-/**
- * Updates certificate settings
- * @param settings Settings object with min courses and workshops required
- * @returns Boolean indicating success
- */
 export const updateCertificateSettings = async (
   settings: CertificateSettings
 ): Promise<boolean> => {
   try {
-    // First, get the settings record ID
     const { data, error: fetchError } = await supabase
       .from("certificate_settings")
       .select("id")
@@ -43,7 +34,6 @@ export const updateCertificateSettings = async (
     if (fetchError) throw fetchError;
     
     if (!data) {
-      // If no settings record exists yet, create one
       const { error: insertError } = await supabase
         .from("certificate_settings")
         .insert({
@@ -54,7 +44,6 @@ export const updateCertificateSettings = async (
         
       if (insertError) throw insertError;
     } else {
-      // Otherwise update the existing record
       const { error: updateError } = await supabase
         .from("certificate_settings")
         .update({
