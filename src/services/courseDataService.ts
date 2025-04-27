@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Course, CourseProgress, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
