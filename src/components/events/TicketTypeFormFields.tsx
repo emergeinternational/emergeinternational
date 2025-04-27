@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFieldArray } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -18,13 +17,16 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
     name: "ticket_types"
   });
 
-  // Field array for benefits within each ticket type
-  const getBenefitsFieldArray = (index: number) => {
-    return useFieldArray({
-      control: form.control,
-      name: `ticket_types.${index}.benefits`
+  // Pre-compute all the benefits field arrays outside of the map function
+  // This keeps the hooks at the top level
+  const benefitsFieldArrays = useMemo(() => {
+    return fields.map((_, index) => {
+      return useFieldArray({
+        control: form.control,
+        name: `ticket_types.${index}.benefits`
+      });
     });
-  };
+  }, [fields, form.control]);
 
   return (
     <div className="border-t mt-6 pt-6">
@@ -47,7 +49,8 @@ const TicketTypeFormFields: React.FC<TicketTypeFormFieldsProps> = ({ form, isEdi
       </div>
 
       {fields.map((field, index) => {
-        const benefitsArray = getBenefitsFieldArray(index);
+        // Get the pre-computed field array for this index
+        const benefitsArray = benefitsFieldArrays[index];
         
         return (
           <div key={field.id} className="border rounded-md p-4 mb-4">
