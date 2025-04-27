@@ -5,7 +5,8 @@ import {
   updateCertificateApproval,
   generateCertificate,
   getCertificateSettings,
-} from "../../services/certificateService";
+  getUsersByStatus
+} from "../services/certificateService";
 import { useToast } from "@/hooks/use-toast";
 import CertificateSettings from "./CertificateSettings";
 import { Award, Loader2, CheckCircle, AlertTriangle, Eye, XCircle } from "lucide-react";
@@ -36,6 +37,7 @@ import CertificateStatusFilter from "./CertificateStatusFilter";
 const CertificateManagement = () => {
   const { toast } = useToast();
   const [eligibleUsers, setEligibleUsers] = useState<any[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -48,11 +50,17 @@ const CertificateManagement = () => {
     min_courses_required: 5,
     min_workshops_required: 3
   });
+  const [statusCounts, setStatusCounts] = useState({
+    pending: 0,
+    approved: 0,
+    denied: 0
+  });
 
   useEffect(() => {
     fetchEligibleUsers();
     fetchCertificateSettings();
-  }, []);
+    fetchStatusCounts();
+  }, [selectedStatus]);
 
   const fetchCertificateSettings = async () => {
     try {
@@ -63,10 +71,31 @@ const CertificateManagement = () => {
     }
   };
 
+  const fetchStatusCounts = async () => {
+    try {
+      const pending = await getUsersByStatus('pending');
+      const approved = await getUsersByStatus('approved');
+      const denied = await getUsersByStatus('denied');
+      
+      setStatusCounts({
+        pending: pending.length,
+        approved: approved.length,
+        denied: denied.length
+      });
+    } catch (error) {
+      console.error("Error fetching status counts:", error);
+    }
+  };
+
   const fetchEligibleUsers = async () => {
     setLoading(true);
     try {
-      const users = await getEligibleUsers();
+      let users;
+      if (selectedStatus === 'all') {
+        users = await getEligibleUsers();
+      } else {
+        users = await getUsersByStatus(selectedStatus);
+      }
       setEligibleUsers(users);
     } catch (error) {
       console.error("Error fetching eligible users:", error);
@@ -92,6 +121,7 @@ const CertificateManagement = () => {
           description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been approved.`,
         });
         await fetchEligibleUsers();
+        await fetchStatusCounts();
       } else {
         throw new Error("Failed to approve certificate");
       }
@@ -120,6 +150,7 @@ const CertificateManagement = () => {
           description: `Certificate for ${selectedUser.profiles?.full_name || selectedUser.profiles?.email || "User"} has been revoked.`,
         });
         await fetchEligibleUsers();
+        await fetchStatusCounts();
       } else {
         throw new Error("Failed to revoke certificate");
       }
@@ -180,23 +211,6 @@ const CertificateManagement = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getUserCourseDetails = (user: any) => {
-    return {
-      embeddedCoursesWatched: [
-        { title: "Fashion Design 101", watchPercent: 95, date: "2023-05-15" },
-        { title: "Advanced Pattern Making", watchPercent: 98, date: "2023-05-20" },
-      ],
-      externalCoursesVisited: [
-        { title: "Digital Fashion Marketing", visitDate: "2023-05-18" },
-        { title: "Sustainable Fashion", visitDate: "2023-05-25" },
-      ],
-      workshopsAttended: [
-        { title: "Acting for Models Workshop", date: "2023-06-01" },
-        { title: "Portfolio Development", date: "2023-06-15" },
-      ],
-    };
-  };
-
   const hasMetRequirements = (user: any) => {
     if (!user) return false;
     const onlineCoursesCompleted = user.online_courses_completed || 0;
@@ -217,7 +231,10 @@ const CertificateManagement = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchEligibleUsers}
+            onClick={() => {
+              fetchEligibleUsers();
+              fetchStatusCounts();
+            }}
             disabled={loading}
           >
             {loading ? (
@@ -235,6 +252,12 @@ const CertificateManagement = () => {
       <CertificateRequirementsBanner
         minCoursesRequired={certificateRequirements.min_courses_required}
         minWorkshopsRequired={certificateRequirements.min_workshops_required}
+      />
+
+      <CertificateStatusFilter 
+        currentStatus={selectedStatus}
+        onChange={setSelectedStatus}
+        counts={statusCounts}
       />
 
       {!loading && eligibleUsers.length === 0 ? (
@@ -312,63 +335,26 @@ const CertificateManagement = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowDetailsDialog(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Details
-                        </Button>
-                        
-                        {user.admin_approved ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-green-600 border-green-300 hover:bg-green-50"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowGenerateDialog(true);
-                              }}
-                            >
-                              <Award className="h-4 w-4 mr-1" />
-                              Generate
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-500 border-red-300 hover:bg-red-50"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowRevocationDialog(true);
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Revoke
-                            </Button>
-                          </>
-                        ) : hasMetRequirements(user) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-300 hover:bg-green-50"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowApprovalDialog(true);
-                            }}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                        )}
-                      </div>
+                      <CertificateActions 
+                        user={user}
+                        hasMetRequirements={hasMetRequirements(user)}
+                        onViewDetails={() => {
+                          setSelectedUser(user);
+                          setShowDetailsDialog(true);
+                        }}
+                        onApprove={() => {
+                          setSelectedUser(user);
+                          setShowApprovalDialog(true);
+                        }}
+                        onGenerate={() => {
+                          setSelectedUser(user);
+                          setShowGenerateDialog(true);
+                        }}
+                        onRevoke={() => {
+                          setSelectedUser(user);
+                          setShowRevocationDialog(true);
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 ))
