@@ -33,7 +33,7 @@ export const useCurrency = () => {
       }
     };
 
-    fetchCurrency();
+    fetchCurrencies();
   }, []);
 
   const convertPrice = (basePrice: number, fromCurrency: string = 'ETB') => {
