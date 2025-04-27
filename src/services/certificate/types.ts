@@ -22,7 +22,7 @@ export interface CertificateEligibility {
   workshops_completed: number;
   is_eligible: boolean;
   admin_approved: boolean;
-  status: 'pending' | 'approved' | 'rejected'; // Changed 'denied' to 'rejected' for consistency
+  status: 'pending' | 'approved' | 'denied'; // Using 'denied' instead of 'rejected' to match database
   created_at?: string;
   updated_at?: string;
   profiles?: {
