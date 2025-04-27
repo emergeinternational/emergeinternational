@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Course, generateCourseHash } from "../courseTypes";
 
@@ -54,7 +55,7 @@ export const checkDuplicateCourse = async (
     // First check by hash (most accurate)
     const { data: hashMatches, error: hashError } = await supabase
       .from("courses")
-      .select("id, title, source_platform")
+      .select("id, title, source_platform, hash_identifier")
       .eq("hash_identifier", courseHash)
       .limit(1);
     
