@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
@@ -92,10 +93,10 @@ export const generateCertificate = async (
 export const getUserCertificates = async (userId: string): Promise<Certificate[]> => {
   try {
     const { data, error } = await supabase
-      .from('certificates')
-      .select('*')
-      .eq('user_id', userId)
-      .order('issue_date', { ascending: false });
+      .from("certificates")
+      .select("*")
+      .eq("user_id", userId)
+      .order("issue_date", { ascending: false }) as { data: Certificate[] | null; error: Error | null };
 
     if (error) {
       console.error("Error fetching user certificates:", error);
@@ -112,10 +113,10 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
 export const downloadCertificate = async (certificateId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
   try {
     const { data, error } = await supabase
-      .from('certificates')
-      .select('certificate_data, course_title')
-      .eq('id', certificateId)
-      .maybeSingle();
+      .from("certificates")
+      .select("certificate_data, course_title")
+      .eq("id", certificateId)
+      .maybeSingle() as { data: CertificateData | null; error: Error | null };
 
     if (error || !data) {
       console.error("Error fetching certificate:", error);
@@ -123,9 +124,9 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
     }
 
     const { error: updateError } = await supabase
-      .from('certificates')
+      .from("certificates")
       .update({ last_downloaded_at: new Date().toISOString() })
-      .eq('id', certificateId);
+      .eq("id", certificateId);
     
     if (updateError) {
       console.warn("Failed to update download timestamp:", updateError);
