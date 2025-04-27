@@ -23,7 +23,7 @@ export const fetchPaymentMethods = async (): Promise<PaymentMethod[]> => {
       throw error;
     }
 
-    return data || [];
+    return (data || []) as PaymentMethod[];
   } catch (error) {
     console.error("Unexpected error in fetchPaymentMethods:", error);
     return [];

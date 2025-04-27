@@ -11,6 +11,8 @@ export interface Currency {
 
 export const fetchCurrencies = async (): Promise<Currency[]> => {
   try {
+    // Using a raw query instead of the typed query builder
+    // until the Supabase types are updated to include the new tables
     const { data, error } = await supabase
       .from('currencies')
       .select('*')
@@ -22,7 +24,8 @@ export const fetchCurrencies = async (): Promise<Currency[]> => {
       throw error;
     }
 
-    return data || [];
+    // Type cast the returned data to our Currency interface
+    return (data || []) as Currency[];
   } catch (error) {
     console.error("Unexpected error in fetchCurrencies:", error);
     return [];

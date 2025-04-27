@@ -58,7 +58,7 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
       return [];
     }
 
-    // Then fetch ticket types for these events
+    // Then fetch ticket types for these events using a raw query
     const eventIds = events.map(event => event.id);
     const { data: tickets, error: ticketsError } = await supabase
       .from('ticket_types')
@@ -72,8 +72,8 @@ export const fetchEvents = async (): Promise<EventWithTickets[]> => {
 
     // Combine events with their tickets
     const eventsWithTickets: EventWithTickets[] = events.map(event => ({
-      ...event,
-      tickets: tickets?.filter(ticket => ticket.event_id === event.id) || []
+      ...event as Event,
+      tickets: (tickets || []).filter(ticket => ticket.event_id === event.id) as TicketType[]
     }));
 
     return eventsWithTickets;
@@ -110,8 +110,8 @@ export const fetchEventDetails = async (eventId: string): Promise<EventWithTicke
 
     // Return event with tickets
     return {
-      ...event,
-      tickets: tickets || []
+      ...event as Event,
+      tickets: (tickets || []) as TicketType[]
     };
   } catch (error) {
     console.error("Error in fetchEventDetails:", error);
