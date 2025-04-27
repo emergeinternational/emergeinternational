@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
 export const getEligibleUsers = async (): Promise<any[]> => {
   try {
@@ -45,17 +45,12 @@ interface Certificate {
   id: string;
   user_id: string;
   course_title: string;
-  issue_date: string;
   certificate_data: string;
+  issue_date: string;
   status: string;
   last_downloaded_at?: string;
   created_at: string;
   updated_at: string;
-}
-
-interface CertificateData {
-  certificate_data: string;
-  course_title: string;
 }
 
 interface GenerateCertificateResponse {
@@ -103,7 +98,7 @@ export const getUserCertificates = async (userId: string): Promise<Certificate[]
       return [];
     }
 
-    return certificates || [];
+    return (certificates as Certificate[]) || [];
   } catch (error) {
     console.error("Unexpected error in getUserCertificates:", error);
     return [];
@@ -116,7 +111,7 @@ export const downloadCertificate = async (certificateId: string): Promise<{ succ
       .from('certificates')
       .select('certificate_data, course_title')
       .eq('id', certificateId)
-      .maybeSingle();
+      .single();
 
     if (error || !data) {
       console.error("Error fetching certificate:", error);
