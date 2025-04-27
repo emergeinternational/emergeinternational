@@ -1,3 +1,4 @@
+
 export interface CertificateSettings {
   min_courses_required: number;
   min_workshops_required: number;
