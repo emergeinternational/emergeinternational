@@ -1,18 +1,16 @@
-
 import React, { useState, useEffect } from "react";
 import AdminLayout from "@/layouts/AdminLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import StatsCard from "@/components/admin/StatsCard";
-import { CertificateManagement } from "@/components/admin/CertificateManagement";
-import { EventsSection } from "@/components/admin/EventsSection";
+import CertificateManagement from "@/components/admin/CertificateManagement";
+import EventsSection from "@/components/admin/EventsSection";
 import { useAuth } from "@/hooks/useAuth";
-import { PaymentsTable } from "@/components/admin/PaymentsTable";
+import PaymentsTable from "@/components/admin/PaymentsTable";
 
 const Dashboard = () => {
   const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Mock data for example purposes
   const events = [
     { id: 1, name: "Fashion Week 2025", date: "Apr 15, 2025", registrations: 120 },
     { id: 2, name: "Design Workshop", date: "May 20, 2025", registrations: 45 },

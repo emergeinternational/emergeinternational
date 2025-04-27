@@ -1,9 +1,9 @@
 
 import React, { useState } from "react";
 import AdminLayout from "@/layouts/AdminLayout";
-import { UserManagement } from "@/components/admin/UserManagement";
-import { RoleGuide } from "@/components/admin/RoleGuide";
-import { UserFilters } from "@/components/admin/UserFilters";
+import UserManagement from "@/components/admin/UserManagement";
+import RoleGuide from "@/components/admin/RoleGuide";
+import UserFilters from "@/components/admin/UserFilters";
 
 const Users = () => {
   // Mock user data - would come from API in real app
