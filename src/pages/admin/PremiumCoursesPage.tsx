@@ -1,190 +1,214 @@
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import AdminLayout from '@/layouts/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Loader, Plus, Edit, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import AdminLayout from "@/layouts/AdminLayout";
-import PremiumCourseUploadForm from "@/components/admin/PremiumCourseUploadForm";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { PremiumCourse, triggerExpirationNotifications } from "@/services/premiumCourseService";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Bell } from "lucide-react";
+interface PremiumCourse {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  status: 'published' | 'draft';
+  created_at: string;
+  updated_at: string;
+  enrollments_count?: number;
+}
 
 const PremiumCoursesPage = () => {
-  const { hasRole } = useAuth();
-  const [courses, setCourses] = useState<PremiumCourse[]>([]);
-  const [activeTab, setActiveTab] = useState("active");
-  const [processingNotification, setProcessingNotification] = useState<string | null>(null);
   const { toast } = useToast();
+  const { hasRole } = useAuth();
+  const canEdit = hasRole(['admin', 'editor']);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<PremiumCourse | null>(null);
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
+  const { data: courses, isLoading, error, refetch } = useQuery({
+    queryKey: ['premium-courses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('premium_courses')
+        .select(`
+          *,
+          enrollments:premium_enrollments(count)
+        `)
+        .order('created_at', { ascending: false });
 
-  const fetchCourses = async () => {
-    const { data, error } = await supabase
-      .from('premium_courses')
-      .select('*')
-      .order('created_at', { ascending: false });
+      if (error) throw error;
 
-    if (error) {
-      console.error('Error fetching courses:', error);
-      return;
+      return data.map(course => ({
+        ...course,
+        enrollments_count: course.enrollments?.[0]?.count || 0
+      })) as PremiumCourse[];
     }
+  });
 
-    setCourses(data || []);
-  };
+  const handleDeleteCourse = async () => {
+    if (!courseToDelete) return;
 
-  const togglePublishStatus = async (courseId: string, currentStatus: boolean) => {
-    const { error } = await supabase
-      .from('premium_courses')
-      .update({ is_published: !currentStatus })
-      .eq('id', courseId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update course status",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    toast({
-      title: "Success",
-      description: `Course ${!currentStatus ? 'published' : 'unpublished'} successfully`
-    });
-
-    fetchCourses();
-  };
-
-  const isCourseExpired = (course: PremiumCourse) => {
-    if (!course.end_date) return false;
-    return new Date(course.end_date) < new Date();
-  };
-
-  const getDaysUntilExpiration = (course: PremiumCourse) => {
-    if (!course.end_date) return null;
-    const endDate = new Date(course.end_date);
-    const today = new Date();
-    const differenceInTime = endDate.getTime() - today.getTime();
-    return Math.ceil(differenceInTime / (1000 * 3600 * 24));
-  };
-
-  const handleTestNotifications = async (courseId: string) => {
-    setProcessingNotification(courseId);
-    
     try {
-      const result = await triggerExpirationNotifications(courseId);
-      
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Notification test triggered successfully. Check logs for details.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to trigger notifications",
-          variant: "destructive"
-        });
-      }
+      const { error } = await supabase
+        .from('premium_courses')
+        .delete()
+        .eq('id', courseToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Course deleted",
+        description: `${courseToDelete.title} has been deleted successfully.`
+      });
+
+      refetch();
     } catch (error) {
+      console.error('Error deleting course:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "Failed to delete course. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setProcessingNotification(null);
+      setIsDeleteDialogOpen(false);
+      setCourseToDelete(null);
     }
   };
 
-  const filterCourses = (courses: PremiumCourse[], tab: string) => {
-    return courses.filter(course => {
-      const isExpired = isCourseExpired(course);
-      if (tab === "expired") return isExpired;
-      return !isExpired;
-    });
+  const confirmDelete = (course: PremiumCourse) => {
+    setCourseToDelete(course);
+    setIsDeleteDialogOpen(true);
   };
 
-  if (!hasRole(['admin', 'editor'])) {
-    return null;
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader className="h-8 w-8 animate-spin text-emerge-gold" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="text-center text-red-500 p-4">
+          Error loading premium courses. Please try again.
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Premium Courses Management</h1>
-        
-        <div className="mb-8">
-          <PremiumCourseUploadForm />
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Premium Courses</h1>
+          {canEdit && (
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add New Course
+            </Button>
+          )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="active">Active Courses</TabsTrigger>
-            <TabsTrigger value="expired">Expired Courses</TabsTrigger>
-          </TabsList>
-
-          {["active", "expired"].map((tab) => (
-            <TabsContent key={tab} value={tab}>
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">
-                  {tab === "active" ? "Active" : "Expired"} Courses
-                </h2>
-                <div className="grid gap-4">
-                  {filterCourses(courses, tab).map((course) => (
-                    <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{course.title}</h3>
-                          {course.end_date && (
-                            <Badge variant={isCourseExpired(course) ? "secondary" : "pending"} className="ml-2">
-                              {isCourseExpired(course) 
-                                ? "Expired" 
-                                : `${getDaysUntilExpiration(course)} days remaining`}
+        <div className="bg-white rounded-md shadow">
+          <div className="p-4 border-b">
+            <h2 className="font-medium">All Premium Courses</h2>
+          </div>
+          <div className="p-4">
+            {courses && courses.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-sm text-gray-500 border-b">
+                      <th className="pb-2 font-medium">Title</th>
+                      <th className="pb-2 font-medium">Price</th>
+                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Enrollments</th>
+                      <th className="pb-2 font-medium">Created</th>
+                      {canEdit && <th className="pb-2 font-medium">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courses.map((course) => (
+                      <tr key={course.id} className="border-b last:border-0">
+                        <td className="py-3 pr-4">{course.title}</td>
+                        <td className="py-3 pr-4">${course.price.toFixed(2)}</td>
+                        <td className="py-3 pr-4">
+                          {course.status === 'published' ? (
+                            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
+                              Published
                             </Badge>
+                          ) : (
+                            <Badge variant="secondary">Draft</Badge>
                           )}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {course.is_published ? 'Published' : 'Draft'} • 
-                          {course.end_date 
-                            ? ` Ends on ${new Date(course.end_date).toLocaleDateString()}` 
-                            : ' No end date'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleTestNotifications(course.id)}
-                          disabled={processingNotification === course.id || !course.end_date}
-                          title={!course.end_date ? "Course needs an end date to test notifications" : "Test expiration notifications"}
-                        >
-                          <Bell className="w-4 h-4 mr-1" />
-                          {processingNotification === course.id ? "Sending..." : "Test Notifications"}
-                        </Button>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">
-                            {course.is_published ? 'Published' : 'Draft'}
-                          </span>
-                          <Switch
-                            checked={course.is_published}
-                            onCheckedChange={() => togglePublishStatus(course.id, course.is_published)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        </td>
+                        <td className="py-3 pr-4">{course.enrollments_count}</td>
+                        <td className="py-3 pr-4">
+                          {new Date(course.created_at).toLocaleDateString()}
+                        </td>
+                        {canEdit && (
+                          <td className="py-3">
+                            <div className="flex space-x-2">
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                onClick={() => confirmDelete(course)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No premium courses found. Add your first course to get started.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Are you sure you want to delete <strong>{courseToDelete?.title}</strong>?</p>
+            <p className="text-sm text-gray-500 mt-2">
+              This action cannot be undone. All associated enrollments and content will be permanently removed.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteCourse}>
+              Delete Course
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
