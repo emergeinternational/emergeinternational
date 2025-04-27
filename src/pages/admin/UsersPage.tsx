@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import UserManagement from "../../components/admin/UserManagement";
@@ -53,12 +52,10 @@ const UsersPage = () => {
     },
   });
 
-  // Function to fetch system status information
   const fetchSystemStatus = async () => {
     try {
       setSystemStatus(prev => ({ ...prev, status: 'loading' }));
       
-      // Fetch admin account and count of all users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, role')
@@ -68,7 +65,6 @@ const UsersPage = () => {
         throw new Error(`Error fetching admin profile: ${profilesError.message}`);
       }
       
-      // Get count of all profiles
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -77,7 +73,6 @@ const UsersPage = () => {
         throw new Error(`Error counting profiles: ${countError.message}`);
       }
       
-      // Update status with the fetched information
       setSystemStatus({
         usersCount: count,
         adminEmail: profilesData[0]?.email || 'reddshawn@yahoo.com',
@@ -101,7 +96,6 @@ const UsersPage = () => {
     }
   };
 
-  // Function to refresh the user management component and system status
   const handleRefreshUserData = () => {
     setLastUpdated(new Date());
     fetchSystemStatus();
@@ -112,12 +106,10 @@ const UsersPage = () => {
     });
   };
   
-  // Function to handle adding a new user
   const handleAddUser = async (values: UserFormValues) => {
     try {
       setIsSubmitting(true);
       
-      // 1. Create the auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: values.email,
         password: values.password,
@@ -129,7 +121,6 @@ const UsersPage = () => {
       }
       
       if (authData?.user) {
-        // 2. Update the profile with full name
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
@@ -140,10 +131,8 @@ const UsersPage = () => {
           
         if (profileError) {
           console.error("Error updating profile:", profileError);
-          // Continue anyway as this is not critical
         }
         
-        // 3. Set the user role
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
@@ -153,7 +142,6 @@ const UsersPage = () => {
           
         if (roleError) {
           console.error("Error setting user role:", roleError);
-          // Continue anyway as we can fix roles later
         }
         
         toast({
@@ -162,11 +150,9 @@ const UsersPage = () => {
           variant: "default"
         });
         
-        // Reset form and close dialog
         form.reset();
         setOpenAddUserDialog(false);
         
-        // Refresh the user list
         handleRefreshUserData();
       }
     } catch (error) {
@@ -181,11 +167,9 @@ const UsersPage = () => {
     }
   };
   
-  // Initial fetch of system status
   useEffect(() => {
     fetchSystemStatus();
     
-    // Set up real-time listener for profile changes
     const channel = supabase
       .channel('user_system_monitor')
       .on(
@@ -197,7 +181,6 @@ const UsersPage = () => {
         },
         (payload) => {
           console.log('Profile change detected in monitoring channel:', payload);
-          // Auto-refresh system status when profiles change
           fetchSystemStatus();
         }
       )
@@ -275,7 +258,7 @@ const UsersPage = () => {
         )}
         
         <div className="bg-white p-6 rounded shadow">
-          <UserManagement key={lastUpdated?.getTime()} />
+          <UserManagement users={[]} key={lastUpdated?.getTime()} />
         </div>
       </div>
       

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { 
   Check, 
@@ -54,7 +55,11 @@ interface UserWithRole {
   is_verified?: boolean;
 }
 
-const UserManagement = () => {
+interface UserManagementProps {
+  users?: UserWithRole[];
+}
+
+const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilterState>({
@@ -80,7 +85,10 @@ const UserManagement = () => {
   const { toast } = useToast();
   
   const filteredUsers = useMemo(() => {
-    let result = [...users];
+    // Make sure users is an array before trying to filter it
+    const userArr = Array.isArray(users) ? users : [];
+    
+    let result = [...userArr];
     
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
@@ -155,7 +163,13 @@ const UserManagement = () => {
   };
   
   useEffect(() => {
-    fetchUsers();
+    // Use initialUsers if provided, otherwise fetch users
+    if (initialUsers && initialUsers.length > 0) {
+      setUsers(initialUsers);
+      setLoading(false);
+    } else {
+      fetchUsers();
+    }
 
     const channel = supabase
       .channel('user_changes')
@@ -176,7 +190,7 @@ const UserManagement = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [initialUsers]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -377,7 +391,7 @@ const UserManagement = () => {
       <div className="bg-slate-50 p-4 rounded-md border border-slate-200 text-xs">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-medium">System Diagnostic</h3>
-          <Badge variant={diagnosticInfo.fetchMethod === 'unknown' ? 'destructive' : 'success'}>
+          <Badge variant="secondary">
             {diagnosticInfo.fetchMethod === 'auth-api' ? 'Using Auth API' : 
              diagnosticInfo.fetchMethod === 'profiles-table' ? 'Using Profiles Table' : 
              'Data Source Unknown'}
@@ -420,10 +434,10 @@ const UserManagement = () => {
                 Loading users...
               </TableCell>
             </TableRow>
-          ) : filteredUsers.length === 0 ? (
+          ) : !Array.isArray(filteredUsers) || filteredUsers.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-8">
-                {users.length > 0 ? (
+                {Array.isArray(users) && users.length > 0 ? (
                   <div className="flex flex-col items-center gap-2">
                     <AlertTriangle className="h-8 w-8 text-amber-500" />
                     <p>No users match your current filters</p>
@@ -445,7 +459,7 @@ const UserManagement = () => {
                       <div className="font-medium flex items-center">
                         {user.full_name || 'Unnamed User'}
                         {user.is_new && (
-                          <Badge variant="success" className="ml-2">New</Badge>
+                          <Badge variant="secondary" className="ml-2">New</Badge>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -463,9 +477,9 @@ const UserManagement = () => {
                 </TableCell>
                 <TableCell>
                   {user.is_verified ? (
-                    <Badge variant="verified">Verified</Badge>
+                    <Badge variant="secondary">Verified</Badge>
                   ) : (
-                    <Badge variant="pending">Unverified</Badge>
+                    <Badge variant="outline">Unverified</Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-sm">
@@ -538,9 +552,9 @@ const UserManagement = () => {
         </TableBody>
       </Table>
       
-      {!loading && filteredUsers.length > 0 && (
+      {!loading && Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
         <div className="text-xs text-gray-500 mt-2">
-          Showing {filteredUsers.length} of {users.length} users
+          Showing {filteredUsers.length} of {Array.isArray(users) ? users.length : 0} users
           {filteredUsers.filter(u => u.is_new).length > 0 && (
             <span className="ml-1">
               including <span className="font-semibold text-emerald-600">{filteredUsers.filter(u => u.is_new).length} new</span> in the last hour
