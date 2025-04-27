@@ -2,24 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/hooks/useAuth";
 import AdminLayout from "@/layouts/AdminLayout";
+import { FileExport } from "lucide-react";
+import { format } from 'date-fns';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+  Table, TableBody, TableCell, TableHead, 
+  TableHeader, TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select, SelectContent, SelectItem, 
+  SelectTrigger, SelectValue 
 } from "@/components/ui/select";
-import { format } from 'date-fns';
 import { getAdminPremiumEnrollments, PremiumEnrollment } from "@/services/premiumCourseService";
 
 const PremiumEnrollmentsPage = () => {
@@ -49,6 +43,34 @@ const PremiumEnrollmentsPage = () => {
     fetchEnrollments();
   }, [page, courseTitle, activeFilter]);
 
+  const handleExportCSV = () => {
+    const headers = ['Course Title', 'User Email', 'Enrollment Date', 'Last Activity Date', 'Status'];
+    const rows = enrollments.map(enrollment => [
+      enrollment.course?.title || 'N/A',
+      enrollment.user?.email || 'N/A',
+      format(new Date(enrollment.created_at), 'yyyy-MM-dd'),
+      format(new Date(enrollment.last_activity_date), 'yyyy-MM-dd'),
+      isEnrollmentActive(enrollment.last_activity_date) ? 'Active' : 'Inactive'
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `premium-enrollments-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const isEnrollmentActive = (lastActivityDate: string) => {
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    return new Date(lastActivityDate) > fourteenDaysAgo;
+  };
+
   if (!hasRole(['admin'])) {
     return null;
   }
@@ -56,7 +78,17 @@ const PremiumEnrollmentsPage = () => {
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Premium Course Enrollments</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Premium Course Enrollments</h1>
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileExport className="w-4 h-4" />
+            Export CSV
+          </Button>
+        </div>
         
         <div className="flex space-x-4 mb-6">
           <Input 
@@ -88,6 +120,7 @@ const PremiumEnrollmentsPage = () => {
               <TableHead>User Email</TableHead>
               <TableHead>Enrollment Date</TableHead>
               <TableHead>Last Activity</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -100,6 +133,9 @@ const PremiumEnrollmentsPage = () => {
                 </TableCell>
                 <TableCell>
                   {format(new Date(enrollment.last_activity_date), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>
+                  {isEnrollmentActive(enrollment.last_activity_date) ? 'Active' : 'Inactive'}
                 </TableCell>
               </TableRow>
             ))}
