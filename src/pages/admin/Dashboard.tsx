@@ -1,12 +1,17 @@
 
 import React from 'react';
-import { StatsCard } from "@/components/admin/StatsCard";
-import { EventsSection } from "@/components/admin/EventsSection";
-import { PaymentsTable } from "@/components/admin/PaymentsTable";
-import { CertificateManagement } from "@/components/admin/CertificateManagement"; // Corrected import
+import StatsCard from "@/components/admin/StatsCard";
+import EventsSection from "@/components/admin/EventsSection";
+import PaymentsTable from "@/components/admin/PaymentsTable";
+import CertificateManagement from '@/components/admin/CertificateManagement';
 import AdminLayout from '@/layouts/AdminLayout';
 
 const Dashboard = () => {
+  const mockEvents = [
+    { id: 1, name: 'Fashion Workshop', date: 'June 15, 2025', registrations: 50 },
+    { id: 2, name: 'Design Conference', date: 'July 20, 2025', registrations: 75 }
+  ];
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -19,7 +24,7 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <EventsSection />
+            <EventsSection events={mockEvents} />
           </div>
           <div>
             <CertificateManagement 
