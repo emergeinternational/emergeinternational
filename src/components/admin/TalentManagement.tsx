@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +17,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -41,13 +41,15 @@ const TalentManagement = () => {
   const { data: applications, isLoading, refetch } = useQuery({
     queryKey: ['talent-applications'],
     queryFn: fetchTalentApplications,
-    onError: (error) => {
-      console.error("Error in talent applications query:", error);
-      toast({
-        title: "Failed to load applications",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
-      });
+    onSettled: (data, error) => {
+      if (error) {
+        console.error("Error in talent applications query:", error);
+        toast({
+          title: "Failed to load applications",
+          description: error instanceof Error ? error.message : "Unknown error occurred",
+          variant: "destructive"
+        });
+      }
     }
   });
 
@@ -232,7 +234,7 @@ const TalentManagement = () => {
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
                         <Dialog>
-                          <Dialog.Trigger asChild>
+                          <DialogTrigger asChild>
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -240,7 +242,7 @@ const TalentManagement = () => {
                             >
                               View Details
                             </Button>
-                          </Dialog.Trigger>
+                          </DialogTrigger>
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Application Details</DialogTitle>
@@ -416,7 +418,6 @@ const TalentManagement = () => {
   );
 };
 
-// Status component for admin debugging
 const TalentDatabaseStatus = () => {
   const { data: applications, isLoading } = useQuery({
     queryKey: ['talent-applications'],
