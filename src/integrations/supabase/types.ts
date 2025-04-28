@@ -236,6 +236,72 @@ export type Database = {
         }
         Relationships: []
       }
+      designers: {
+        Row: {
+          achievements: string[] | null
+          bio: string | null
+          category: Database["public"]["Enums"]["creator_category"]
+          created_at: string | null
+          email: string | null
+          featured: boolean
+          featured_project: Json | null
+          full_name: string
+          id: string
+          image_url: string | null
+          location: string | null
+          portfolio_url: string | null
+          products: string[] | null
+          revenue: number | null
+          sales_count: number | null
+          showcase_images: string[] | null
+          social_media: Json | null
+          specialty: Database["public"]["Enums"]["designer_category"]
+          updated_at: string | null
+        }
+        Insert: {
+          achievements?: string[] | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["creator_category"]
+          created_at?: string | null
+          email?: string | null
+          featured?: boolean
+          featured_project?: Json | null
+          full_name: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          portfolio_url?: string | null
+          products?: string[] | null
+          revenue?: number | null
+          sales_count?: number | null
+          showcase_images?: string[] | null
+          social_media?: Json | null
+          specialty: Database["public"]["Enums"]["designer_category"]
+          updated_at?: string | null
+        }
+        Update: {
+          achievements?: string[] | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["creator_category"]
+          created_at?: string | null
+          email?: string | null
+          featured?: boolean
+          featured_project?: Json | null
+          full_name?: string
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          portfolio_url?: string | null
+          products?: string[] | null
+          revenue?: number | null
+          sales_count?: number | null
+          showcase_images?: string[] | null
+          social_media?: Json | null
+          specialty?: Database["public"]["Enums"]["designer_category"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       discount_codes: {
         Row: {
           code: string
@@ -289,33 +355,149 @@ export type Database = {
           },
         ]
       }
+      donation_page_settings: {
+        Row: {
+          created_at: string | null
+          currency_options: string[] | null
+          hero_description: string | null
+          hero_image_url: string | null
+          hero_title: string
+          id: string
+          is_active: boolean | null
+          max_donation_amount: number | null
+          min_donation_amount: number | null
+          payment_methods: string[] | null
+          suggested_amounts: number[] | null
+          thank_you_message: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency_options?: string[] | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_title?: string
+          id?: string
+          is_active?: boolean | null
+          max_donation_amount?: number | null
+          min_donation_amount?: number | null
+          payment_methods?: string[] | null
+          suggested_amounts?: number[] | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency_options?: string[] | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_title?: string
+          id?: string
+          is_active?: boolean | null
+          max_donation_amount?: number | null
+          min_donation_amount?: number | null
+          payment_methods?: string[] | null
+          suggested_amounts?: number[] | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number
+          certificate_issued: boolean | null
+          certificate_url: string | null
           created_at: string | null
           currency: string
+          donor_id: string | null
           id: string
+          message: string | null
           payment_method: string | null
+          payment_proof_url: string | null
           payment_status: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           amount: number
+          certificate_issued?: boolean | null
+          certificate_url?: string | null
           created_at?: string | null
           currency?: string
+          donor_id?: string | null
           id?: string
+          message?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           amount?: number
+          certificate_issued?: boolean | null
+          certificate_url?: string | null
           created_at?: string | null
           currency?: string
+          donor_id?: string | null
           id?: string
+          message?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string
+          updated_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donors: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          last_donation_date: string | null
+          phone: string | null
+          total_donations: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          last_donation_date?: string | null
+          phone?: string | null
+          total_donations?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          last_donation_date?: string | null
+          phone?: string | null
+          total_donations?: number | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -418,6 +600,7 @@ export type Database = {
           measurements: Json | null
           phone_number: string | null
           portfolio_url: string | null
+          sync_status: string | null
           talent_description: string | null
           telegram: string | null
           tiktok: string | null
@@ -435,6 +618,7 @@ export type Database = {
           measurements?: Json | null
           phone_number?: string | null
           portfolio_url?: string | null
+          sync_status?: string | null
           talent_description?: string | null
           telegram?: string | null
           tiktok?: string | null
@@ -452,6 +636,7 @@ export type Database = {
           measurements?: Json | null
           phone_number?: string | null
           portfolio_url?: string | null
+          sync_status?: string | null
           talent_description?: string | null
           telegram?: string | null
           tiktok?: string | null
@@ -818,6 +1003,8 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string | null
           description: string | null
+          designer_id: string | null
+          dimensions: Json | null
           id: string
           image_url: string | null
           in_stock: boolean
@@ -825,14 +1012,20 @@ export type Database = {
           price: number
           revenue: number | null
           sales_count: number | null
+          shipping_info: Json | null
+          sku: string | null
+          stock_quantity: number | null
           title: string
           updated_at: string | null
           variations: Json[] | null
+          weight: number | null
         }
         Insert: {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string | null
           description?: string | null
+          designer_id?: string | null
+          dimensions?: Json | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
@@ -840,14 +1033,20 @@ export type Database = {
           price?: number
           revenue?: number | null
           sales_count?: number | null
+          shipping_info?: Json | null
+          sku?: string | null
+          stock_quantity?: number | null
           title: string
           updated_at?: string | null
           variations?: Json[] | null
+          weight?: number | null
         }
         Update: {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string | null
           description?: string | null
+          designer_id?: string | null
+          dimensions?: Json | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
@@ -855,11 +1054,23 @@ export type Database = {
           price?: number
           revenue?: number | null
           sales_count?: number | null
+          shipping_info?: Json | null
+          sku?: string | null
+          stock_quantity?: number | null
           title?: string
           updated_at?: string | null
           variations?: Json[] | null
+          weight?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "designers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1041,6 +1252,7 @@ export type Database = {
           experience_level: string | null
           experience_years: number | null
           full_name: string
+          gender: string | null
           height: number | null
           id: string
           languages_spoken: string[] | null
@@ -1053,6 +1265,7 @@ export type Database = {
           skills: string[] | null
           social_media: Json | null
           status: Database["public"]["Enums"]["talent_status"] | null
+          sync_status: string | null
           travel_availability: string | null
           updated_at: string | null
           user_id: string | null
@@ -1069,6 +1282,7 @@ export type Database = {
           experience_level?: string | null
           experience_years?: number | null
           full_name: string
+          gender?: string | null
           height?: number | null
           id?: string
           languages_spoken?: string[] | null
@@ -1081,6 +1295,7 @@ export type Database = {
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          sync_status?: string | null
           travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1097,6 +1312,7 @@ export type Database = {
           experience_level?: string | null
           experience_years?: number | null
           full_name?: string
+          gender?: string | null
           height?: number | null
           id?: string
           languages_spoken?: string[] | null
@@ -1109,6 +1325,7 @@ export type Database = {
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          sync_status?: string | null
           travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1239,19 +1456,19 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
+          role: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role?: string
           user_id?: string
         }
         Relationships: []
@@ -1297,7 +1514,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      registration_system_diagnostics: {
+        Row: {
+          handle_new_user_exists: boolean | null
+          on_auth_user_created_exists: boolean | null
+          problematic_function_removed: boolean | null
+          problematic_trigger_removed: boolean | null
+        }
+        Relationships: []
+      }
+      talent_sync_status: {
+        Row: {
+          email: string | null
+          emerge_submission_id: string | null
+          exists_in_talent_applications: boolean | null
+          submission_date: string | null
+          talent_application_id: string | null
+          talent_sync_date: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_current_user_profile: {
@@ -1341,10 +1577,6 @@ export type Database = {
           events: Json
         }[]
       }
-      has_role: {
-        Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
-        Returns: boolean
-      }
       log_user_action: {
         Args: {
           action_type: string
@@ -1353,9 +1585,12 @@ export type Database = {
         }
         Returns: string
       }
+      logsyncactivity: {
+        Args: { function_name: string; results: Json }
+        Returns: undefined
+      }
     }
     Enums: {
-      app_role: "admin" | "editor" | "viewer" | "user"
       career_path:
         | "model"
         | "designer"
@@ -1375,10 +1610,26 @@ export type Database = {
         | "event_planner"
       course_hosting_type: "hosted" | "embedded" | "external"
       course_level: "beginner" | "intermediate" | "expert"
+      creator_category:
+        | "fashion_designer"
+        | "interior_designer"
+        | "graphic_designer"
+        | "visual_artist"
+        | "photographer"
+        | "event_planner"
+        | "model"
+        | "creative_director"
+      designer_category:
+        | "apparel"
+        | "accessories"
+        | "footwear"
+        | "jewelry"
+        | "other"
       event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
       product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
+      user_role_type: "admin" | "editor" | "viewer" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1494,7 +1745,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "editor", "viewer", "user"],
       career_path: [
         "model",
         "designer",
@@ -1516,10 +1766,28 @@ export const Constants = {
       ],
       course_hosting_type: ["hosted", "embedded", "external"],
       course_level: ["beginner", "intermediate", "expert"],
+      creator_category: [
+        "fashion_designer",
+        "interior_designer",
+        "graphic_designer",
+        "visual_artist",
+        "photographer",
+        "event_planner",
+        "model",
+        "creative_director",
+      ],
+      designer_category: [
+        "apparel",
+        "accessories",
+        "footwear",
+        "jewelry",
+        "other",
+      ],
       event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
       product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
+      user_role_type: ["admin", "editor", "viewer", "user"],
     },
   },
 } as const
