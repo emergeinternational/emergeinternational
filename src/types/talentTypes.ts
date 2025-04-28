@@ -23,6 +23,7 @@ export interface TalentApplication {
   gender?: string | null;
   experience_years?: number | null;
   measurements?: Record<string, any> | null;
+  sync_status?: string | null;
 }
 
 export interface TalentFormData {

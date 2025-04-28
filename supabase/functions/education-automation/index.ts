@@ -115,10 +115,11 @@ serve(async (req) => {
               },
               notes: submission.talent_description,
               category_type: submission.category,
-              gender: submission.gender, // Include gender in the mapping
+              gender: submission.gender,
               portfolio_url: submission.portfolio_url,
               measurements: submission.measurements,
-              created_at: submission.created_at
+              created_at: submission.created_at,
+              sync_status: 'synced'
             }));
 
             // Insert into talent_applications

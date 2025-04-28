@@ -1265,6 +1265,7 @@ export type Database = {
           skills: string[] | null
           social_media: Json | null
           status: Database["public"]["Enums"]["talent_status"] | null
+          sync_status: string | null
           travel_availability: string | null
           updated_at: string | null
           user_id: string | null
@@ -1294,6 +1295,7 @@ export type Database = {
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          sync_status?: string | null
           travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1323,6 +1325,7 @@ export type Database = {
           skills?: string[] | null
           social_media?: Json | null
           status?: Database["public"]["Enums"]["talent_status"] | null
+          sync_status?: string | null
           travel_availability?: string | null
           updated_at?: string | null
           user_id?: string | null

@@ -60,10 +60,11 @@ export async function syncEmergeSubmissions(): Promise<{
       },
       notes: submission.talent_description,
       category_type: submission.category,
-      gender: submission.gender, // Include gender field in the mapping
+      gender: submission.gender,
       portfolio_url: submission.portfolio_url,
       measurements: submission.measurements,
-      created_at: submission.created_at
+      created_at: submission.created_at,
+      sync_status: 'synced'
     }));
     
     // Insert into talent_applications
@@ -232,10 +233,11 @@ export async function performFullTalentDataMigration(): Promise<{
           },
           notes: submission.talent_description || null,
           category_type: submission.category || null,
-          gender: submission.gender || null, // Ensure gender is included
+          gender: submission.gender || null,
           portfolio_url: submission.portfolio_url || null,
           measurements: submission.measurements || null,
-          created_at: submission.created_at || new Date().toISOString()
+          created_at: submission.created_at || new Date().toISOString(),
+          sync_status: 'synced'
         });
         
         // Add migrated email to existing sets to avoid duplicate migrations in the same batch
