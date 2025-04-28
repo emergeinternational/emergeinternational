@@ -34,9 +34,9 @@ const OrdersManager: React.FC = () => {
       }
 
       // Transform the raw data to match the Order type
-      const transformedOrders: Order[] = data.map(order => ({
+      const transformedOrders: Order[] = data.map((order: any) => ({
         ...order,
-        status: order.status as OrderStatus, // Cast the status to OrderStatus type
+        status: order.status as OrderStatus,
       }));
 
       setOrders(transformedOrders);

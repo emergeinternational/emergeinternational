@@ -10,6 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const specialtyEnum = z.enum([
+  'apparel',
+  'accessories',
+  'footwear',
+  'jewelry',
+  'other'
+] as const);
+
 const formSchema = z.object({
   full_name: z.string().min(2, {
     message: "Full name must be at least 2 characters.",
@@ -18,15 +26,7 @@ const formSchema = z.object({
     message: "Please enter a valid email.",
   }).optional(),
   bio: z.string().optional(),
-  specialty: z.enum([
-    'apparel',
-    'accessories',
-    'footwear',
-    'jewelry',
-    'other'
-  ] as [DesignerSpecialty, ...DesignerSpecialty[]], {
-    required_error: "Please select a specialty.",
-  }),
+  specialty: specialtyEnum, // Use the enum directly
   category: z.enum([
     'fashion_designer',
     'model',
@@ -36,7 +36,7 @@ const formSchema = z.object({
     'graphic_designer',
     'visual_artist',
     'creative_director'
-  ] as [CreatorCategory, ...CreatorCategory[]], {
+  ] as const, {
     required_error: "Please select a category.",
   }),
   portfolio_url: z.string().url({
@@ -53,29 +53,40 @@ export interface DesignerFormProps {
   onSubmit: (data: Partial<Designer>) => void;
   defaultValues?: Partial<Designer>;
   isLoading?: boolean;
+  initialData?: Partial<Designer>;
+  onSuccess?: () => void;
 }
 
-export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultValues, isLoading }) => {
+export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultValues, isLoading, initialData, onSuccess }) => {
+  const valuesToUse = initialData || defaultValues || {
+    full_name: '',
+    email: '',
+    bio: '',
+    specialty: 'apparel' as DesignerSpecialty, // Use a valid default from the enum
+    category: 'fashion_designer' as CreatorCategory,
+    portfolio_url: '',
+    location: '',
+    featured: false,
+    image_url: '',
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: defaultValues || {
-      full_name: '',
-      email: '',
-      bio: '',
-      specialty: '',
-      category: 'fashion_designer',
-      portfolio_url: '',
-      location: '',
-      featured: false,
-      image_url: '',
-    },
+    defaultValues: valuesToUse,
     mode: "onChange"
   });
 
   const { handleSubmit, register, formState: { errors }, control } = form;
 
+  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    onSubmit(data);
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div>
         <Label htmlFor="full_name">Full Name</Label>
         <Input id="full_name" type="text" {...register("full_name")} disabled={isLoading} />
@@ -102,7 +113,21 @@ export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultVal
 
       <div>
         <Label htmlFor="specialty">Specialty</Label>
-        <Input id="specialty" type="text" {...register("specialty")} disabled={isLoading} />
+        <Select
+          onValueChange={(value) => form.setValue('specialty', value as DesignerSpecialty)}
+          defaultValue={valuesToUse.specialty as string}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a specialty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="apparel">Apparel</SelectItem>
+            <SelectItem value="accessories">Accessories</SelectItem>
+            <SelectItem value="footwear">Footwear</SelectItem>
+            <SelectItem value="jewelry">Jewelry</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
         {errors.specialty && (
           <p className="text-red-500 text-sm">{errors.specialty.message}</p>
         )}
@@ -112,7 +137,7 @@ export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultVal
         <Label htmlFor="category">Category</Label>
         <Select
           onValueChange={(value) => form.setValue('category', value as CreatorCategory)}
-          defaultValue={defaultValues?.category || 'fashion_designer'}
+          defaultValue={valuesToUse.category}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a category" />

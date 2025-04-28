@@ -1,161 +1,188 @@
 
-import React from 'react';
-import { Search } from 'lucide-react';
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '../../ui/date-range-picker';
-import { OrderFiltersState } from '@/types/orderTypes';
-import { DateRange } from 'react-day-picker';
-import { Badge } from "@/components/ui/badge";
+import { DateRangePicker } from '../../ui/date-range-picker';
+import { X } from 'lucide-react';
+import { ORDER_STATUSES, PAYMENT_STATUSES, OrderStatus, PaymentStatus, OrderFiltersState } from '@/types/orderTypes';
 
-interface OrderFiltersProps {
+interface OrderFiltersNewProps {
   filters: OrderFiltersState;
   onFilterChange: (filters: OrderFiltersState) => void;
 }
 
-export const OrderFiltersNew: React.FC<OrderFiltersProps> = ({ filters, onFilterChange }) => {
-  const handleStatusChange = (value: string) => {
+export function OrderFiltersNew({ filters, onFilterChange }: OrderFiltersNewProps) {
+  // Ensure all properties exist on filters
+  const filtersWithDefaults = {
+    ...filters,
+    searchQuery: filters.searchQuery || filters.searchTerm || '',
+    paymentStatus: filters.paymentStatus || 'all'
+  };
+
+  const handleResetFilters = () => {
     onFilterChange({
-      ...filters,
+      searchTerm: '',
+      status: 'all',
+      dateRange: {
+        from: undefined,
+        to: undefined,
+      },
+      paymentStatus: 'all',
+      searchQuery: ''
+    });
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    onFilterChange({
+      ...filtersWithDefaults,
+      searchTerm: event.target.value,
+      searchQuery: event.target.value
+    });
+  };
+
+  const handleStatusChange = (value: OrderStatus | 'all') => {
+    onFilterChange({
+      ...filtersWithDefaults,
       status: value
     });
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePaymentStatusChange = (value: PaymentStatus | 'all') => {
     onFilterChange({
-      ...filters,
-      searchQuery: e.target.value
+      ...filtersWithDefaults,
+      paymentStatus: value
     });
   };
 
-  const handlePaymentStatusChange = (value: string) => {
-    // Convert to array if it's a string
-    let newPaymentStatus: string | string[];
-    
-    if (typeof filters.paymentStatus === 'string') {
-      newPaymentStatus = value;
-    } else {
-      // It's already an array
-      newPaymentStatus = [value];
-    }
-    
+  const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
     onFilterChange({
-      ...filters,
-      paymentStatus: newPaymentStatus
+      ...filtersWithDefaults,
+      dateRange: range
     });
   };
 
-  const handleDateRangeChange = (range: DateRange | undefined) => {
-    onFilterChange({
-      ...filters,
-      dateRange: {
-        from: range?.from || null,
-        to: range?.to || null
-      }
-    });
-  };
+  const isFiltersActive = 
+    (filtersWithDefaults.searchTerm && filtersWithDefaults.searchTerm.length > 0) || 
+    filtersWithDefaults.status !== 'all' ||
+    filtersWithDefaults.paymentStatus !== 'all' ||
+    filtersWithDefaults.dateRange.from !== undefined || 
+    filtersWithDefaults.dateRange.to !== undefined;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6">
-      <div className="flex-1">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
           <Input
+            type="search"
             placeholder="Search orders..."
-            className="pl-8"
-            value={filters.searchQuery}
+            value={filtersWithDefaults.searchQuery || filtersWithDefaults.searchTerm}
             onChange={handleSearchChange}
+            className="w-full"
           />
         </div>
-      </div>
-      
-      <div className="w-full sm:w-[180px]">
-        <Select
-          value={typeof filters.status === 'string' ? filters.status : filters.status[0]}
-          onValueChange={handleStatusChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="w-full sm:w-[180px]">
-        <Select 
-          value={typeof filters.paymentStatus === 'string' ? filters.paymentStatus : filters.paymentStatus[0] || ''}
-          onValueChange={handlePaymentStatusChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Payment" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All Payments</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="w-full sm:w-auto">
-        <DatePickerWithRange 
-          date={{
-            from: filters.dateRange.from || undefined,
-            to: filters.dateRange.to || undefined
-          }}
-          onSelect={handleDateRangeChange}
+        
+        <div>
+          <Select
+            value={filtersWithDefaults.status}
+            onValueChange={(value: string) => handleStatusChange(value as OrderStatus | 'all')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Order status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {ORDER_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Select
+            value={filtersWithDefaults.paymentStatus}
+            onValueChange={(value: string) => handlePaymentStatusChange(value as PaymentStatus | 'all')}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Payment status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payment Statuses</SelectItem>
+              {PAYMENT_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <DateRangePicker 
+          dateRange={filtersWithDefaults.dateRange} 
+          onDateRangeChange={handleDateRangeChange} 
         />
       </div>
-      
-      {/* Active filters */}
-      {(filters.searchQuery || 
-       (typeof filters.status === 'string' && filters.status) || 
-       (Array.isArray(filters.status) && filters.status.length > 0) || 
-       (typeof filters.paymentStatus === 'string' && filters.paymentStatus) || 
-       (Array.isArray(filters.paymentStatus) && filters.paymentStatus.length > 0) || 
-       filters.dateRange.from || 
-       filters.dateRange.to) && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {filters.searchQuery && (
-            <Badge variant="secondary" className="px-2 py-1">
-              Search: {filters.searchQuery}
+
+      {isFiltersActive && (
+        <div className="flex flex-wrap gap-2 pt-2">
+          <div className="text-sm text-gray-500 mr-2">Active filters:</div>
+
+          {filtersWithDefaults.searchQuery && filtersWithDefaults.searchQuery.length > 0 && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              Search: {filtersWithDefaults.searchQuery}
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => onFilterChange({...filtersWithDefaults, searchTerm: '', searchQuery: ''})} 
+              />
             </Badge>
           )}
-          
-          {typeof filters.status === 'string' && filters.status && (
-            <Badge variant="secondary" className="px-2 py-1">
-              Status: {filters.status}
+
+          {filtersWithDefaults.status !== 'all' && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              Status: {filtersWithDefaults.status}
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => onFilterChange({...filtersWithDefaults, status: 'all'})} 
+              />
             </Badge>
           )}
-          
-          {typeof filters.paymentStatus === 'string' && filters.paymentStatus && (
-            <Badge variant="secondary" className="px-2 py-1">
-              Payment: {filters.paymentStatus}
+
+          {filtersWithDefaults.paymentStatus !== 'all' && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              Payment: {filtersWithDefaults.paymentStatus}
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => onFilterChange({...filtersWithDefaults, paymentStatus: 'all'})} 
+              />
             </Badge>
           )}
-          
-          {filters.dateRange.from && (
-            <Badge variant="secondary" className="px-2 py-1">
-              From: {filters.dateRange.from.toLocaleDateString()}
+
+          {(filtersWithDefaults.dateRange.from || filtersWithDefaults.dateRange.to) && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              Date Range
+              <X 
+                className="h-3 w-3 cursor-pointer" 
+                onClick={() => onFilterChange({...filtersWithDefaults, dateRange: { from: undefined, to: undefined }})} 
+              />
             </Badge>
           )}
-          
-          {filters.dateRange.to && (
-            <Badge variant="secondary" className="px-2 py-1">
-              To: {filters.dateRange.to.toLocaleDateString()}
-            </Badge>
-          )}
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleResetFilters}
+            className="ml-auto"
+          >
+            Clear all filters
+          </Button>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default OrderFiltersNew;

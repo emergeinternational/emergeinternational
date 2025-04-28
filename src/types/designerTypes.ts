@@ -44,7 +44,7 @@ export interface Designer {
   full_name: string;
   email?: string;
   bio?: string;
-  specialty: DesignerSpecialty;
+  specialty: string | DesignerSpecialty; // Modified to accommodate string values
   category: CreatorCategory;
   portfolio_url?: string;
   location?: string;

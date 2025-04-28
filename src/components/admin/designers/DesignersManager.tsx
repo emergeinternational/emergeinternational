@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Designer } from "@/types/designerTypes";
-import { DesignerForm } from "./DesignerForm"; // Changed from default import to named import
+import { DesignerForm } from "./DesignerForm"; 
 import DesignersTable from "./DesignersTable";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,7 +30,7 @@ const DesignersManager = () => {
     return (
       designer.full_name.toLowerCase().includes(query) ||
       designer.email?.toLowerCase().includes(query) ||
-      designer.specialty.toLowerCase().includes(query) ||
+      designer.specialty.toString().toLowerCase().includes(query) ||
       designer.category.toLowerCase().includes(query) ||
       designer.location?.toLowerCase().includes(query)
     );
@@ -44,7 +44,7 @@ const DesignersManager = () => {
   const handleEdit = (designer: Designer) => {
     setSelectedDesigner({
       ...designer,
-      // Convert specialty to string if it's not already
+      // Ensure specialty is a string to match the form component
       specialty: designer.specialty.toString()
     });
     setIsFormOpen(true);
@@ -112,6 +112,53 @@ const DesignersManager = () => {
       {isFormOpen && (
         <DesignerForm
           initialData={selectedDesigner}
+          onSubmit={async (formData) => {
+            try {
+              if (selectedDesigner?.id) {
+                // Update existing designer
+                const { error } = await supabase
+                  .from('designers')
+                  .update({
+                    ...formData,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', selectedDesigner.id);
+                
+                if (error) throw error;
+                
+                toast({
+                  title: "Designer updated",
+                  description: "The designer has been successfully updated.",
+                });
+              } else {
+                // Create new designer
+                const { error } = await supabase
+                  .from('designers')
+                  .insert([{
+                    ...formData,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }]);
+                
+                if (error) throw error;
+                
+                toast({
+                  title: "Designer created",
+                  description: "The designer has been successfully created.",
+                });
+              }
+              
+              // Close form and refresh data
+              setIsFormOpen(false);
+              refetch();
+            } catch (error: any) {
+              toast({
+                title: "Error saving designer",
+                description: error.message,
+                variant: "destructive",
+              });
+            }
+          }}
           onSuccess={() => {
             refetch();
             setIsFormOpen(false);

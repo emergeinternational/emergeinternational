@@ -56,6 +56,8 @@ export interface OrderFiltersState {
     from: Date | undefined;
     to: Date | undefined;
   };
+  paymentStatus?: PaymentStatus | 'all'; // Added missing property
+  searchQuery?: string; // Added missing property
 }
 
 export const ORDER_STATUSES: OrderStatus[] = [
