@@ -60,7 +60,8 @@ export const LoginSignupForm = ({
       console.error("Authentication error:", error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       
-      if (errorMessage.includes("type \"app_role\" does not exist") || 
+      if (errorMessage.includes("app_role") || 
+          errorMessage.includes("type") || 
           errorMessage.includes("Database error saving")) {
         toast({
           title: "Registration issue",

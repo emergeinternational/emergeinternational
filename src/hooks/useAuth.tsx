@@ -214,24 +214,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           console.log("Creating profile for new user:", data.user.id);
           let retries = 0;
-          const maxRetries = 3;
+          const maxRetries = 5;
           let profileCreated = false;
           
-          // Retry profile creation a few times with increasing delays
+          // Retry profile creation a few times with increasing delays to handle potential race conditions
           while (retries < maxRetries && !profileCreated) {
             try {
               profileCreated = await ensureUserProfile(data.user.id, email);
               if (!profileCreated) {
                 retries++;
                 console.warn(`Profile creation attempt ${retries} failed, retrying...`);
-                // Exponential backoff: 200ms, 400ms, 800ms
-                await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, retries - 1)));
+                // Exponential backoff: 300ms, 600ms, 1.2s, 2.4s, 4.8s
+                await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, retries - 1)));
               }
             } catch (e) {
               console.error(`Error in profile creation attempt ${retries}:`, e);
               retries++;
               // Exponential backoff
-              await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, retries - 1)));
+              await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, retries - 1)));
             }
           }
 

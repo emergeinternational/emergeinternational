@@ -9,16 +9,26 @@ export type CreatorCategory =
   | 'model'
   | 'creative_director';
 
-export type DesignerSpecialty = {
-  fashion_designer: 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
-  interior_designer: 'residential' | 'commercial' | 'hospitality' | 'other';
-  graphic_designer: 'branding' | 'digital' | 'print' | 'illustration' | 'other';
-  visual_artist: 'painting' | 'sculpture' | 'digital_art' | 'mixed_media' | 'other';
-  photographer: 'portrait' | 'fashion' | 'event' | 'commercial' | 'other';
-  event_planner: 'weddings' | 'corporate' | 'social' | 'non_profit' | 'other';
-  model: 'runway' | 'commercial' | 'editorial' | 'fitness' | 'other';
-  creative_director: 'fashion' | 'advertising' | 'brand' | 'art_direction' | 'other';
-}[CreatorCategory];
+// Each category has its own set of specialty types
+export type FashionDesignerSpecialty = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
+export type InteriorDesignerSpecialty = 'residential' | 'commercial' | 'hospitality' | 'other';
+export type GraphicDesignerSpecialty = 'branding' | 'digital' | 'print' | 'illustration' | 'other';
+export type VisualArtistSpecialty = 'painting' | 'sculpture' | 'digital_art' | 'mixed_media' | 'other';
+export type PhotographerSpecialty = 'portrait' | 'fashion' | 'event' | 'commercial' | 'other';
+export type EventPlannerSpecialty = 'weddings' | 'corporate' | 'social' | 'non_profit' | 'other';
+export type ModelSpecialty = 'runway' | 'commercial' | 'editorial' | 'fitness' | 'other';
+export type CreativeDirectorSpecialty = 'fashion' | 'advertising' | 'brand' | 'art_direction' | 'other';
+
+// Conditional type based on category
+export type DesignerSpecialty = 
+  | FashionDesignerSpecialty
+  | InteriorDesignerSpecialty
+  | GraphicDesignerSpecialty
+  | VisualArtistSpecialty
+  | PhotographerSpecialty
+  | EventPlannerSpecialty
+  | ModelSpecialty
+  | CreativeDirectorSpecialty;
 
 export interface FeaturedProject {
   title: string;
@@ -56,63 +66,71 @@ export interface Designer {
 
 // Helper function to get specialty options based on category
 export const getSpecialtyOptions = (category: CreatorCategory): { value: DesignerSpecialty; label: string }[] => {
-  const specialtyMap: Record<CreatorCategory, Array<{ value: DesignerSpecialty; label: string }>> = {
-    fashion_designer: [
-      { value: 'apparel' as DesignerSpecialty, label: 'Apparel' },
-      { value: 'accessories' as DesignerSpecialty, label: 'Accessories' },
-      { value: 'footwear' as DesignerSpecialty, label: 'Footwear' },
-      { value: 'jewelry' as DesignerSpecialty, label: 'Jewelry' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    interior_designer: [
-      { value: 'residential' as DesignerSpecialty, label: 'Residential' },
-      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
-      { value: 'hospitality' as DesignerSpecialty, label: 'Hospitality' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    graphic_designer: [
-      { value: 'branding' as DesignerSpecialty, label: 'Branding' },
-      { value: 'digital' as DesignerSpecialty, label: 'Digital' },
-      { value: 'print' as DesignerSpecialty, label: 'Print' },
-      { value: 'illustration' as DesignerSpecialty, label: 'Illustration' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    visual_artist: [
-      { value: 'painting' as DesignerSpecialty, label: 'Painting' },
-      { value: 'sculpture' as DesignerSpecialty, label: 'Sculpture' },
-      { value: 'digital_art' as DesignerSpecialty, label: 'Digital Art' },
-      { value: 'mixed_media' as DesignerSpecialty, label: 'Mixed Media' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    photographer: [
-      { value: 'portrait' as DesignerSpecialty, label: 'Portrait' },
-      { value: 'fashion' as DesignerSpecialty, label: 'Fashion' },
-      { value: 'event' as DesignerSpecialty, label: 'Event' },
-      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    event_planner: [
-      { value: 'weddings' as DesignerSpecialty, label: 'Weddings' },
-      { value: 'corporate' as DesignerSpecialty, label: 'Corporate' },
-      { value: 'social' as DesignerSpecialty, label: 'Social Events' },
-      { value: 'non_profit' as DesignerSpecialty, label: 'Non-Profit Events' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    model: [
-      { value: 'runway' as DesignerSpecialty, label: 'Runway' },
-      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
-      { value: 'editorial' as DesignerSpecialty, label: 'Editorial' },
-      { value: 'fitness' as DesignerSpecialty, label: 'Fitness' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ],
-    creative_director: [
-      { value: 'fashion' as DesignerSpecialty, label: 'Fashion' },
-      { value: 'advertising' as DesignerSpecialty, label: 'Advertising' },
-      { value: 'brand' as DesignerSpecialty, label: 'Brand Development' },
-      { value: 'art_direction' as DesignerSpecialty, label: 'Art Direction' },
-      { value: 'other' as DesignerSpecialty, label: 'Other' }
-    ]
-  };
-
-  return specialtyMap[category];
+  switch (category) {
+    case 'fashion_designer':
+      return [
+        { value: 'apparel', label: 'Apparel' },
+        { value: 'accessories', label: 'Accessories' },
+        { value: 'footwear', label: 'Footwear' },
+        { value: 'jewelry', label: 'Jewelry' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'interior_designer':
+      return [
+        { value: 'residential', label: 'Residential' },
+        { value: 'commercial', label: 'Commercial' },
+        { value: 'hospitality', label: 'Hospitality' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'graphic_designer':
+      return [
+        { value: 'branding', label: 'Branding' },
+        { value: 'digital', label: 'Digital' },
+        { value: 'print', label: 'Print' },
+        { value: 'illustration', label: 'Illustration' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'visual_artist':
+      return [
+        { value: 'painting', label: 'Painting' },
+        { value: 'sculpture', label: 'Sculpture' },
+        { value: 'digital_art', label: 'Digital Art' },
+        { value: 'mixed_media', label: 'Mixed Media' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'photographer':
+      return [
+        { value: 'portrait', label: 'Portrait' },
+        { value: 'fashion', label: 'Fashion' },
+        { value: 'event', label: 'Event' },
+        { value: 'commercial', label: 'Commercial' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'event_planner':
+      return [
+        { value: 'weddings', label: 'Weddings' },
+        { value: 'corporate', label: 'Corporate' },
+        { value: 'social', label: 'Social Events' },
+        { value: 'non_profit', label: 'Non-Profit Events' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'model':
+      return [
+        { value: 'runway', label: 'Runway' },
+        { value: 'commercial', label: 'Commercial' },
+        { value: 'editorial', label: 'Editorial' },
+        { value: 'fitness', label: 'Fitness' },
+        { value: 'other', label: 'Other' }
+      ];
+    case 'creative_director':
+      return [
+        { value: 'fashion', label: 'Fashion' },
+        { value: 'advertising', label: 'Advertising' },
+        { value: 'brand', label: 'Brand Development' },
+        { value: 'art_direction', label: 'Art Direction' },
+        { value: 'other', label: 'Other' }
+      ];
+    default:
+      return [{ value: 'other', label: 'Other' }];
+  }
 };

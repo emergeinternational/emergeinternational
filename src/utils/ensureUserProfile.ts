@@ -33,53 +33,79 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     console.log("Creating new profile for user:", userId);
     
-    // No profile found, create one with basic info
+    // Create profile without role field first - safer approach to avoid app_role errors
     const { error } = await supabase
       .from('profiles')
       .insert({ 
         id: userId,
         email: email,
         updated_at: new Date().toISOString(),
-        role: 'user' // Set a default role directly in the profiles table
+        // No role field here to avoid app_role type errors
       });
 
     if (error) {
       console.error("Error creating user profile:", error);
       
-      // Handle specific app_role type error
-      if (error.message.includes('type "app_role" does not exist')) {
-        console.log("Detected app_role type error. Creating profile without role field...");
+      // Try again with simplified profile if there's any error
+      if (error.message.includes('type "app_role"') || 
+          error.message.includes('Database error') ||
+          error.message.includes('foreign key constraint')) {
         
-        // Try again without the role field
+        console.log("Attempting simplified profile creation without optional fields...");
+        
+        // Retry with minimal data
         const { error: retryError } = await supabase
           .from('profiles')
           .insert({ 
             id: userId,
-            email: email,
-            updated_at: new Date().toISOString()
+            email: email
           });
           
         if (retryError) {
           console.error("Second attempt to create profile failed:", retryError);
           return false;
         } else {
-          console.log("Profile created successfully without role field");
+          console.log("Simple profile created successfully");
+          
+          // Now try to update the user role in the user_roles table if it exists
+          try {
+            await supabase
+              .from('user_roles')
+              .insert({
+                user_id: userId,
+                role: 'user'
+              })
+              .select();
+            console.log("User role set in user_roles table");
+          } catch (roleError) {
+            // This is not critical - the user can still use the app without a role
+            console.log("Could not set user role, but profile was created:", roleError);
+          }
+          
           return true;
         }
-      }
-      
-      // Check if it's a foreign key constraint issue
-      if (error.message.includes('foreign key constraint')) {
-        console.log("Foreign key constraint error - this could be a race condition. Retrying...");
-        // Wait briefly and try again
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return await ensureUserProfile(userId, email);
       }
       
       return false;
     }
     
     console.log("Profile created successfully for user:", userId);
+    
+    // Now try to update the user role in the user_roles table if it exists
+    try {
+      await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'user'
+        })
+        .select();
+      console.log("User role set in user_roles table");
+    } catch (roleError) {
+      // This is not critical - the user can still use the app without a role
+      console.log("Could not set user role in separate table, but profile was created");
+    }
+    
     return true;
   } catch (error) {
     console.error("Exception in ensureUserProfile:", error);
