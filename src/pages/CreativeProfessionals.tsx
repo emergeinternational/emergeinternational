@@ -77,7 +77,13 @@ const CreativeProfessionals = () => {
         <div>
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-serif font-semibold">
-              {activeCategory?.label || "All Professionals"}
+              {activeCategory?.label.replace('Designers', 'Designer')
+                .replace('Artists', 'Artist')
+                .replace('Photographers', 'Photographer')
+                .replace('Planners', 'Planner')
+                .replace('Models', 'Model')
+                .replace('Directors', 'Director')
+                .replace('Professionals', 'Professional') || "All Professionals"}
             </h2>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
