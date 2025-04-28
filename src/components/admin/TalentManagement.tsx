@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type TalentStatus = 'pending' | 'approved' | 'rejected' | 'on_hold';
 
@@ -51,42 +51,15 @@ interface TalentApplication {
   age: number | null;
   category_type: string | null;
   photo_url: string | null;
-  gender: string | null; // Made explicit
+  gender: string | null;
 }
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
-  const [debugRecords, setDebugRecords] = useState<any[]>([]);
-
-  // Debug function to check table columns
-  const checkTableSchema = async () => {
-    try {
-      console.log("Checking talent_applications columns...");
-      
-      // Make a direct fetch call to the edge function
-      const { data, error } = await supabase.functions.invoke('select_columns_info', {
-        body: { table_name: 'talent_applications' }
-      });
-      
-      if (error) {
-        console.error("Failed to check schema:", error);
-      } else {
-        console.log("Talent applications table schema:", data?.columns);
-      }
-      
-    } catch (err) {
-      console.error("Error checking schema:", err);
-    }
-  };
-  
-  // Debug on mount
-  useEffect(() => {
-    console.log("TalentManagement component mounted");
-    // Check table schema when component mounts
-    checkTableSchema();
-  }, []);
+  const [syncResults, setSyncResults] = useState<any>(null);
 
   const { data: applications, isLoading, refetch } = useQuery({
     queryKey: ['talent-applications'],
@@ -104,11 +77,56 @@ const TalentManagement = () => {
       
       console.log("Fetched applications:", data);
       
-      // Store raw data for debugging
-      setDebugRecords(data || []);
+      // Type assertion to handle TypeScript compatibility
+      return (data || []) as TalentApplication[];
+    }
+  });
+
+  const { data: pendingSubmissions, isLoading: isLoadingSubmissions } = useQuery({
+    queryKey: ['pending-emerge-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('emerge_submissions')
+        .select('*')
+        .eq('sync_status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching pending submissions:", error);
+        throw error;
+      }
       
-      // Use type assertion to avoid TypeScript errors
-      return (data as unknown) as TalentApplication[];
+      return data || [];
+    }
+  });
+
+  const syncTalentsMutation = useMutation({
+    mutationFn: async () => {
+      setIsSyncing(true);
+      const { data, error } = await supabase.functions.invoke('talent-sync');
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setSyncResults(data);
+      toast({
+        title: "Sync completed",
+        description: `Successfully processed ${data.processed} talent submissions`
+      });
+      // Refresh applications list
+      refetch();
+    },
+    onError: (error) => {
+      console.error("Error syncing talents:", error);
+      toast({
+        title: "Sync failed",
+        description: "There was an error syncing talent applications",
+        variant: "destructive"
+      });
+    },
+    onSettled: () => {
+      setIsSyncing(false);
     }
   });
 
@@ -130,6 +148,10 @@ const TalentManagement = () => {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const handleSyncTalents = () => {
+    syncTalentsMutation.mutate();
   };
 
   const updateApplicationStatus = async (id: string, status: TalentStatus) => {
@@ -170,12 +192,47 @@ const TalentManagement = () => {
     }
   };
 
-  // Debug log to check data
-  console.log("Current applications data:", applications);
-  console.log("Raw database records:", debugRecords);
-  
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Sync section for pending submissions */}
+      {pendingSubmissions && pendingSubmissions.length > 0 && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              There are <strong>{pendingSubmissions.length}</strong> new talent submissions that need to be synced
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncTalents}
+              disabled={isSyncing}
+              className="border-amber-500 hover:bg-amber-100"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Syncing..." : "Sync Now"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {syncResults && (
+        <div className="p-4 bg-gray-50 rounded-lg mb-4">
+          <h3 className="font-medium mb-2">Last Sync Results</h3>
+          <p>Processed: {syncResults.processed} submissions</p>
+          <div className="mt-2 text-sm">
+            {syncResults.results && syncResults.results.map((result: any, index: number) => (
+              <div key={index} className="flex gap-2 items-center">
+                <span className={result.status === 'synced' ? 'text-green-500' : 'text-blue-500'}>
+                  {result.email}
+                </span>
+                <span className="text-gray-500">-</span>
+                <span className="capitalize">{result.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Applications</h2>
         <Button 
@@ -446,16 +503,6 @@ const TalentManagement = () => {
           )}
         </TableBody>
       </Table>
-      
-      {/* Add debug info section */}
-      {debugRecords && debugRecords.length > 0 && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">Debug: Latest Record</h3>
-          <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto">
-            {JSON.stringify(debugRecords[0], null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 };
