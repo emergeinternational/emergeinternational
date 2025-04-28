@@ -4,12 +4,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Designer } from "@/services/designerTypes";
 import MainLayout from "../layouts/MainLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/utils/usePageTitle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const CreativeProfessionals = () => {
-  usePageTitle("Creative Professionals 🌍 | Emerge International");
+  usePageTitle();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const { data: designers, isLoading } = useQuery({
@@ -41,6 +50,8 @@ const CreativeProfessionals = () => {
 
   const featuredDesigners = designers?.filter(designer => designer.featured) || [];
 
+  const activeCategory = categories.find(cat => cat.value === selectedCategory);
+
   return (
     <MainLayout>
       <div className="emerge-container py-12">
@@ -64,37 +75,54 @@ const CreativeProfessionals = () => {
         )}
 
         <div>
-          <Tabs defaultValue="all" onValueChange={setSelectedCategory}>
-            <div className="flex justify-center mb-8">
-              <TabsList className="overflow-x-auto flex p-1 max-w-full">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-serif font-semibold">
+              {activeCategory?.label || "All Professionals"}
+            </h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter by Category
+                  {selectedCategory !== "all" && (
+                    <Badge variant="secondary" className="ml-2">1</Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Categories</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {categories.map((category) => (
-                  <TabsTrigger key={category.value} value={category.value} className="whitespace-nowrap">
+                  <DropdownMenuItem
+                    key={category.value}
+                    onClick={() => setSelectedCategory(category.value)}
+                    className="flex items-center justify-between"
+                  >
                     {category.label}
-                  </TabsTrigger>
+                    {category.value === selectedCategory && (
+                      <span className="text-primary">✓</span>
+                    )}
+                  </DropdownMenuItem>
                 ))}
-              </TabsList>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading creative professionals...</p>
             </div>
-            
-            {categories.map((category) => (
-              <TabsContent key={category.value} value={category.value} className="mt-0">
-                {isLoading ? (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">Loading creative professionals...</p>
-                  </div>
-                ) : filteredDesigners?.length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">No creative professionals found in this category</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredDesigners?.map((designer) => (
-                      <DesignerCard key={designer.id} designer={designer} />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
+          ) : filteredDesigners?.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No creative professionals found in this category</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredDesigners?.map((designer) => (
+                <DesignerCard key={designer.id} designer={designer} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>
