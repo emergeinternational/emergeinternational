@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { OrderStatus, PaymentStatus } from '@/services/orderTypes';
 
 export const useOrdersRealtime = (onOrderChange?: () => void) => {
   const { toast } = useToast();

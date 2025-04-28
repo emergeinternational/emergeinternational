@@ -147,8 +147,18 @@ const OrderFilters = ({ filters, setFilters }: OrderFiltersProps) => {
                 initialFocus
                 mode="range"
                 defaultMonth={dateRange.from}
-                selected={dateRange}
-                onSelect={setDateRange}
+                selected={{
+                  from: dateRange.from,
+                  to: dateRange.to
+                }}
+                onSelect={(selected) => {
+                  if (selected) {
+                    setDateRange({
+                      from: selected.from,
+                      to: selected.to
+                    });
+                  }
+                }}
                 numberOfMonths={2}
               />
             </PopoverContent>
