@@ -2,15 +2,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCcw, AlertCircle, Check } from "lucide-react";
+import { RefreshCcw, AlertCircle, Check, Lock, Unlock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useTalentSync } from "@/hooks/useTalentSync";
+import { usePageProtection } from "@/hooks/usePageProtection";
+import { Badge } from "@/components/ui/badge";
 
 export function TalentSyncActions() {
   const [showResult, setShowResult] = useState(false);
   const { toast } = useToast();
+  const { isLocked, requestUnlock, lockPage } = usePageProtection("Talent Management");
   
   const { 
     runForceSync, 
@@ -20,6 +23,11 @@ export function TalentSyncActions() {
   } = useTalentSync();
 
   const handleForceSync = async () => {
+    // Check if action is allowed while page is protected
+    if (!requestUnlock()) {
+      return;
+    }
+    
     setShowResult(false);
     try {
       const result = await runForceSync();
@@ -51,15 +59,38 @@ export function TalentSyncActions() {
     <div className="space-y-4">
       <div className="flex flex-col space-y-2">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">Talent Data Synchronization</h3>
-          <Button 
-            onClick={handleForceSync} 
-            disabled={isForceSyncing}
-            size="sm"
-          >
-            <RefreshCcw className={`h-4 w-4 mr-2 ${isForceSyncing ? "animate-spin" : ""}`} />
-            {isForceSyncing ? "Syncing..." : "Force Sync Now"}
-          </Button>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-lg font-medium">Talent Data Synchronization</h3>
+            {isLocked ? (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                <Lock className="h-3 w-3 mr-1" /> Protected
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <Unlock className="h-3 w-3 mr-1" /> Unlocked
+              </Badge>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            {!isLocked && (
+              <Button 
+                onClick={lockPage} 
+                size="sm"
+                variant="outline"
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Lock Page
+              </Button>
+            )}
+            <Button 
+              onClick={handleForceSync} 
+              disabled={isForceSyncing}
+              size="sm"
+            >
+              <RefreshCcw className={`h-4 w-4 mr-2 ${isForceSyncing ? "animate-spin" : ""}`} />
+              {isForceSyncing ? "Syncing..." : "Force Sync Now"}
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-gray-500">
           Force an immediate synchronization of all talent submissions to ensure data consistency between systems.
