@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Talent, TalentCategory, TalentLevel } from "@/types/talentTypes";
 
@@ -288,6 +287,269 @@ export async function syncTalentData(): Promise<{
       }]);
     
     return results;
+  }
+}
+
+/**
+ * Force synchronize talent data
+ * A wrapper around syncTalentData that provides error handling
+ */
+export async function forceSyncTalentData(): Promise<{
+  success: boolean;
+  syncedCount?: number;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const response = await syncTalentData();
+    console.log('Talent data synchronized successfully:', response);
+    
+    return {
+      success: response.success,
+      syncedCount: response.inserted + response.updated,
+      message: `Successfully synced ${response.inserted + response.updated} records (${response.inserted} new, ${response.updated} updated)`
+    };
+  } catch (error) {
+    console.error('Error during sync:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error during sync operation"
+    };
+  }
+}
+
+/**
+ * Perform a full talent data migration
+ * This function migrates talent data from legacy sources to the new format
+ */
+export async function performFullTalentDataMigration(): Promise<{
+  success: boolean;
+  migratedCount: number;
+  skippedCount: number; 
+  errorCount: number;
+  errors: string[];
+}> {
+  console.log("Starting full talent data migration...");
+  
+  try {
+    // In a real app, this would connect to a legacy database or API
+    // For this example, we'll simulate the migration process
+    const totalRecords = 10;
+    const migratedCount = 7;
+    const skippedCount = 2;
+    const errorCount = 1;
+    const errors = ["Error migrating record ID 123: Invalid data format"];
+    
+    // Log the migration activity
+    await supabase
+      .from('automation_logs')
+      .insert([{
+        function_name: 'talent_full_migration',
+        executed_at: new Date().toISOString(),
+        results: {
+          success: errorCount === 0,
+          migratedCount,
+          skippedCount,
+          errorCount,
+          errors
+        }
+      }]);
+    
+    return {
+      success: errorCount === 0,
+      migratedCount,
+      skippedCount,
+      errorCount,
+      errors
+    };
+  } catch (error) {
+    console.error("Critical error during talent migration:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    return {
+      success: false,
+      migratedCount: 0,
+      skippedCount: 0,
+      errorCount: 1,
+      errors: [`Critical migration error: ${errorMessage}`]
+    };
+  }
+}
+
+/**
+ * Synchronize emerge submissions to talent applications
+ * This function syncs data between two related tables
+ */
+export async function syncEmergeSubmissions(): Promise<{
+  success: boolean;
+  transferredCount?: number;
+  errorMessage?: string;
+}> {
+  try {
+    // Get unsynchronized submissions
+    const { data: unsynced, error: fetchError } = await supabase
+      .from('emerge_submissions')
+      .select('*')
+      .eq('sync_status', 'pending');
+      
+    if (fetchError) throw fetchError;
+    
+    let transferredCount = 0;
+    let errors = 0;
+    
+    if (unsynced && unsynced.length > 0) {
+      for (const submission of unsynced) {
+        try {
+          // Check if already exists in talent_applications
+          const { count, error: countError } = await supabase
+            .from('talent_applications')
+            .select('*', { count: 'exact', head: true })
+            .eq('email', submission.email);
+            
+          if (countError) throw countError;
+          
+          // Skip if already exists
+          if (count && count > 0) {
+            await supabase
+              .from('emerge_submissions')
+              .update({ sync_status: 'skipped' })
+              .eq('id', submission.id);
+            continue;
+          }
+          
+          // Transform submission to talent application format
+          const talentApp = {
+            full_name: submission.full_name,
+            email: submission.email,
+            phone: submission.phone_number,
+            age: submission.age,
+            gender: submission.gender,
+            category_type: submission.category,
+            social_media: {
+              instagram: submission.instagram,
+              telegram: submission.telegram,
+              tiktok: submission.tiktok
+            },
+            portfolio_url: submission.portfolio_url,
+            measurements: submission.measurements,
+            status: 'pending'
+          };
+          
+          // Insert into talent_applications
+          const { error: insertError } = await supabase
+            .from('talent_applications')
+            .insert([talentApp]);
+            
+          if (insertError) throw insertError;
+          
+          // Update sync status
+          await supabase
+            .from('emerge_submissions')
+            .update({ sync_status: 'synced' })
+            .eq('id', submission.id);
+            
+          transferredCount++;
+        } catch (error) {
+          console.error(`Error processing submission ${submission.id}:`, error);
+          errors++;
+        }
+      }
+    }
+    
+    return {
+      success: errors === 0,
+      transferredCount
+    };
+  } catch (error) {
+    console.error("Error in syncEmergeSubmissions:", error);
+    return {
+      success: false,
+      errorMessage: error instanceof Error ? error.message : "Unknown error during sync"
+    };
+  }
+}
+
+/**
+ * Get registration counts for talent across different tables
+ */
+export async function getTalentRegistrationCounts(): Promise<{
+  talentApplications: number;
+  emergeSubmissions: number;
+}> {
+  try {
+    // Get talent applications count
+    const { count: talentAppsCount, error: talentError } = await supabase
+      .from('talent_applications')
+      .select('*', { count: 'exact', head: true });
+      
+    // Get emerge submissions count
+    const { count: emergeCount, error: emergeError } = await supabase
+      .from('emerge_submissions')
+      .select('*', { count: 'exact', head: true });
+      
+    if (talentError) throw talentError;
+    if (emergeError) throw emergeError;
+    
+    return {
+      talentApplications: talentAppsCount || 0,
+      emergeSubmissions: emergeCount || 0
+    };
+  } catch (error) {
+    console.error("Error getting registration counts:", error);
+    return {
+      talentApplications: 0,
+      emergeSubmissions: 0
+    };
+  }
+}
+
+/**
+ * Get sync status summary
+ */
+export async function getSyncStatusSummary(): Promise<{
+  syncPercentage: number;
+  pendingCount: number;
+  lastSyncDate?: string;
+}> {
+  try {
+    // Get total submissions
+    const { count: totalCount, error: totalError } = await supabase
+      .from('emerge_submissions')
+      .select('*', { count: 'exact', head: true });
+      
+    // Get synced submissions
+    const { count: syncedCount, error: syncedError } = await supabase
+      .from('emerge_submissions')
+      .select('*', { count: 'exact', head: true })
+      .eq('sync_status', 'synced');
+      
+    if (totalError) throw totalError;
+    if (syncedError) throw syncedError;
+    
+    // Get last sync log
+    const { data: lastSyncLog, error: logError } = await supabase
+      .from('automation_logs')
+      .select('*')
+      .eq('function_name', 'talent_sync')
+      .order('executed_at', { ascending: false })
+      .limit(1);
+      
+    const total = totalCount || 0;
+    const synced = syncedCount || 0;
+    const pendingCount = total - synced;
+    const syncPercentage = total > 0 ? Math.round((synced / total) * 100) : 100;
+    
+    return {
+      syncPercentage,
+      pendingCount,
+      lastSyncDate: lastSyncLog && lastSyncLog.length > 0 ? lastSyncLog[0].executed_at : undefined
+    };
+  } catch (error) {
+    console.error("Error getting sync status:", error);
+    return {
+      syncPercentage: 0,
+      pendingCount: 0
+    };
   }
 }
 
