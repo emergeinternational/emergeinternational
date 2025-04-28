@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,7 +25,7 @@ const formSchema = z.object({
     message: "Please enter a valid email.",
   }).optional(),
   bio: z.string().optional(),
-  specialty: specialtyEnum, // Use the enum directly
+  specialty: specialtyEnum,
   category: z.enum([
     'fashion_designer',
     'model',
@@ -62,7 +61,7 @@ export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultVal
     full_name: '',
     email: '',
     bio: '',
-    specialty: 'apparel' as DesignerSpecialty, // Use a valid default from the enum
+    specialty: 'apparel' as DesignerSpecialty,
     category: 'fashion_designer' as CreatorCategory,
     portfolio_url: '',
     location: '',

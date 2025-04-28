@@ -28,7 +28,7 @@ export interface SocialMedia {
 export interface FeaturedProject {
   title: string;
   description: string;
-  image_url?: string;
+  image_url: string; // Changed to required
   date?: string;
 }
 
@@ -44,7 +44,7 @@ export interface Designer {
   full_name: string;
   email?: string;
   bio?: string;
-  specialty: string | DesignerSpecialty; // Modified to accommodate string values
+  specialty: DesignerSpecialty;
   category: CreatorCategory;
   portfolio_url?: string;
   location?: string;
