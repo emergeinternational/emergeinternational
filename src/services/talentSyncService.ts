@@ -122,3 +122,176 @@ export async function getTalentRegistrationCounts(): Promise<{
     };
   }
 }
+
+/**
+ * Performs a one-time comprehensive migration of all records from emerge_submissions to talent_applications
+ * with careful handling of duplicates and data integrity
+ */
+export async function performFullTalentDataMigration(): Promise<{
+  success: boolean;
+  migratedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  errors: string[];
+}> {
+  console.log("Starting full talent data migration process");
+  
+  try {
+    // 1. Fetch all records from emerge_submissions
+    const { data: emergeSubmissions, error: fetchError } = await supabase
+      .from('emerge_submissions')
+      .select('*')
+      .order('created_at', { ascending: true });
+    
+    if (fetchError) {
+      console.error("Error fetching emerge submissions:", fetchError);
+      return {
+        success: false,
+        migratedCount: 0,
+        skippedCount: 0,
+        errorCount: 1,
+        errors: [fetchError.message]
+      };
+    }
+    
+    if (!emergeSubmissions || emergeSubmissions.length === 0) {
+      console.log("No records found in emerge_submissions table");
+      return {
+        success: true,
+        migratedCount: 0,
+        skippedCount: 0,
+        errorCount: 0,
+        errors: []
+      };
+    }
+    
+    // 2. Fetch all existing records from talent_applications to check for duplicates
+    const { data: existingApplications, error: existingError } = await supabase
+      .from('talent_applications')
+      .select('email, phone');
+    
+    if (existingError) {
+      console.error("Error fetching existing applications:", existingError);
+      return {
+        success: false,
+        migratedCount: 0,
+        skippedCount: 0,
+        errorCount: 1,
+        errors: [existingError.message]
+      };
+    }
+    
+    // 3. Create lookup sets for quick duplicate checking
+    const existingEmails = new Set(existingApplications?.map(app => app.email?.toLowerCase()) || []);
+    const existingPhones = new Set(existingApplications?.map(app => app.phone) || []);
+    
+    // 4. Filter and prepare records for migration
+    const recordsToMigrate = [];
+    const skippedRecords = [];
+    const errors = [];
+    
+    for (const submission of emergeSubmissions) {
+      // Skip if email already exists in talent_applications
+      if (existingEmails.has(submission.email?.toLowerCase())) {
+        console.log(`Skipping record with duplicate email: ${submission.email}`);
+        skippedRecords.push(submission);
+        continue;
+      }
+      
+      // Skip if phone exists and is not null/empty
+      if (submission.phone_number && existingPhones.has(submission.phone_number)) {
+        console.log(`Skipping record with duplicate phone: ${submission.phone_number}`);
+        skippedRecords.push(submission);
+        continue;
+      }
+      
+      // Prepare record for migration with proper field mapping
+      try {
+        recordsToMigrate.push({
+          full_name: submission.full_name || 'Unknown',
+          email: submission.email,
+          phone: submission.phone_number,
+          age: typeof submission.age === 'number' ? submission.age : null,
+          status: 'pending',
+          social_media: {
+            instagram: submission.instagram || null,
+            telegram: submission.telegram || null,
+            tiktok: submission.tiktok || null
+          },
+          notes: submission.talent_description || null,
+          category_type: submission.category || null,
+          gender: submission.gender || null,
+          portfolio_url: submission.portfolio_url || null,
+          measurements: submission.measurements || null,
+          created_at: submission.created_at || new Date().toISOString()
+        });
+        
+        // Add migrated email to existing sets to avoid duplicate migrations in the same batch
+        existingEmails.add(submission.email?.toLowerCase());
+        if (submission.phone_number) {
+          existingPhones.add(submission.phone_number);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error during record preparation');
+        console.error(`Error preparing record ${submission.id}:`, error);
+        errors.push(`Error preparing record ${submission.id}: ${error.message}`);
+      }
+    }
+    
+    // 5. Migrate records in batches to avoid request size limits
+    const BATCH_SIZE = 50;
+    let migratedCount = 0;
+    let errorCount = errors.length;
+    
+    for (let i = 0; i < recordsToMigrate.length; i += BATCH_SIZE) {
+      const batch = recordsToMigrate.slice(i, i + BATCH_SIZE);
+      
+      if (batch.length === 0) continue;
+      
+      try {
+        console.log(`Migrating batch of ${batch.length} records (${i + 1} to ${i + batch.length})`);
+        const { error: insertError } = await supabase
+          .from('talent_applications')
+          .insert(batch);
+        
+        if (insertError) {
+          console.error(`Error inserting batch (${i + 1} to ${i + batch.length}):`, insertError);
+          errors.push(`Batch insertion error (records ${i + 1} to ${i + batch.length}): ${insertError.message}`);
+          errorCount++;
+        } else {
+          migratedCount += batch.length;
+          console.log(`Successfully migrated batch of ${batch.length} records`);
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Unknown error');
+        console.error(`Error processing batch (${i + 1} to ${i + batch.length}):`, error);
+        errors.push(`Batch processing error (records ${i + 1} to ${i + batch.length}): ${error.message}`);
+        errorCount++;
+      }
+      
+      // Small delay between batches to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // 6. Return comprehensive report
+    const success = errorCount === 0;
+    console.log(`Migration completed with: ${migratedCount} migrated, ${skippedRecords.length} skipped, ${errorCount} errors`);
+    
+    return {
+      success,
+      migratedCount,
+      skippedCount: skippedRecords.length,
+      errorCount,
+      errors
+    };
+  } catch (error) {
+    console.error("Critical error during talent data migration:", error);
+    return {
+      success: false,
+      migratedCount: 0,
+      skippedCount: 0,
+      errorCount: 1,
+      errors: [error instanceof Error ? error.message : "Unknown critical error during migration"]
+    };
+  }
+}

@@ -42,6 +42,7 @@ type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 const MediaSubmission = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<MediaFormData>({
@@ -53,39 +54,57 @@ const MediaSubmission = () => {
 
   const onSubmit = async (data: MediaFormData) => {
     try {
+      setIsSubmitting(true);
+      
       // Common data structure to send to both tables
       const commonData = {
         full_name: data.fullName,
         email: data.email,
-        phone: data.phoneNumber,
+        phone_number: data.phoneNumber, // for emerge_submissions
+        phone: data.phoneNumber, // for talent_applications
         age: parseInt(data.age, 10),
-        category_type: data.category,
-        notes: data.description,
+        category: data.category, // for emerge_submissions
+        category_type: data.category, // for talent_applications
+        talent_description: data.description, // for emerge_submissions
+        notes: data.description, // for talent_applications
+      };
+      
+      // Social media data formatted appropriately for each table
+      const emergeData = {
+        ...commonData,
+        instagram: data.instagramHandle || null,
+        tiktok: data.tiktokHandle || null
+      };
+      
+      const talentData = {
+        ...commonData,
+        status: "pending" as TalentStatus,
         social_media: {
           instagram: data.instagramHandle || null,
-          tiktok: data.tiktokHandle || null
+          tiktok: data.tiktokHandle || null,
+          telegram: null
         }
       };
       
-      // Insert into talent_applications
+      // First insert into emerge_submissions (this is the original table)
+      const { error: emergeError } = await supabase
+        .from('emerge_submissions')
+        .insert(emergeData);
+      
+      if (emergeError) {
+        console.error("Database insertion error for emerge_submissions:", emergeError);
+        throw new Error(`Failed to save your submission: ${emergeError.message}`);
+      }
+      
+      // Then insert into talent_applications (the talent management system)
       const { error: talentError } = await supabase
         .from('talent_applications')
-        .insert({
-          ...commonData,
-          status: "pending" as TalentStatus
-        });
+        .insert(talentData);
       
+      // Log but don't stop submission if talent_applications insertion fails
       if (talentError) {
-        console.error("Error inserting into talent_applications:", talentError);
-        // Fall back to emerge_submissions if talent_applications insert fails
-        const { error: emergeError } = await supabase
-          .from('emerge_submissions')
-          .insert(commonData);
-        
-        if (emergeError) {
-          console.error("Database insertion error:", emergeError);
-          throw new Error(`Failed to save your submission: ${emergeError.message}`);
-        }
+        console.error("Database insertion error for talent_applications:", talentError);
+        // We still consider this a success since the primary submission worked
       }
       
       toast({
@@ -102,6 +121,8 @@ const MediaSubmission = () => {
         description: error instanceof Error ? error.message : "Failed to process your submission",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +32,7 @@ import { TalentApplication, TalentStatus } from "@/types/talentTypes";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TalentDataMigrationTool } from "./TalentDataMigrationTool";
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
@@ -499,6 +499,8 @@ const TalentDatabaseStatus = () => {
           </Alert>
         )}
       </div>
+      
+      <TalentDataMigrationTool />
     </Card>
   );
 };
