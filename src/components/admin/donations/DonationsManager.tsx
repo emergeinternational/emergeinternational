@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import DonorsTable from "./DonorsTable";
 import DonationPageConfig from "./DonationPageConfig";
+import { Button } from "@/components/ui/button";
 
 const DonationsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");

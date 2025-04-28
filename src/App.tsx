@@ -39,7 +39,7 @@ import Profile from "./pages/Profile";
 import Certificates from "./pages/Certificates";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/UsersPage";
-import Orders from "./pages/admin/Orders";
+import OrdersPage from "./pages/admin/OrdersPage";
 import Settings from "./pages/admin/Settings";
 import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
@@ -138,7 +138,7 @@ const App = () => {
                 } />
                 <Route path="/admin/orders" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                    <Orders />
+                    <OrdersPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/settings" element={
