@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Designer, CreatorCategory, DesignerSpecialty } from "@/services/designerTypes";
+import type { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -196,6 +195,8 @@ const DesignerFormDialog = ({
     }
   };
   
+  const specialtyOptions = getSpecialtyOptions(category);
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose(false)}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -245,7 +246,11 @@ const DesignerFormDialog = ({
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={category}
-                  onValueChange={(value) => setCategory(value as CreatorCategory)}
+                  onValueChange={(value) => {
+                    setCategory(value as CreatorCategory);
+                    // Reset specialty when category changes
+                    setSpecialty(getSpecialtyOptions(value as CreatorCategory)[0].value);
+                  }}
                 >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
@@ -270,11 +275,11 @@ const DesignerFormDialog = ({
                     <SelectValue placeholder="Select specialty" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="apparel">Apparel</SelectItem>
-                    <SelectItem value="accessories">Accessories</SelectItem>
-                    <SelectItem value="footwear">Footwear</SelectItem>
-                    <SelectItem value="jewelry">Jewelry</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {specialtyOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
