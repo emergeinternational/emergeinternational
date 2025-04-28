@@ -15,6 +15,7 @@ export function TalentSyncActions() {
     success: boolean;
     syncedCount?: number;
     message?: string;
+    error?: string;
   } | null>(null);
   
   const { toast } = useToast();
