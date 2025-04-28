@@ -1,8 +1,7 @@
 
-export type DesignerCategory = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
-
 export interface SocialMedia {
   instagram?: string;
+  facebook?: string;
   twitter?: string;
   website?: string;
 }
@@ -10,16 +9,16 @@ export interface SocialMedia {
 export interface Designer {
   id: string;
   full_name: string;
-  email?: string | null;
-  bio?: string | null;
-  specialty: DesignerCategory;
-  portfolio_url?: string | null;
+  email?: string;
+  bio?: string;
+  specialty: 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
+  portfolio_url?: string;
+  image_url?: string;
   social_media?: SocialMedia;
-  products?: string[];
   featured: boolean;
-  image_url?: string | null;
+  products?: string[];
+  revenue?: number;
+  sales_count?: number;
   created_at?: string;
   updated_at?: string;
-  sales_count?: number;
-  revenue?: number;
 }

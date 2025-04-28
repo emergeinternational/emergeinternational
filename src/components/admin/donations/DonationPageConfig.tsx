@@ -1,355 +1,636 @@
-
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import type { DonationPageSettings } from "@/services/donationTypes";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DonationPageSettings } from "@/services/donationTypes";
 
-const settingsSchema = z.object({
-  hero_title: z.string().min(1, "Title is required"),
-  hero_description: z.string().nullable(),
-  hero_image_url: z.string().nullable(),
+const formSchema = z.object({
+  hero_title: z.string().min(2, {
+    message: "Hero title must be at least 2 characters.",
+  }),
+  hero_description: z.string().optional(),
+  hero_image_url: z.string().url({ message: "Invalid URL" }).optional(),
+  payment_methods: z.array(z.string()).optional(),
+  currency_options: z.array(z.string()).optional(),
+  suggested_amounts: z.array(z.number()).optional(),
+  min_donation_amount: z.number().optional(),
+  max_donation_amount: z.number().optional(),
+  thank_you_message: z.string().optional(),
+  is_active: z.boolean().default(false),
   featured_member: z.object({
     name: z.string(),
     role: z.string(),
-    bio: z.string(),
-    image_url: z.string()
-  }).nullable(),
-  min_donation_amount: z.number().min(0),
-  max_donation_amount: z.number().min(0),
-  suggested_amounts: z.array(z.number()),
-  currency_options: z.array(z.string()),
-  payment_methods: z.array(z.string()),
-  thank_you_message: z.string()
+    image_url: z.string().url({ message: "Invalid URL" }),
+    description: z.string(),
+  }).optional(),
 });
 
 const DonationPageConfig = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState<'hero' | 'featured' | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const { data: settings } = useQuery<DonationPageSettings>({
-    queryKey: ["donation-page-settings"],
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['donation-page-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('donation_page_settings')
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      return data as DonationPageSettings;
+    },
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      hero_title: settings?.hero_title || "",
+      hero_description: settings?.hero_description || "",
+      hero_image_url: settings?.hero_image_url || "",
+      payment_methods: settings?.payment_methods || [],
+      currency_options: settings?.currency_options || [],
+      suggested_amounts: settings?.suggested_amounts || [],
+      min_donation_amount: settings?.min_donation_amount || 1,
+      max_donation_amount: settings?.max_donation_amount || 1000,
+      thank_you_message: settings?.thank_you_message || "",
+      is_active: settings?.is_active || false,
+      featured_member: settings?.featured_member || {
+        name: "",
+        role: "",
+        image_url: "",
+        description: "",
+      },
+    },
+    mode: "onChange",
+  });
+
+  useEffect(() => {
+    if (settings) {
+      form.reset(settings);
+    }
+  }, [settings, form]);
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      const { data, error } = await supabase
         .from("donation_page_settings")
-        .select("*")
+        .upsert(
+          [
+            {
+              id: settings?.id || undefined,
+              ...values,
+            },
+          ],
+          { onConflict: "id" }
+        )
+        .select()
         .single();
 
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (values: z.infer<typeof settingsSchema>) => {
-      const { error } = await supabase
-        .from("donation_page_settings")
-        .update(values)
-        .eq("id", settings?.id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["donation-page-settings"] });
-      toast({
-        title: "Settings updated",
-        description: "The donation page settings have been updated successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update settings",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const form = useForm<z.infer<typeof settingsSchema>>({
-    resolver: zodResolver(settingsSchema),
-    defaultValues: settings || {
-      hero_title: "",
-      hero_description: "",
-      hero_image_url: "",
-      featured_member: null,
-      min_donation_amount: 10,
-      max_donation_amount: 1000000,
-      suggested_amounts: [20, 50, 100, 500],
-      currency_options: ["ETB", "USD"],
-      payment_methods: ["bank_transfer", "mobile_money"],
-      thank_you_message: "",
-    },
-  });
-
-  const handleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: 'hero' | 'featured'
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setUploadingImage(type);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${type}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('donation-page')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('donation-page')
-        .getPublicUrl(filePath);
-
-      if (type === 'hero') {
-        form.setValue('hero_image_url', publicUrl);
+      if (error) {
+        console.error("Error updating donation page settings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update donation page settings.",
+          variant: "destructive",
+        });
       } else {
-        const featuredMember = form.getValues('featured_member') || {
-          name: '',
-          role: '',
-          bio: '',
-          image_url: ''
-        };
-        form.setValue('featured_member', {
-          ...featuredMember,
-          image_url: publicUrl
+        toast({
+          title: "Success",
+          description: "Donation page settings updated successfully.",
         });
       }
-
-      toast({
-        title: "Image uploaded",
-        description: "The image has been uploaded successfully.",
-      });
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Unexpected error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to upload image",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
-    } finally {
-      setUploadingImage(null);
     }
   };
 
-  const onSubmit = (values: z.infer<typeof settingsSchema>) => {
-    mutation.mutate(values);
-  };
+  if (!isMounted) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Donation Page Settings</CardTitle>
-        <CardDescription>
-          Customize how the donation page appears to your users
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Hero Section</h3>
-              
-              <FormField
-                control={form.control}
-                name="hero_title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hero Title</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="hero_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hero Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-2">
-                <Label>Hero Image</Label>
-                <div className="flex items-center gap-4">
-                  {settings?.hero_image_url && (
-                    <img 
-                      src={settings.hero_image_url} 
-                      alt="Hero" 
-                      className="w-40 h-24 object-cover rounded"
-                    />
+    <div className="container max-w-4xl mx-auto mt-10 p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Donation Page Configuration</CardTitle>
+          <CardDescription>
+            Manage settings for the donation page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="hero_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hero Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter hero title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('hero-image-upload')?.click()}
-                    disabled={uploadingImage === 'hero'}
-                  >
-                    {uploadingImage === 'hero' ? 'Uploading...' : 'Upload Image'}
-                  </Button>
-                  <input
-                    id="hero-image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'hero')}
-                    className="hidden"
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hero_description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hero Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter hero description"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="hero_image_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Hero Image URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter hero image URL" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="thank_you_message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Thank You Message</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter thank you message"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="min_donation_amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Minimum Donation Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Enter minimum amount"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="max_donation_amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum Donation Amount</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="Enter maximum amount"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              <div>
+                <FormLabel>Payment Methods</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="payment_methods"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("credit_card")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "credit_card",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "credit_card"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Credit Card
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="payment_methods"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("paypal")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "paypal",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "paypal"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">Paypal</FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="payment_methods"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("telebirr")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "telebirr",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "telebirr"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Telebirr
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+                <FormDescription>
+                  Select the payment methods available for donations.
+                </FormDescription>
+                <FormMessage />
+              </div>
+
+              <Separator />
+
+              <div>
+                <FormLabel>Currency Options</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="currency_options"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("USD")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "USD",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "USD"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">USD</FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="currency_options"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("ETB")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "ETB",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "ETB"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">ETB</FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="currency_options"
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes("EUR")}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([
+                                        ...(field.value || []),
+                                        "EUR",
+                                      ])
+                                    : field.onChange(
+                                        field.value?.filter(
+                                          (value) => value !== "EUR"
+                                        )
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">EUR</FormLabel>
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+                <FormDescription>
+                  Select the currency options available for donations.
+                </FormDescription>
+                <FormMessage />
+              </div>
+
+              <Separator />
+
+              <div>
+                <FormLabel>Suggested Donation Amounts</FormLabel>
+                <div className="flex flex-wrap gap-2">
+                  {[5, 10, 20, 50, 100].map((amount) => (
+                    <div key={amount}>
+                      <FormField
+                        control={form.control}
+                        name="suggested_amounts"
+                        render={({ field }) => {
+                          return (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(amount)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([
+                                          ...(field.value || []),
+                                          amount,
+                                        ])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== amount
+                                          )
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {amount}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <FormDescription>
+                  Select the suggested donation amounts.
+                </FormDescription>
+                <FormMessage />
+              </div>
+
+              <Separator />
+
+              <div>
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Donation Page Status
+                        </FormLabel>
+                        <FormDescription>
+                          Enable or disable the donation page.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Featured Member</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="featured_member.name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="featured_member.role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter role" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="featured_member.image_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Image URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter image URL" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="featured_member.description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter description"
+                            className="resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Featured Member</h3>
-              
-              <FormField
-                control={form.control}
-                name="featured_member.name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="featured_member.role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="featured_member.bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-2">
-                <Label>Member Image</Label>
-                <div className="flex items-center gap-4">
-                  {form.watch('featured_member.image_url') && (
-                    <img 
-                      src={form.watch('featured_member.image_url')} 
-                      alt="Featured Member" 
-                      className="w-40 h-40 object-cover rounded-full"
-                    />
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('featured-image-upload')?.click()}
-                    disabled={uploadingImage === 'featured'}
-                  >
-                    {uploadingImage === 'featured' ? 'Uploading...' : 'Upload Image'}
-                  </Button>
-                  <input
-                    id="featured-image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'featured')}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Donation Settings</h3>
-              
-              <FormField
-                control={form.control}
-                name="min_donation_amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Minimum Donation Amount</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field}
-                        onChange={e => field.onChange(parseFloat(e.target.value))}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="max_donation_amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Donation Amount</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        {...field}
-                        onChange={e => field.onChange(parseFloat(e.target.value))}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="thank_you_message"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Thank You Message</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This message will be shown after a successful donation
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <Button type="submit" disabled={isLoading || mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+              <Button type="submit">Update Settings</Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
