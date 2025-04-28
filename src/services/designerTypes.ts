@@ -155,3 +155,8 @@ export const getCategorySpecialty = (category: CreatorCategory, specialty: strin
   // Simply return the specialty as the appropriate type since our union type will handle this
   return specialty as DesignerSpecialty;
 };
+
+// This function helps cast specialties to the database-expected types
+export const castSpecialtyForDatabase = (specialty: DesignerSpecialty): string => {
+  return specialty;
+};

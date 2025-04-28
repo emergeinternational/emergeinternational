@@ -7,6 +7,7 @@ import OrderFilters from "./OrderFilters";
 import OrdersTable from "./OrdersTable";
 import OrderDetailsView from "./OrderDetailsView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Toaster } from "@/components/ui/toaster";
 import type { Order } from "@/services/orderTypes";
 
 export interface OrderStatus {
@@ -47,6 +48,36 @@ export interface OrderFiltersState {
   };
 }
 
+// Simple OrdersSummary component to fix build error
+const OrdersSummary = ({ orders }: { orders: Order[] }) => {
+  return (
+    <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="bg-white rounded-lg p-4 shadow">
+        <h3 className="text-lg font-medium">Total Orders</h3>
+        <p className="text-2xl font-bold">{orders.length}</p>
+      </div>
+      <div className="bg-white rounded-lg p-4 shadow">
+        <h3 className="text-lg font-medium">Pending</h3>
+        <p className="text-2xl font-bold">
+          {orders.filter(order => order.status === 'pending').length}
+        </p>
+      </div>
+      <div className="bg-white rounded-lg p-4 shadow">
+        <h3 className="text-lg font-medium">Processing</h3>
+        <p className="text-2xl font-bold">
+          {orders.filter(order => order.status === 'processing').length}
+        </p>
+      </div>
+      <div className="bg-white rounded-lg p-4 shadow">
+        <h3 className="text-lg font-medium">Completed</h3>
+        <p className="text-2xl font-bold">
+          {orders.filter(order => order.status === 'completed').length}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const OrdersManager = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -61,7 +92,7 @@ const OrdersManager = () => {
         .select(`
           *,
           order_items(*),
-          profiles:user_id(*),
+          profiles:user_id(id, full_name, email),
           shipping_addresses:shipping_address_id(*)
         `)
         .order('created_at', { ascending: false });
@@ -123,21 +154,84 @@ const OrdersManager = () => {
       <OrdersSummary orders={orders || []} />
       
       {/* Filters and Search */}
-      <OrderFilters 
-        filterStatus={filterStatus} 
-        onFilterChange={setFilterStatus}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+      <div className="flex justify-between mb-6">
+        <div className="w-1/3">
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-3 py-2 border rounded-md"
+          />
+        </div>
+      </div>
       
       {/* Orders List / Details View */}
       {selectedOrder ? (
-        <OrderDetailsView 
-          order={selectedOrder} 
-          onClose={handleCloseDetails} 
-          onUpdateStatus={handleUpdateStatus}
-          onRefresh={refetch}
-        />
+        <div className="bg-white p-6 rounded-lg shadow">
+          <button 
+            onClick={handleCloseDetails}
+            className="mb-4 text-blue-600 hover:underline flex items-center"
+          >
+            &larr; Back to all orders
+          </button>
+          <h2 className="text-2xl font-bold mb-4">Order Details: {selectedOrder.id}</h2>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-medium mb-2">Order Information</h3>
+              <p><strong>Status:</strong> {selectedOrder.status}</p>
+              <p><strong>Date:</strong> {new Date(selectedOrder.created_at || "").toLocaleString()}</p>
+              <p><strong>Total:</strong> ${selectedOrder.total_amount}</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium mb-2">Customer Information</h3>
+              <p><strong>Name:</strong> {selectedOrder.profiles?.full_name || "N/A"}</p>
+              <p><strong>Email:</strong> {selectedOrder.profiles?.email || "N/A"}</p>
+            </div>
+          </div>
+          <div className="mt-6">
+            <h3 className="text-lg font-medium mb-2">Order Items</h3>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-2 text-left">Product</th>
+                  <th className="p-2 text-left">Price</th>
+                  <th className="p-2 text-left">Quantity</th>
+                  <th className="p-2 text-left">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedOrder.order_items?.map(item => (
+                  <tr key={item.id} className="border-b">
+                    <td className="p-2">{item.product_name}</td>
+                    <td className="p-2">${item.unit_price}</td>
+                    <td className="p-2">{item.quantity}</td>
+                    <td className="p-2">${item.unit_price * item.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-6">
+            <h3 className="text-lg font-medium mb-2">Update Status</h3>
+            <div className="flex space-x-2">
+              {ORDER_STATUSES.map(status => (
+                <button
+                  key={status.value}
+                  onClick={() => handleUpdateStatus(selectedOrder.id, status.value)}
+                  disabled={selectedOrder.status === status.value}
+                  className={`px-3 py-1 rounded ${
+                    selectedOrder.status === status.value
+                      ? "bg-blue-200 text-blue-800"
+                      : "bg-blue-500 text-white hover:bg-blue-600"
+                  }`}
+                >
+                  {status.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
         <Tabs defaultValue="all" value={filterStatus} onValueChange={setFilterStatus}>
           <TabsList className="mb-6">
@@ -150,24 +244,114 @@ const OrdersManager = () => {
           </TabsList>
           
           <TabsContent value="all" className="mt-0">
-            <OrdersTable 
-              orders={filteredOrders || []} 
-              isLoading={isLoading} 
-              onViewOrder={handleViewOrder} 
-              onUpdateStatus={handleUpdateStatus}
-              onRefresh={refetch}
-            />
+            <div className="bg-white p-6 rounded-lg shadow">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="p-2 text-left">Order ID</th>
+                    <th className="p-2 text-left">Customer</th>
+                    <th className="p-2 text-left">Date</th>
+                    <th className="p-2 text-left">Status</th>
+                    <th className="p-2 text-left">Total</th>
+                    <th className="p-2 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center">Loading orders...</td>
+                    </tr>
+                  ) : filteredOrders?.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center">No orders found</td>
+                    </tr>
+                  ) : (
+                    filteredOrders?.map(order => (
+                      <tr key={order.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2">{order.id.substring(0, 8)}...</td>
+                        <td className="p-2">{order.profiles?.full_name || 'Unknown'}</td>
+                        <td className="p-2">{new Date(order.created_at || "").toLocaleDateString()}</td>
+                        <td className="p-2">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="p-2">${order.total_amount}</td>
+                        <td className="p-2">
+                          <button
+                            onClick={() => handleViewOrder(order.id)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </TabsContent>
           
           {["pending", "processing", "shipped", "delivered", "cancelled"].map((status) => (
             <TabsContent key={status} value={status} className="mt-0">
-              <OrdersTable 
-                orders={filteredOrders || []} 
-                isLoading={isLoading} 
-                onViewOrder={handleViewOrder} 
-                onUpdateStatus={handleUpdateStatus}
-                onRefresh={refetch}
-              />
+              <div className="bg-white p-6 rounded-lg shadow">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="p-2 text-left">Order ID</th>
+                      <th className="p-2 text-left">Customer</th>
+                      <th className="p-2 text-left">Date</th>
+                      <th className="p-2 text-left">Status</th>
+                      <th className="p-2 text-left">Total</th>
+                      <th className="p-2 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center">Loading orders...</td>
+                      </tr>
+                    ) : filteredOrders?.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center">No orders found</td>
+                      </tr>
+                    ) : (
+                      filteredOrders?.map(order => (
+                        <tr key={order.id} className="border-b hover:bg-gray-50">
+                          <td className="p-2">{order.id.substring(0, 8)}...</td>
+                          <td className="p-2">{order.profiles?.full_name || 'Unknown'}</td>
+                          <td className="p-2">{new Date(order.created_at || "").toLocaleDateString()}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="p-2">${order.total_amount}</td>
+                          <td className="p-2">
+                            <button
+                              onClick={() => handleViewOrder(order.id)}
+                              className="text-blue-600 hover:underline"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </TabsContent>
           ))}
         </Tabs>
