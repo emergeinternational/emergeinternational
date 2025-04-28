@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -75,11 +76,17 @@ const DesignerForm = ({ open, setOpen, designer }: DesignerFormProps) => {
         return;
       }
 
+      // Convert social_media to a plain object for Supabase
+      const dataToSend = {
+        ...formData,
+        social_media: formData.social_media ? { ...formData.social_media } : null
+      };
+
       if (designer) {
         // Update existing designer
         const { error } = await supabase
           .from("designers")
-          .update(formData)
+          .update(dataToSend)
           .eq("id", designer.id);
 
         if (error) throw error;
@@ -92,7 +99,7 @@ const DesignerForm = ({ open, setOpen, designer }: DesignerFormProps) => {
         // Create new designer
         const { error } = await supabase
           .from("designers")
-          .insert([formData as Required<Pick<Designer, 'full_name' | 'specialty'>>]);
+          .insert([dataToSend]);
 
         if (error) throw error;
 

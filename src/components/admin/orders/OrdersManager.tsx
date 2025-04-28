@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,6 @@ import OrdersSummary from "./OrdersSummary";
 import OrderFilters from "./OrderFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
-import { Order } from "@/services/orderTypes";
 
 // Define order status options
 export const ORDER_STATUSES = [
@@ -39,8 +37,23 @@ export interface OrderFiltersState {
   searchQuery: string;
 }
 
-// Define types for the query response
-interface OrderQueryResponse {
+// Define interfaces for order data
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  created_at?: string;
+}
+
+export interface OrderUser {
+  full_name?: string;
+  email?: string;
+  phone_number?: string;
+}
+
+export interface Order {
   id: string;
   user_id: string;
   status: string;
@@ -50,19 +63,8 @@ interface OrderQueryResponse {
   shipping_address_id?: string;
   created_at?: string;
   updated_at?: string;
-  user?: {
-    full_name?: string;
-    email?: string;
-    phone_number?: string;
-  };
-  order_items?: Array<{
-    id: string;
-    order_id: string;
-    product_name: string;
-    quantity: number;
-    unit_price: number;
-    created_at?: string;
-  }>;
+  user?: OrderUser;
+  order_items?: OrderItem[];
 }
 
 const OrdersManager = () => {
@@ -147,8 +149,32 @@ const OrdersManager = () => {
     );
   });
 
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-500">Error loading orders data</p>
+        <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-primary text-white rounded">
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <OrdersSummary summary={calculateSummary()} />
+      <OrderFilters filters={filters} setFilters={setFilters} />
+      <OrdersTable 
+        orders={filteredOrders || []} 
+        isLoading={isLoading}
+        onStatusUpdate={handleOrderStatusUpdate}
+        onRefresh={refetch}
+      />
+    </div>
+  );
+  
   // Calculate summary statistics
-  const calculateSummary = () => {
+  function calculateSummary() {
     if (!orders) return {
       totalOrders: 0,
       pendingOrders: 0,
@@ -166,12 +192,10 @@ const OrdersManager = () => {
         order.status === 'completed' ? sum + Number(order.total_amount || 0) : sum, 0
       ),
     };
-  };
-
-  const orderSummary = calculateSummary();
+  }
 
   // Handle order status updates
-  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
+  async function handleOrderStatusUpdate(orderId: string, status: string) {
     try {
       const { error } = await supabase
         .from("orders")
@@ -195,31 +219,7 @@ const OrdersManager = () => {
         variant: "destructive",
       });
     }
-  };
-
-  if (error) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-red-500">Error loading orders data</p>
-        <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-primary text-white rounded">
-          Try Again
-        </button>
-      </div>
-    );
   }
-
-  return (
-    <div className="space-y-6">
-      <OrdersSummary summary={orderSummary} />
-      <OrderFilters filters={filters} setFilters={setFilters} />
-      <OrdersTable 
-        orders={filteredOrders || []} 
-        isLoading={isLoading}
-        onStatusUpdate={handleOrderStatusUpdate}
-        onRefresh={refetch}
-      />
-    </div>
-  );
 };
 
 export default OrdersManager;
