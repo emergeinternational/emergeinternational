@@ -54,7 +54,7 @@ const DesignersManager = () => {
       if (error) throw error;
 
       toast({
-        title: "Creator deleted",
+        title: "Creative professional deleted",
         description: "The creative professional has been successfully deleted.",
       });
       

@@ -2,8 +2,15 @@
 import AdminLayout from "../../layouts/AdminLayout";
 import DesignersManager from "../../components/admin/designers/DesignersManager";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect } from "react";
+import { usePageTitle } from "@/utils/usePageTitle";
 
 const DesignersPage = () => {
+  // Update the page title dynamically
+  useEffect(() => {
+    document.title = "Creative Professionals 🌍 | Emerge International";
+  }, []);
+  
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 py-6">

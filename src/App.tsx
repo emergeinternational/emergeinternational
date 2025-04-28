@@ -16,7 +16,7 @@ import PremiumEnrollmentsPage from "./pages/admin/PremiumEnrollmentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
-import DesignersPage from "./pages/admin/DesignersPage";
+import CreativeProfessionalsPage from "./pages/admin/DesignersPage";
 import DonationsManagementPage from "./pages/admin/DonationsManagementPage";
 import Login from "./pages/Login";
 import EmailLogin from "./pages/EmailLogin";
@@ -130,9 +130,9 @@ const App = () => {
                       <ProductsPage />
                     </RoleBasedRoute>
                   } />
-                  <Route path="/admin/designers" element={
+                  <Route path="/admin/creative-professionals" element={
                     <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <DesignersPage />
+                      <CreativeProfessionalsPage />
                     </RoleBasedRoute>
                   } />
                   <Route path="/admin/donations" element={

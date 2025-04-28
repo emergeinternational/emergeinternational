@@ -9,6 +9,8 @@ export type CreatorCategory =
   | 'model'
   | 'creative_director';
 
+export type DesignerSpecialty = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
+
 export interface FeaturedProject {
   title: string;
   description?: string;
@@ -21,7 +23,7 @@ export interface Designer {
   full_name: string;
   email?: string;
   bio?: string;
-  specialty: 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
+  specialty: DesignerSpecialty;
   category: CreatorCategory;
   portfolio_url?: string;
   image_url?: string;
