@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +7,6 @@ import DonationsTable from "./DonationsTable";
 import DonationStats from "./DonationStats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import DonorsTable from "./DonorsTable";
 import DonationPageConfig from "./DonationPageConfig";
@@ -20,7 +20,7 @@ const DonationsManager = () => {
     isLoading: donationsLoading,
     error: donationsError,
     refetch: refetchDonations,
-  } = useQuery<Donation[]>({
+  } = useQuery({
     queryKey: ["admin-donations"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,7 +36,7 @@ const DonationsManager = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Donation[];
     },
   });
 

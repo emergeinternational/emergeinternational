@@ -32,6 +32,12 @@ export interface DonationPageSettings {
   hero_title: string;
   hero_description: string | null;
   hero_image_url: string | null;
+  featured_member: {
+    name: string;
+    role: string;
+    bio: string;
+    image_url: string;
+  } | null;
   min_donation_amount: number;
   max_donation_amount: number;
   suggested_amounts: number[];
