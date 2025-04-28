@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import OrdersTable from "./OrdersTable";
@@ -8,6 +8,15 @@ import OrderFilters from "./OrderFilters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderDetailsView from "./OrderDetailsView";
 import { Toaster } from "@/components/ui/toaster";
+
+// Export constants for use in other components
+export const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"];
+export const PAYMENT_STATUSES = ["pending", "completed", "failed", "refunded"];
+
+export interface OrderFiltersState {
+  status: string;
+  searchQuery: string;
+}
 
 const OrdersManager = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -23,7 +32,7 @@ const OrdersManager = () => {
         .select(`
           *,
           order_items(*),
-          profiles:user_id(full_name, email, phone_number),
+          profiles:user_id(*),
           shipping_addresses:shipping_address_id(*)
         `)
         .order('created_at', { ascending: false });

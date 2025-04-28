@@ -41,6 +41,8 @@ const ProductsManager = () => {
     },
   });
 
+  console.log("Products fetched:", products);
+
   // Handle product edit
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
