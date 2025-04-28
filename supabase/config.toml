@@ -1,12 +1,28 @@
 
-# Project Configuration
 project_id = "dqfnetchkvnzrtacgvfw"
 
-[functions.course-scraper]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[functions]
+[functions.select_columns_info]
 verify_jwt = true
-
-[functions.send-course-expiration-emails]
-verify_jwt = false
-
-[functions.generate-course-expiration-notifications]
-verify_jwt = false
