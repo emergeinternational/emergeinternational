@@ -7,6 +7,7 @@ import OrdersSummary from "./OrdersSummary";
 import OrderFilters from "./OrderFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
+import { Order } from "@/services/orderTypes";
 
 // Define order status options
 export const ORDER_STATUSES = [
@@ -97,7 +98,7 @@ const OrdersManager = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data;
+      return data as Order[];
     },
   });
 
