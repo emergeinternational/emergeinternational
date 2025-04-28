@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +41,7 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<string>("");
+  const [specialty, setSpecialty] = useState<DesignerSpecialty>("apparel");
   const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -50,10 +49,11 @@ const DesignerFormDialog = ({
   const [website, setWebsite] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [featured, setFeatured] = useState(false);
+  const [location, setLocation] = useState("");
   
   // Get specialty options based on the current category
   const specialtyOptions = getSpecialtyOptions(category);
-  
+
   useEffect(() => {
     if (designer) {
       setFullName(designer.full_name);
@@ -67,6 +67,7 @@ const DesignerFormDialog = ({
       setWebsite(designer.social_media?.website || "");
       setImageUrl(designer.image_url || "");
       setFeatured(designer.featured);
+      setLocation(designer.location || "");
     } else {
       resetForm();
     }
@@ -74,9 +75,8 @@ const DesignerFormDialog = ({
 
   // Set initial specialty when category changes
   useEffect(() => {
-    // When category changes, set specialty to the first option in the new category's specialty list
     if (specialtyOptions.length > 0) {
-      setSpecialty(specialtyOptions[0].value);
+      setSpecialty(specialtyOptions[0].value as DesignerSpecialty);
     }
   }, [category]);
 
@@ -85,13 +85,14 @@ const DesignerFormDialog = ({
     setEmail("");
     setBio("");
     setCategory("fashion_designer");
-    setSpecialty("apparel"); // Default for fashion_designer
+    setSpecialty("apparel");
     setPortfolioUrl("");
     setInstagram("");
     setTwitter("");
     setWebsite("");
     setImageUrl("");
     setFeatured(false);
+    setLocation("");
   };
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +157,7 @@ const DesignerFormDialog = ({
         specialty,
         category,
         portfolio_url: portfolioUrl || null,
+        location: location || null,
         social_media: {
           instagram: instagram || null,
           twitter: twitter || null,
@@ -231,6 +233,16 @@ const DesignerFormDialog = ({
               </div>
               
               <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Enter location"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
@@ -277,7 +289,7 @@ const DesignerFormDialog = ({
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
                   value={specialty}
-                  onValueChange={(value) => setSpecialty(value)}
+                  onValueChange={(value) => setSpecialty(value as DesignerSpecialty)}
                 >
                   <SelectTrigger id="specialty">
                     <SelectValue placeholder="Select specialty" />

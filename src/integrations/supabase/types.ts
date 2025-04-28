@@ -248,6 +248,7 @@ export type Database = {
           full_name: string
           id: string
           image_url: string | null
+          location: string | null
           portfolio_url: string | null
           products: string[] | null
           revenue: number | null
@@ -268,6 +269,7 @@ export type Database = {
           full_name: string
           id?: string
           image_url?: string | null
+          location?: string | null
           portfolio_url?: string | null
           products?: string[] | null
           revenue?: number | null
@@ -288,6 +290,7 @@ export type Database = {
           full_name?: string
           id?: string
           image_url?: string | null
+          location?: string | null
           portfolio_url?: string | null
           products?: string[] | null
           revenue?: number | null

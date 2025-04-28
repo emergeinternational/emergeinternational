@@ -36,6 +36,7 @@ export interface Designer {
   category: CreatorCategory;
   portfolio_url?: string;
   image_url?: string;
+  location?: string;
   social_media?: {
     instagram?: string;
     facebook?: string;
