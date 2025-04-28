@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory } from "@/services/designerTypes";
+import { Designer, CreatorCategory, DesignerSpecialty } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -43,6 +43,15 @@ const creatorCategories: { value: CreatorCategory; label: string }[] = [
   { value: "event_planner", label: "Event Planner" },
   { value: "model", label: "Model" },
   { value: "creative_director", label: "Creative Director" },
+];
+
+// Define the specialty options
+const specialtyOptions: { value: DesignerSpecialty; label: string }[] = [
+  { value: "apparel", label: "Apparel" },
+  { value: "accessories", label: "Accessories" },
+  { value: "footwear", label: "Footwear" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "other", label: "Other" },
 ];
 
 // Define the form schema with validation rules
@@ -188,7 +197,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         if (error) throw error;
 
         toast({
-          title: "Creator updated",
+          title: "Creative professional updated",
           description: `${values.full_name} has been updated successfully.`,
         });
       } else {
@@ -197,12 +206,13 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .insert({
             ...values,
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           });
 
         if (error) throw error;
 
         toast({
-          title: "Creator added",
+          title: "Creative professional added",
           description: `${values.full_name} has been added successfully.`,
         });
       }
@@ -222,7 +232,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{designer ? "Edit Creative Professional" : "Add Creative Professional"}</DialogTitle>
         </DialogHeader>
@@ -307,11 +317,11 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="apparel">Apparel</SelectItem>
-                        <SelectItem value="accessories">Accessories</SelectItem>
-                        <SelectItem value="footwear">Footwear</SelectItem>
-                        <SelectItem value="jewelry">Jewelry</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {specialtyOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -325,7 +335,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <FormLabel>Featured Creator</FormLabel>
+                      <FormLabel>Featured Creative</FormLabel>
                     </div>
                     <FormControl>
                       <Switch
@@ -497,8 +507,8 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                 {isSubmitting
                   ? "Saving..."
                   : designer
-                  ? "Update Creator"
-                  : "Create Creator"}
+                  ? "Update Professional"
+                  : "Create Professional"}
               </Button>
             </DialogFooter>
           </form>

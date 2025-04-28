@@ -16,7 +16,7 @@ import PremiumEnrollmentsPage from "./pages/admin/PremiumEnrollmentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
-import CreativeProfessionalsPage from "./pages/admin/DesignersPage";
+import CreativeProfessionalsPage from "./pages/admin/CreativeProfessionalsPage";
 import DonationsManagementPage from "./pages/admin/DonationsManagementPage";
 import Login from "./pages/Login";
 import EmailLogin from "./pages/EmailLogin";

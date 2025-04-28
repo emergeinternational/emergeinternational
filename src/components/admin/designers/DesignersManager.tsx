@@ -30,7 +30,8 @@ const DesignersManager = () => {
     return (
       designer.full_name.toLowerCase().includes(query) ||
       designer.email?.toLowerCase().includes(query) ||
-      designer.specialty.toLowerCase().includes(query)
+      designer.specialty.toLowerCase().includes(query) ||
+      designer.category.toLowerCase().includes(query)
     );
   }) ?? [];
 
@@ -76,7 +77,7 @@ const DesignersManager = () => {
         <div className="flex items-center space-x-4">
           <input
             type="search"
-            placeholder="Search creators..."
+            placeholder="Search professionals..."
             className="border rounded-md px-3 py-2 w-64"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

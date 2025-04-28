@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Designer, CreatorCategory } from "@/services/designerTypes";
+import type { Designer, CreatorCategory, DesignerSpecialty } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,17 @@ interface DesignerFormDialogProps {
   onClose: (refresh: boolean) => void;
 }
 
+const creatorCategories: { value: CreatorCategory; label: string }[] = [
+  { value: "fashion_designer", label: "Fashion Designer" },
+  { value: "interior_designer", label: "Interior Designer" },
+  { value: "graphic_designer", label: "Graphic Designer" },
+  { value: "visual_artist", label: "Visual Artist" },
+  { value: "photographer", label: "Photographer" },
+  { value: "event_planner", label: "Event Planner" },
+  { value: "model", label: "Model" },
+  { value: "creative_director", label: "Creative Director" },
+];
+
 const DesignerFormDialog = ({
   open,
   designer,
@@ -30,7 +42,8 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<CreatorCategory>("apparel");
+  const [specialty, setSpecialty] = useState<DesignerSpecialty>("apparel");
+  const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -44,6 +57,7 @@ const DesignerFormDialog = ({
       setEmail(designer.email || "");
       setBio(designer.bio || "");
       setSpecialty(designer.specialty);
+      setCategory(designer.category);
       setPortfolioUrl(designer.portfolio_url || "");
       setInstagram(designer.social_media?.instagram || "");
       setTwitter(designer.social_media?.twitter || "");
@@ -60,6 +74,7 @@ const DesignerFormDialog = ({
     setEmail("");
     setBio("");
     setSpecialty("apparel");
+    setCategory("fashion_designer");
     setPortfolioUrl("");
     setInstagram("");
     setTwitter("");
@@ -95,7 +110,7 @@ const DesignerFormDialog = ({
       setImageUrl(publicUrl);
       toast({
         title: "Image uploaded successfully",
-        description: "The designer image has been uploaded.",
+        description: "The professional's image has been uploaded.",
       });
     } catch (error: any) {
       toast({
@@ -114,7 +129,7 @@ const DesignerFormDialog = ({
     if (!fullName) {
       toast({
         title: "Missing information",
-        description: "Please provide the designer's name",
+        description: "Please provide the professional's name",
         variant: "destructive",
       });
       return;
@@ -128,6 +143,7 @@ const DesignerFormDialog = ({
         email,
         bio,
         specialty,
+        category,
         portfolio_url: portfolioUrl,
         social_media: {
           instagram: instagram || null,
@@ -148,7 +164,7 @@ const DesignerFormDialog = ({
         if (error) throw error;
         
         toast({
-          title: "Designer updated",
+          title: "Professional updated",
           description: `${fullName}'s profile has been updated successfully.`,
         });
       } else {
@@ -162,7 +178,7 @@ const DesignerFormDialog = ({
         if (error) throw error;
 
         toast({
-          title: "Designer created",
+          title: "Professional created",
           description: `${fullName}'s profile has been added successfully.`,
         });
       }
@@ -171,7 +187,7 @@ const DesignerFormDialog = ({
       resetForm();
     } catch (error: any) {
       toast({
-        title: "Error saving designer",
+        title: "Error saving professional",
         description: error.message || "Something went wrong",
         variant: "destructive",
       });
@@ -185,7 +201,7 @@ const DesignerFormDialog = ({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {designer ? `Edit Designer: ${designer.full_name}` : "Add New Designer"}
+            {designer ? `Edit Creative Professional: ${designer.full_name}` : "Add New Creative Professional"}
           </DialogTitle>
         </DialogHeader>
         
@@ -199,7 +215,7 @@ const DesignerFormDialog = ({
                   id="full-name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter designer's full name"
+                  placeholder="Enter full name"
                 />
               </div>
               
@@ -226,12 +242,31 @@ const DesignerFormDialog = ({
               </div>
               
               <div>
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={category}
+                  onValueChange={(value) => setCategory(value as CreatorCategory)}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {creatorCategories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
                   value={specialty}
-                  onValueChange={(value) => setSpecialty(value as CreatorCategory)}
+                  onValueChange={(value) => setSpecialty(value as DesignerSpecialty)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="specialty">
                     <SelectValue placeholder="Select specialty" />
                   </SelectTrigger>
                   <SelectContent>
@@ -284,13 +319,13 @@ const DesignerFormDialog = ({
           
           {/* Image Upload */}
           <div className="space-y-4">
-            <Label>Designer Image</Label>
+            <Label>Profile Image</Label>
             <div className="flex items-center gap-4">
               {imageUrl && (
                 <div className="relative h-24 w-24 rounded-full overflow-hidden border">
                   <img
                     src={imageUrl}
-                    alt="Designer"
+                    alt="Profile"
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -328,7 +363,7 @@ const DesignerFormDialog = ({
                 checked={featured}
                 onCheckedChange={(checked) => setFeatured(!!checked)}
               />
-              <Label htmlFor="featured">Featured Designer</Label>
+              <Label htmlFor="featured">Featured Professional</Label>
             </div>
           </div>
           
@@ -353,7 +388,7 @@ const DesignerFormDialog = ({
                   Saving...
                 </>
               ) : (
-                <>{designer ? "Update Designer" : "Create Designer"}</>
+                <>{designer ? "Update Professional" : "Create Professional"}</>
               )}
             </Button>
           </div>

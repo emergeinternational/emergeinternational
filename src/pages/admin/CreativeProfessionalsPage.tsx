@@ -2,14 +2,11 @@
 import AdminLayout from "../../layouts/AdminLayout";
 import DesignersManager from "../../components/admin/designers/DesignersManager";
 import { Toaster } from "@/components/ui/toaster";
-import { useEffect } from "react";
 import { usePageTitle } from "@/utils/usePageTitle";
 
-const DesignersPage = () => {
-  // Update the page title dynamically
-  useEffect(() => {
-    document.title = "Creative Professionals 🌍 | Emerge International";
-  }, []);
+const CreativeProfessionalsPage = () => {
+  // Use the hook-based approach for page title
+  usePageTitle();
   
   return (
     <AdminLayout>
@@ -30,4 +27,4 @@ const DesignersPage = () => {
   );
 };
 
-export default DesignersPage;
+export default CreativeProfessionalsPage;
