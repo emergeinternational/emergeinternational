@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,8 @@ const ProductsManager = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [priceFilter, setPriceFilter] = useState<{min?: number, max?: number}>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [mockProducts, setMockProducts] = useState<Product[]>([]);
+  const [isLoadingMock, setIsLoadingMock] = useState(false);
 
   // Fetch all products with additional logging
   const { data: products, isLoading, error, refetch } = useQuery({
@@ -50,7 +53,115 @@ const ProductsManager = () => {
     },
   });
 
+  // Load mock products from Shop page on component mount
+  useEffect(() => {
+    const loadMockProducts = () => {
+      setIsLoadingMock(true);
+      try {
+        // Mock products data from Shop.tsx
+        const shopMockProducts: Product[] = [
+          { 
+            id: "mock-1", 
+            title: "Emerge T-Shirt", 
+            price: 4800, 
+            category: "clothing", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Comfortable cotton t-shirt with Emerge logo",
+            sales_count: 12
+          },
+          { 
+            id: "mock-2", 
+            title: "Designer Earrings", 
+            price: 12500, 
+            category: "accessories", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Handcrafted designer earrings",
+            sales_count: 5
+          },
+          { 
+            id: "mock-3", 
+            title: "Leather Bag", 
+            price: 4800, 
+            category: "accessories", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Premium leather bag with custom design",
+            sales_count: 8
+          },
+          { 
+            id: "mock-4", 
+            title: "Tailored Coat", 
+            price: 12500, 
+            category: "clothing", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Tailored coat for all seasons",
+            sales_count: 3
+          },
+          { 
+            id: "mock-5", 
+            title: "Woven Sandals", 
+            price: 3200, 
+            category: "footwear", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Handwoven comfortable sandals",
+            sales_count: 9
+          },
+          { 
+            id: "mock-6", 
+            title: "Patterned Scarf", 
+            price: 2400, 
+            category: "accessories", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Beautiful patterned scarf with traditional design",
+            sales_count: 15
+          },
+          { 
+            id: "mock-7", 
+            title: "Denim Jacket", 
+            price: 8600, 
+            category: "clothing", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Premium denim jacket with custom embroidery",
+            sales_count: 7
+          },
+          { 
+            id: "mock-8", 
+            title: "Leather Boots", 
+            price: 7500, 
+            category: "footwear", 
+            image_url: "/placeholder.svg",
+            is_published: true,
+            in_stock: true,
+            description: "Durable leather boots for all terrains",
+            sales_count: 11
+          },
+        ];
+        setMockProducts(shopMockProducts);
+      } catch (err) {
+        console.error("Error loading mock products:", err);
+      } finally {
+        setIsLoadingMock(false);
+      }
+    };
+
+    loadMockProducts();
+  }, []);
+
   console.log("Products fetched:", products);
+  console.log("Mock products:", mockProducts);
 
   // Handle product edit
   const handleEditProduct = (product: Product) => {
@@ -60,6 +171,16 @@ const ProductsManager = () => {
 
   // Handle product deletion
   const handleDeleteProduct = async (productId: string) => {
+    // For mock products, just show a toast notification
+    if (productId.startsWith("mock-")) {
+      const mockProductToDelete = mockProducts.find(p => p.id === productId);
+      toast({
+        title: "Mock product action",
+        description: `The product "${mockProductToDelete?.title}" would be deleted in a live environment.`,
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from("products")
@@ -83,8 +204,11 @@ const ProductsManager = () => {
     }
   };
 
+  // Combine database products and mock products
+  const combinedProducts = [...(products || []), ...mockProducts];
+
   // Filter products based on search query and selected category
-  const filteredProducts = products?.filter((product) => {
+  const filteredProducts = combinedProducts?.filter((product) => {
     const matchesSearch = 
       product.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -106,6 +230,21 @@ const ProductsManager = () => {
     setEditingProduct(null);
     if (refresh) {
       refetch();
+    }
+  };
+
+  // Handle save for mock products
+  const handleMockProductSave = (editedProduct: Product) => {
+    if (editedProduct.id.startsWith("mock-")) {
+      // Update mock product in state
+      setMockProducts(prevMock => 
+        prevMock.map(p => p.id === editedProduct.id ? editedProduct : p)
+      );
+      
+      toast({
+        title: "Mock product updated",
+        description: `"${editedProduct.title}" has been updated in the UI (not saved to database).`,
+      });
     }
   };
 
@@ -241,7 +380,7 @@ const ProductsManager = () => {
         <TabsContent value="all">
           <ProductsTable 
             products={filteredProducts || []} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isLoadingMock} 
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
             onRefresh={refetch} 
@@ -250,7 +389,7 @@ const ProductsManager = () => {
         <TabsContent value="new_arrivals">
           <ProductsTable 
             products={filteredProducts || []} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isLoadingMock} 
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
             onRefresh={refetch} 
@@ -259,7 +398,7 @@ const ProductsManager = () => {
         <TabsContent value="clothing">
           <ProductsTable 
             products={filteredProducts || []} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isLoadingMock} 
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
             onRefresh={refetch} 
@@ -268,7 +407,7 @@ const ProductsManager = () => {
         <TabsContent value="footwear">
           <ProductsTable 
             products={filteredProducts || []} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isLoadingMock} 
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
             onRefresh={refetch} 
@@ -277,7 +416,7 @@ const ProductsManager = () => {
         <TabsContent value="accessories">
           <ProductsTable 
             products={filteredProducts || []} 
-            isLoading={isLoading} 
+            isLoading={isLoading || isLoadingMock} 
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}
             onRefresh={refetch} 
@@ -290,6 +429,7 @@ const ProductsManager = () => {
         open={isFormOpen}
         product={editingProduct}
         onClose={handleFormClose}
+        onMockSave={handleMockProductSave}
       />
     </div>
   );

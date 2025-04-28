@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Eye } from "lucide-react";
+import { Edit, Trash2, Globe } from "lucide-react";
 import { Product } from "@/services/productTypes";
 
 interface ProductsTableProps {
@@ -42,6 +43,10 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
     onDelete(productToDelete.id);
     setDeleteDialogOpen(false);
     setProductToDelete(null);
+  };
+
+  const isMockProduct = (product: Product) => {
+    return product.id.startsWith('mock-');
   };
 
   if (isLoading) {
@@ -92,7 +97,14 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                     ) : (
                       <div className="h-10 w-10 bg-gray-100 rounded-md" />
                     )}
-                    <span className="truncate max-w-[200px]">{product.title}</span>
+                    <div>
+                      <div className="truncate max-w-[200px]">{product.title}</div>
+                      {isMockProduct(product) && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] mt-1">
+                          Mock Product
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell onClick={() => onEdit(product)}>
@@ -162,8 +174,11 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will permanently delete the product "
-              {productToDelete?.title}". This action cannot be undone.
+              {productToDelete?.id.startsWith('mock-') ? (
+                <>This will remove the mock product "{productToDelete?.title}" from the UI.</>
+              ) : (
+                <>This action will permanently delete the product "{productToDelete?.title}". This action cannot be undone.</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

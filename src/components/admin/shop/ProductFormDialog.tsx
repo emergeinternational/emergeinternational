@@ -17,14 +17,16 @@ interface ProductFormDialogProps {
   open: boolean;
   product?: Product | null;
   onClose: (refresh: boolean) => void;
+  onMockSave?: (product: Product) => void;
 }
 
-const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) => {
+const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDialogProps) => {
   const { toast } = useToast();
   const { uploadFile, ensureBucket, isLoading: storageLoading } = useStorage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [isMockProduct, setIsMockProduct] = useState(false);
   
   // Form state
   const [title, setTitle] = useState("");
@@ -55,6 +57,8 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
 
   useEffect(() => {
     if (product) {
+      setIsMockProduct(product.id.startsWith("mock-"));
+      
       setTitle(product.title || "");
       setDescription(product.description || "");
       setPrice(product.price || 0);
@@ -84,10 +88,8 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
       resetForm();
     }
     
-    // Load designers for the dropdown
     fetchDesigners();
     
-    // Ensure the products storage bucket exists
     ensureBucket('products', { public: true });
   }, [product]);
 
@@ -122,6 +124,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
     });
     setDesignerId(undefined);
     setActiveTab("basic");
+    setIsMockProduct(false);
   };
 
   const handleAddVariation = () => {
@@ -178,12 +181,19 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
     try {
       setUploadingImage(true);
       
-      // Create a unique file path
+      if (isMockProduct) {
+        setImageUrl("/placeholder.svg");
+        toast({
+          title: "Mock image set",
+          description: "For mock products, we're using a placeholder image.",
+        });
+        return;
+      }
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
       
-      // Upload to Supabase storage using the utility function
       const publicUrl = await uploadFile('products', file, filePath);
       
       setImageUrl(publicUrl);
@@ -217,7 +227,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
     try {
       setIsSubmitting(true);
       
-      // Prepare the product data
       const productData = {
         title,
         description,
@@ -240,8 +249,17 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
         updated_at: new Date().toISOString(),
       };
 
-      if (product?.id) {
-        // Update existing product
+      if (isMockProduct && product?.id && onMockSave) {
+        onMockSave({
+          ...product,
+          ...productData,
+        });
+        
+        toast({
+          title: "Mock product updated",
+          description: `${title} has been updated in the UI (not saved to database).`,
+        });
+      } else if (product?.id) {
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -254,7 +272,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
           description: `${title} has been updated successfully.`,
         });
       } else {
-        // Create new product
         const { error } = await supabase
           .from('products')
           .insert([{
@@ -288,7 +305,17 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {product ? `Edit Product: ${product.title}` : "Add New Product"}
+            {isMockProduct 
+              ? `Edit Mock Product: ${product?.title}`
+              : product 
+                ? `Edit Product: ${product.title}` 
+                : "Add New Product"
+            }
+            {isMockProduct && (
+              <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                Mock Product
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
         
@@ -302,7 +329,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
           
           <form onSubmit={handleSubmit} className="space-y-6 mt-4">
             <TabsContent value="basic" className="space-y-4">
-              {/* Basic Info */}
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="title">Product Title</Label>
@@ -377,7 +403,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
                   </Select>
                 </div>
 
-                {/* Product Status */}
                 <div className="flex items-center space-x-6">
                   <div className="flex items-center space-x-2">
                     <Checkbox 
@@ -401,7 +426,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
             </TabsContent>
             
             <TabsContent value="images">
-              {/* Image Upload */}
               <div className="space-y-4">
                 <Label>Product Image</Label>
                 <div className="flex items-center gap-4">
@@ -436,7 +460,10 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
                       disabled={uploadingImage}
                     />
                     <p className="text-sm text-gray-500 mt-2">
-                      Recommended size: 800x800px. Max file size: 5MB.
+                      {isMockProduct 
+                        ? "This is a mock product. Image changes will not be saved to the database."
+                        : "Recommended size: 800x800px. Max file size: 5MB."
+                      }
                     </p>
                   </div>
                 </div>
@@ -444,7 +471,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
             </TabsContent>
             
             <TabsContent value="inventory" className="space-y-4">
-              {/* Inventory Management */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="sku">SKU</Label>
@@ -568,7 +594,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
             </TabsContent>
             
             <TabsContent value="variations" className="space-y-4">
-              {/* Variations Management */}
               <div className="flex justify-between items-center">
                 <Label>Product Variations</Label>
                 <Button 
@@ -606,7 +631,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
                         </Button>
                       </div>
                       
-                      {/* Variation Options */}
                       <div className="space-y-2">
                         <Label>Options</Label>
                         {variation.options.map((option, oIndex) => (
@@ -656,7 +680,6 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
               )}
             </TabsContent>
             
-            {/* Form Buttons - Always visible */}
             <div className="flex justify-end gap-2 border-t pt-4">
               <Button 
                 type="button"
@@ -677,7 +700,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
                     Saving...
                   </>
                 ) : (
-                  <>{product ? "Update Product" : "Create Product"}</>
+                  <>{isMockProduct ? "Update Mock Product" : product ? "Update Product" : "Create Product"}</>
                 )}
               </Button>
             </div>
