@@ -1,42 +1,49 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Donation } from "@/services/donationTypes";
+import DonationsTable from "./DonationsTable";
+import DonationStats from "./DonationStats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import DonationsTable from "./DonationsTable";
 import DonorsTable from "./DonorsTable";
-import DonationStats from "./DonationStats";
 
 const DonationsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string>("donations");
 
-  // Fetch all donations
+  // Fetch all donations with donor information
   const {
     data: donations,
     isLoading: donationsLoading,
     error: donationsError,
     refetch: refetchDonations,
-  } = useQuery({
+  } = useQuery<Donation[]>({
     queryKey: ["admin-donations"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("donations")
-        .select("*, profiles(full_name, email, phone_number)")
+        .select(`
+          *,
+          donor:donors (
+            full_name,
+            email,
+            phone
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return data;
     },
   });
 
   // Filter donations based on search query
   const filteredDonations = donations?.filter((donation) => {
-    const donorName = donation.profiles?.full_name?.toLowerCase() || "";
-    const donorEmail = donation.profiles?.email?.toLowerCase() || "";
+    const donorName = donation.donor?.full_name?.toLowerCase() || "";
+    const donorEmail = donation.donor?.email?.toLowerCase() || "";
     const searchLower = searchQuery.toLowerCase();
     
     return (
@@ -51,7 +58,7 @@ const DonationsManager = () => {
   // Group donations by donor for the donors tab
   const donors = donations
     ? donations.reduce((acc: any[], donation: any) => {
-        if (!donation.profiles) return acc;
+        if (!donation.donor) return acc;
         
         const existingDonorIndex = acc.findIndex(
           (donor) => donor.user_id === donation.user_id
@@ -67,9 +74,9 @@ const DonationsManager = () => {
         } else {
           acc.push({
             user_id: donation.user_id,
-            full_name: donation.profiles.full_name,
-            email: donation.profiles.email,
-            phone_number: donation.profiles.phone_number,
+            full_name: donation.donor.full_name,
+            email: donation.donor.email,
+            phone_number: donation.donor.phone,
             total_amount: donation.amount,
             donation_count: 1,
             last_donation_date: donation.created_at,

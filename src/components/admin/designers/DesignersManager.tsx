@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { PlusCircle, Search } from "lucide-react";
 import DesignersTable from "./DesignersTable";
 import DesignerFormDialog from "./DesignerFormDialog";
+import type { Designer } from "@/services/designerTypes";
 
 const DesignersManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingDesigner, setEditingDesigner] = useState<any>(null);
+  const [editingDesigner, setEditingDesigner] = useState<Designer | null>(null);
 
   // Fetch all designers
-  const { data: designers, isLoading, error, refetch } = useQuery({
+  const { data: designers, isLoading, error, refetch } = useQuery<Designer[]>({
     queryKey: ["admin-designers"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -23,21 +23,21 @@ const DesignersManager = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return data;
     },
   });
 
   // Handle designer edit
-  const handleEditDesigner = (designer: any) => {
+  const handleEditDesigner = (designer: Designer) => {
     setEditingDesigner(designer);
     setIsFormOpen(true);
   };
 
   // Filter designers based on search query
   const filteredDesigners = designers?.filter((designer) =>
-    designer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    designer.specialty?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    designer.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    designer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    designer.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (designer.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
   // Handle form close and refresh data

@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, DesignerCategory } from "@/services/designerTypes";
+import type { Designer, DesignerCategory } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,16 +40,16 @@ const DesignerFormDialog = ({
   
   useEffect(() => {
     if (designer) {
-      setFullName(designer.full_name || "");
+      setFullName(designer.full_name);
       setEmail(designer.email || "");
       setBio(designer.bio || "");
-      setSpecialty(designer.specialty || "apparel");
+      setSpecialty(designer.specialty);
       setPortfolioUrl(designer.portfolio_url || "");
       setInstagram(designer.social_media?.instagram || "");
       setTwitter(designer.social_media?.twitter || "");
       setWebsite(designer.social_media?.website || "");
       setImageUrl(designer.image_url || "");
-      setFeatured(designer.featured || false);
+      setFeatured(designer.featured);
     } else {
       resetForm();
     }
@@ -124,7 +123,6 @@ const DesignerFormDialog = ({
     try {
       setIsSubmitting(true);
       
-      // Prepare the designer data
       const designerData = {
         full_name: fullName,
         email,
@@ -142,11 +140,10 @@ const DesignerFormDialog = ({
       };
 
       if (designer?.id) {
-        // Update existing designer
         const { error } = await supabase
-          .from('designers')
+          .from("designers")
           .update(designerData)
-          .eq('id', designer.id);
+          .eq("id", designer.id);
 
         if (error) throw error;
         
@@ -155,9 +152,8 @@ const DesignerFormDialog = ({
           description: `${fullName}'s profile has been updated successfully.`,
         });
       } else {
-        // Create new designer
         const { error } = await supabase
-          .from('designers')
+          .from("designers")
           .insert([{
             ...designerData,
             created_at: new Date().toISOString(),

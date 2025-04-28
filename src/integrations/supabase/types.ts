@@ -236,6 +236,57 @@ export type Database = {
         }
         Relationships: []
       }
+      designers: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          email: string | null
+          featured: boolean
+          full_name: string
+          id: string
+          image_url: string | null
+          portfolio_url: string | null
+          products: string[] | null
+          revenue: number | null
+          sales_count: number | null
+          social_media: Json | null
+          specialty: Database["public"]["Enums"]["designer_category"]
+          updated_at: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          email?: string | null
+          featured?: boolean
+          full_name: string
+          id?: string
+          image_url?: string | null
+          portfolio_url?: string | null
+          products?: string[] | null
+          revenue?: number | null
+          sales_count?: number | null
+          social_media?: Json | null
+          specialty: Database["public"]["Enums"]["designer_category"]
+          updated_at?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          email?: string | null
+          featured?: boolean
+          full_name?: string
+          id?: string
+          image_url?: string | null
+          portfolio_url?: string | null
+          products?: string[] | null
+          revenue?: number | null
+          sales_count?: number | null
+          social_media?: Json | null
+          specialty?: Database["public"]["Enums"]["designer_category"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       discount_codes: {
         Row: {
           code: string
@@ -292,30 +343,95 @@ export type Database = {
       donations: {
         Row: {
           amount: number
+          certificate_issued: boolean | null
+          certificate_url: string | null
           created_at: string | null
           currency: string
+          donor_id: string | null
           id: string
+          message: string | null
           payment_method: string | null
+          payment_proof_url: string | null
           payment_status: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
           amount: number
+          certificate_issued?: boolean | null
+          certificate_url?: string | null
           created_at?: string | null
           currency?: string
+          donor_id?: string | null
           id?: string
+          message?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
           amount?: number
+          certificate_issued?: boolean | null
+          certificate_url?: string | null
           created_at?: string | null
           currency?: string
+          donor_id?: string | null
           id?: string
+          message?: string | null
           payment_method?: string | null
+          payment_proof_url?: string | null
           payment_status?: string
+          updated_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donors: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          last_donation_date: string | null
+          phone: string | null
+          total_donations: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          last_donation_date?: string | null
+          phone?: string | null
+          total_donations?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          last_donation_date?: string | null
+          phone?: string | null
+          total_donations?: number | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1375,6 +1491,12 @@ export type Database = {
         | "event_planner"
       course_hosting_type: "hosted" | "embedded" | "external"
       course_level: "beginner" | "intermediate" | "expert"
+      designer_category:
+        | "apparel"
+        | "accessories"
+        | "footwear"
+        | "jewelry"
+        | "other"
       event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
       product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
@@ -1516,6 +1638,13 @@ export const Constants = {
       ],
       course_hosting_type: ["hosted", "embedded", "external"],
       course_level: ["beginner", "intermediate", "expert"],
+      designer_category: [
+        "apparel",
+        "accessories",
+        "footwear",
+        "jewelry",
+        "other",
+      ],
       event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
       product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
