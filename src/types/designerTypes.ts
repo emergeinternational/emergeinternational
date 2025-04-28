@@ -1,3 +1,4 @@
+
 // Designer related types
 export type CreatorCategory = 
   | 'fashion_designer' 

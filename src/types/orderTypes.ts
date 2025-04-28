@@ -1,3 +1,4 @@
+
 // Order related types for the application
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';

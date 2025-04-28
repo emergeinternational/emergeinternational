@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import OrdersTable from './OrdersTable';
@@ -32,7 +33,13 @@ const OrdersManager: React.FC = () => {
         return;
       }
 
-      setOrders(data);
+      // Transform the raw data to match the Order type
+      const transformedOrders: Order[] = data.map(order => ({
+        ...order,
+        status: order.status as OrderStatus, // Cast the status to OrderStatus type
+      }));
+
+      setOrders(transformedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
@@ -88,7 +95,6 @@ const OrdersManager: React.FC = () => {
         isOpen={isDetailsOpen}
         onClose={handleDetailsClose}
         order={selectedOrder}
-        onStatusChange={handleStatusChange}
       />
     </div>
   );
