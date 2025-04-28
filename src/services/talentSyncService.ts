@@ -3,6 +3,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { TalentApplication } from "@/types/talentTypes";
 
 /**
+ * Maps talent category values to valid database values
+ */
+const mapCategoryToValidType = (category: string | null): string => {
+  if (!category) return 'other';
+  
+  // Map to lowercase for consistency
+  const lowerCategory = category.toLowerCase();
+  
+  // Basic mapping to ensure compatibility with constraints
+  if (lowerCategory.includes('model')) return 'model';
+  if (lowerCategory.includes('performer') || 
+      lowerCategory.includes('singer') || 
+      lowerCategory.includes('dancer') || 
+      lowerCategory.includes('actor')) return 'performer';
+  if (lowerCategory.includes('design')) return 'designer';
+  
+  // Default fallback - ensure this value is allowed by constraints
+  return 'other';
+};
+
+/**
  * Syncs data from emerge_submissions to talent_applications
  * This function moves records that exist in emerge_submissions but not in talent_applications
  */
@@ -59,7 +80,7 @@ export async function syncEmergeSubmissions(): Promise<{
         tiktok: submission.tiktok
       },
       notes: submission.talent_description,
-      category_type: submission.category,
+      category_type: mapCategoryToValidType(submission.category),
       gender: submission.gender,
       portfolio_url: submission.portfolio_url,
       measurements: submission.measurements,
@@ -232,7 +253,7 @@ export async function performFullTalentDataMigration(): Promise<{
             tiktok: submission.tiktok || null
           },
           notes: submission.talent_description || null,
-          category_type: submission.category || null,
+          category_type: mapCategoryToValidType(submission.category),
           gender: submission.gender || null,
           portfolio_url: submission.portfolio_url || null,
           measurements: submission.measurements || null,

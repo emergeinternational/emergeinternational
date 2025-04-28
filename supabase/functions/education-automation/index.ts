@@ -101,6 +101,25 @@ serve(async (req) => {
           console.log(`Found ${emergeSubmissions.length} pending submissions, ${newSubmissions.length} are new`);
 
           if (newSubmissions.length > 0) {
+            // Map category values to valid talent_applications values
+            function mapCategoryToValidType(category) {
+              if (!category) return 'other';
+              
+              // Map to lowercase for consistency
+              const lowerCategory = category.toLowerCase();
+              
+              // Basic mapping to ensure compatibility with constraints
+              if (lowerCategory.includes('model')) return 'model';
+              if (lowerCategory.includes('performer') || 
+                  lowerCategory.includes('singer') || 
+                  lowerCategory.includes('dancer') || 
+                  lowerCategory.includes('actor')) return 'performer';
+              if (lowerCategory.includes('design')) return 'designer';
+              
+              // Default fallback - ensure this value is allowed by constraints
+              return 'other';
+            }
+            
             // Format for talent_applications table
             const applicationData = newSubmissions.map(submission => ({
               full_name: submission.full_name,
@@ -114,7 +133,7 @@ serve(async (req) => {
                 tiktok: submission.tiktok || null
               },
               notes: submission.talent_description,
-              category_type: submission.category,
+              category_type: mapCategoryToValidType(submission.category),
               gender: submission.gender,
               portfolio_url: submission.portfolio_url,
               measurements: submission.measurements,
