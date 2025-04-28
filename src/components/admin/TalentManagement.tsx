@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +34,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TalentDataMigrationTool } from "./TalentDataMigrationTool";
+import { TalentSyncActions } from "./TalentSyncActions";
 import { Badge } from "@/components/ui/badge";
 
 const TalentManagement = () => {
@@ -529,10 +531,15 @@ const TalentDatabaseStatus = () => {
             <AlertDescription>
               There are {registrationCounts?.emergeSubmissions - registrationCounts?.talentApplications} historical submissions 
               from the registration form that need to be synced to the talent management system.
-              Use the migration tool below to import these submissions.
+              Use the sync tools below to import these submissions.
             </AlertDescription>
           </Alert>
         )}
+      </div>
+      
+      {/* Add new TalentSyncActions component here */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <TalentSyncActions />
       </div>
       
       <TalentDataMigrationTool />

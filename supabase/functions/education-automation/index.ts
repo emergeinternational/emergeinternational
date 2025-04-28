@@ -26,9 +26,11 @@ serve(async (req) => {
     
     // Parse request to determine operation
     let operation = 'all';
+    let forceSync = false;
     try {
       const body = await req.json();
       operation = body.operation || 'all';
+      forceSync = !!body.forceSync;
     } catch (e) {
       // If body parsing fails, default to 'all'
       console.log("Error parsing request body, defaulting to 'all' operation");
@@ -71,11 +73,17 @@ serve(async (req) => {
     // 2. Sync talent submissions if operation is talent-sync
     if (operation === 'all' || operation === 'talent-sync') {
       try {
-        // Get submissions not yet synced to talent applications
-        const { data: emergeSubmissions, error: fetchError } = await supabaseAdmin
+        // Query definition changes based on force sync flag
+        let queryBuilder = supabaseAdmin
           .from('emerge_submissions')
-          .select('*')
-          .eq('sync_status', 'pending');
+          .select('*');
+
+        // Apply filter only if not force syncing
+        if (!forceSync) {
+          queryBuilder = queryBuilder.eq('sync_status', 'pending');
+        }
+        
+        const { data: emergeSubmissions, error: fetchError } = await queryBuilder;
 
         if (fetchError) throw fetchError;
 
@@ -98,7 +106,7 @@ serve(async (req) => {
             !existingEmailsMap.has(submission.email?.toLowerCase())
           );
 
-          console.log(`Found ${emergeSubmissions.length} pending submissions, ${newSubmissions.length} are new`);
+          console.log(`Found ${emergeSubmissions.length} ${forceSync ? 'total' : 'pending'} submissions, ${newSubmissions.length} are new`);
 
           if (newSubmissions.length > 0) {
             // Map category values to valid talent_applications values
@@ -159,6 +167,7 @@ serve(async (req) => {
             results.operations.talentSync = {
               success: true,
               syncedCount: newSubmissions.length,
+              forceSync: forceSync
             };
 
             console.log(`Successfully synced ${newSubmissions.length} talent submissions`);
@@ -166,14 +175,16 @@ serve(async (req) => {
             results.operations.talentSync = {
               success: true,
               syncedCount: 0,
-              message: "No new records to sync"
+              message: "No new records to sync",
+              forceSync: forceSync
             };
           }
         } else {
           results.operations.talentSync = {
             success: true,
             syncedCount: 0,
-            message: "No pending submissions found"
+            message: "No pending submissions found",
+            forceSync: forceSync
           };
         }
       } catch (error) {
@@ -181,6 +192,7 @@ serve(async (req) => {
         results.operations.talentSync = {
           success: false,
           error: error.message,
+          forceSync: forceSync
         };
       }
     }

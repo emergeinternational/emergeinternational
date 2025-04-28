@@ -123,6 +123,54 @@ export async function syncEmergeSubmissions(): Promise<{
 }
 
 /**
+ * Initiates a forced sync via the Edge Function
+ * This is more powerful than the client-side sync as it uses admin privileges
+ */
+export async function forceSyncTalentData(): Promise<{
+  success: boolean;
+  syncedCount?: number;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke('education-automation', {
+      body: { 
+        operation: 'talent-sync',
+        forceSync: true 
+      }
+    });
+
+    if (error) {
+      console.error("Error in force sync:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+
+    if (data.operations?.talentSync) {
+      return {
+        success: data.operations.talentSync.success,
+        syncedCount: data.operations.talentSync.syncedCount || 0,
+        message: data.operations.talentSync.message || `Successfully synced ${data.operations.talentSync.syncedCount || 0} records`
+      };
+    }
+
+    return {
+      success: true,
+      syncedCount: 0,
+      message: "No sync operation was performed"
+    };
+  } catch (error) {
+    console.error("Error in forceSyncTalentData:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error occurred during force sync" 
+    };
+  }
+}
+
+/**
  * Gets summary counts of registrations in both tables
  */
 export async function getTalentRegistrationCounts(): Promise<{
