@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,7 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<DesignerSpecialty>("apparel");
+  const [specialty, setSpecialty] = useState<string>("apparel");
   const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -76,7 +77,7 @@ const DesignerFormDialog = ({
   // Set initial specialty when category changes
   useEffect(() => {
     if (specialtyOptions.length > 0) {
-      setSpecialty(specialtyOptions[0].value as DesignerSpecialty);
+      setSpecialty(specialtyOptions[0].value);
     }
   }, [category]);
 
@@ -154,7 +155,7 @@ const DesignerFormDialog = ({
         full_name: fullName,
         email: email || null,
         bio: bio || null,
-        specialty,
+        specialty: specialty as DesignerSpecialty,
         category,
         portfolio_url: portfolioUrl || null,
         location: location || null,

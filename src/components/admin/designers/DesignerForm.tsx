@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Designer, CreatorCategory, getSpecialtyOptions, DesignerSpecialty } from "@/services/designerTypes";
@@ -202,7 +203,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .update({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty as DesignerSpecialty,
+            specialty: values.specialty as any as DesignerSpecialty,
             category: values.category,
             bio: values.bio || null,
             location: values.location || null,
@@ -229,7 +230,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .insert({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty as DesignerSpecialty,
+            specialty: values.specialty as any as DesignerSpecialty,
             category: values.category,
             bio: values.bio || null,
             location: values.location || null,

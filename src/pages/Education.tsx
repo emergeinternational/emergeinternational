@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar, AlertTriangle } from "lucide-react";
+import { GraduationCap, BookOpen, Library, ExternalLink, Clock, Calendar } from "lucide-react";
 import CourseCard from "../components/education/CourseCard";
 import UpcomingWorkshops from "../components/education/UpcomingWorkshops";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
 import { 
   getEducationCategories, 
   getEducationContent,
