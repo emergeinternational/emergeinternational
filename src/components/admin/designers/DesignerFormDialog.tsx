@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Designer, CreatorCategory } from '@/services/designerTypes';
+import { Designer, CreatorCategory, DesignerSpecialty } from '@/types/designerTypes';
 
 interface DesignerFormDialogProps {
   open: boolean;
@@ -30,14 +30,15 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
     full_name: '',
     email: '',
     bio: '',
-    specialty: '',
+    specialty: 'apparel' as DesignerSpecialty,
     category: 'fashion_designer' as CreatorCategory,
     portfolio_url: '',
     location: '',
     social_media: {
       instagram: '',
-      facebook: '',
-      twitter: '',
+      tiktok: '',
+      linkedin: '',
+      portfolio: '',
       website: '',
     },
     image_url: '',
@@ -74,7 +75,7 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
       if (isEditing && designer) {
         const { error } = await supabase
           .from('designers')
-          .update(submitData)
+          .update(submitData as any)
           .eq('id', designer.id);
 
         if (error) throw error;
@@ -82,7 +83,7 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
       } else {
         const { error } = await supabase
           .from('designers')
-          .insert([submitData]);
+          .insert([submitData as any]);
 
         if (error) throw error;
         toast.success('Designer created successfully');
@@ -128,14 +129,13 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
                 value={formData.email || ''}
                 onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="designer@example.com"
-                required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select
-                value={formData.category}
+                value={formData.category as string}
                 onValueChange={(value) => handleChange('category', value)}
               >
                 <SelectTrigger>
@@ -156,13 +156,21 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="specialty">Specialty</Label>
-              <Input
-                id="specialty"
-                value={formData.specialty || ''}
-                onChange={(e) => handleChange('specialty', e.target.value)}
-                placeholder="e.g., Apparel, Accessories, etc."
-                required
-              />
+              <Select
+                value={formData.specialty as string}
+                onValueChange={(value) => handleChange('specialty', value as DesignerSpecialty)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select specialty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="apparel">Apparel</SelectItem>
+                  <SelectItem value="accessories">Accessories</SelectItem>
+                  <SelectItem value="footwear">Footwear</SelectItem>
+                  <SelectItem value="jewelry">Jewelry</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -206,6 +214,16 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={formData.social_media?.website || ''}
+                onChange={(e) => handleSocialMediaChange('website', e.target.value)}
+                placeholder="https://yourwebsite.com"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="featured">Featured Designer</Label>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -228,7 +246,6 @@ const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({
               onChange={(e) => handleChange('bio', e.target.value)}
               placeholder="Brief description of the designer's background and style"
               rows={4}
-              required
             />
           </div>
 

@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import UserManagement from "../../components/admin/UserManagement";
+import { AdminUsersTable } from "@/components/admin/users/AdminUsersTable";
 import { Button } from "@/components/ui/button";
-import { UserPlus, RefreshCw } from "lucide-react";
+import { UserPlus, RefreshCw, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ensureUserProfile } from "@/utils/ensureUserProfile";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const userSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -30,6 +32,7 @@ const UsersPage = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("all-users");
   const [systemStatus, setSystemStatus] = useState<{
     usersCount: number | null;
     adminEmail: string | null;
@@ -260,9 +263,23 @@ const UsersPage = () => {
           </div>
         )}
         
-        <div className="bg-white p-6 rounded shadow">
-          <UserManagement key={lastUpdated?.getTime()} />
-        </div>
+        <Tabs defaultValue="all-users" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="all-users">All Users</TabsTrigger>
+            <TabsTrigger value="admin-users" className="flex items-center">
+              <Shield className="h-4 w-4 mr-1" />
+              Admin Users
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all-users" className="bg-white p-6 rounded shadow">
+            <UserManagement key={lastUpdated?.getTime()} />
+          </TabsContent>
+          
+          <TabsContent value="admin-users" className="bg-white p-6 rounded shadow">
+            <AdminUsersTable />
+          </TabsContent>
+        </Tabs>
       </div>
       
       <Dialog open={openAddUserDialog} onOpenChange={setOpenAddUserDialog}>

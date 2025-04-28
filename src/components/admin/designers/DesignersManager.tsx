@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer } from "@/types/designerTypes";
+import { Designer, DesignerSpecialty } from "@/types/designerTypes";
 import { DesignerForm } from "./DesignerForm"; 
 import DesignersTable from "./DesignersTable";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ const DesignersManager = () => {
         .from('designers')
         .select('*');
       if (error) throw error;
-      return data as Designer[];
+      return data as unknown as Designer[];
     },
   });
 
@@ -44,8 +44,8 @@ const DesignersManager = () => {
   const handleEdit = (designer: Designer) => {
     setSelectedDesigner({
       ...designer,
-      // Ensure specialty is a string to match the form component
-      specialty: designer.specialty.toString()
+      // Ensure specialty is handled correctly
+      specialty: designer.specialty as DesignerSpecialty
     });
     setIsFormOpen(true);
   };
@@ -121,7 +121,7 @@ const DesignersManager = () => {
                   .update({
                     ...formData,
                     updated_at: new Date().toISOString()
-                  })
+                  } as any)
                   .eq('id', selectedDesigner.id);
                 
                 if (error) throw error;
@@ -138,7 +138,7 @@ const DesignersManager = () => {
                     ...formData,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
-                  }]);
+                  }] as any);
                 
                 if (error) throw error;
                 

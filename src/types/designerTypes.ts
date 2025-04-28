@@ -22,14 +22,16 @@ export interface SocialMedia {
   tiktok?: string;
   linkedin?: string;
   portfolio?: string;
+  website?: string;  // Added website property
   other?: string;
 }
 
 export interface FeaturedProject {
   title: string;
   description: string;
-  image_url: string; // Changed to required
+  image_url: string;
   date?: string;
+  link?: string;  // Added link property
 }
 
 export interface ProductDimensions {
