@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Order, OrderStatus } from '@/types/orderTypes';
 import {
@@ -17,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CalendarIcon } from "@radix-ui/react-icons"
+import { CalendarIcon } from "lucide-react" // Changed from @radix-ui/react-icons to lucide-react
 import { format } from 'date-fns';
 import { getStatusColor, formatCurrency, ORDER_STATUSES } from './OrderHelper';
 

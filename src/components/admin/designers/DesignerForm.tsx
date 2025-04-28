@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,8 +18,14 @@ const formSchema = z.object({
     message: "Please enter a valid email.",
   }).optional(),
   bio: z.string().optional(),
-  specialty: z.string().min(2, {
-    message: "Specialty must be at least 2 characters.",
+  specialty: z.enum([
+    'apparel',
+    'accessories',
+    'footwear',
+    'jewelry',
+    'other'
+  ] as [DesignerSpecialty, ...DesignerSpecialty[]], {
+    required_error: "Please select a specialty.",
   }),
   category: z.enum([
     'fashion_designer',

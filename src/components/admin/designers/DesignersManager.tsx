@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer } from "@/services/designerTypes";
-import DesignerForm from "./DesignerForm";
+import { Designer } from "@/types/designerTypes";
+import { DesignerForm } from "./DesignerForm"; // Changed from default import to named import
 import DesignersTable from "./DesignersTable";
 import { useToast } from "@/hooks/use-toast";
 
