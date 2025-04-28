@@ -1,68 +1,52 @@
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { forceSyncTalentData } from "@/services/talentSyncService";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCcw, AlertCircle, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useTalentSync } from "@/hooks/useTalentSync";
 
 export function TalentSyncActions() {
   const [showResult, setShowResult] = useState(false);
-  const [syncResult, setSyncResult] = useState<{
-    success: boolean;
-    syncedCount?: number;
-    message?: string;
-    error?: string;
-  } | null>(null);
-  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const syncMutation = useMutation({
-    mutationFn: forceSyncTalentData,
-    onSuccess: (data) => {
-      setSyncResult(data);
+  const { 
+    runForceSync, 
+    isForceSyncing, 
+    forceSyncResult, 
+    forceSyncError 
+  } = useTalentSync();
+
+  const handleForceSync = async () => {
+    setShowResult(false);
+    try {
+      const result = await runForceSync();
       setShowResult(true);
       
-      // Invalidate related queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['talent-applications'] });
-      queryClient.invalidateQueries({ queryKey: ['talent-registration-counts'] });
-      queryClient.invalidateQueries({ queryKey: ['talent-sync-status'] });
-      
-      if (data.success) {
+      if (result.success) {
         toast({
           title: "Forced synchronization complete",
-          description: data.message || `Successfully synced ${data.syncedCount} records.`,
+          description: result.message || `Successfully synced ${result.syncedCount} records.`,
         });
       } else {
         toast({
           variant: "destructive",
           title: "Synchronization error",
-          description: data.error || "An unknown error occurred during synchronization",
+          description: result.error || "An unknown error occurred during synchronization",
         });
       }
-    },
-    onError: (error) => {
+    } catch (error) {
       setShowResult(true);
-      setSyncResult({
-        success: false,
-        message: error instanceof Error ? error.message : "Unknown error occurred"
-      });
-      
       toast({
         variant: "destructive",
         title: "Force sync failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
       });
     }
-  });
-
-  const handleForceSync = async () => {
-    setShowResult(false);
-    syncMutation.mutate();
   };
 
   return (
@@ -72,11 +56,11 @@ export function TalentSyncActions() {
           <h3 className="text-lg font-medium">Talent Data Synchronization</h3>
           <Button 
             onClick={handleForceSync} 
-            disabled={syncMutation.isPending}
+            disabled={isForceSyncing}
             size="sm"
           >
-            <RefreshCcw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-            {syncMutation.isPending ? "Syncing..." : "Force Sync Now"}
+            <RefreshCcw className={`h-4 w-4 mr-2 ${isForceSyncing ? "animate-spin" : ""}`} />
+            {isForceSyncing ? "Syncing..." : "Force Sync Now"}
           </Button>
         </div>
         <p className="text-sm text-gray-500">
@@ -86,21 +70,33 @@ export function TalentSyncActions() {
       
       <Separator />
       
-      {showResult && syncResult && (
-        <Alert variant={syncResult.success ? "default" : "destructive"}>
-          {syncResult.success ? (
+      {showResult && forceSyncResult && (
+        <Alert variant={forceSyncResult.success ? "default" : "destructive"}>
+          {forceSyncResult.success ? (
             <Check className="h-4 w-4" />
           ) : (
             <AlertCircle className="h-4 w-4" />
           )}
           <AlertTitle>
-            {syncResult.success ? "Sync Completed" : "Sync Error"}
+            {forceSyncResult.success ? "Sync Completed" : "Sync Error"}
           </AlertTitle>
           <AlertDescription>
-            {syncResult.message || 
-             (syncResult.success 
-              ? `Successfully synced ${syncResult.syncedCount} records.` 
+            {forceSyncResult.message || 
+             (forceSyncResult.success 
+              ? `Successfully synced ${forceSyncResult.syncedCount} records.` 
               : "Failed to sync talent data.")}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {showResult && forceSyncError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Sync Failed</AlertTitle>
+          <AlertDescription>
+            {forceSyncError instanceof Error 
+              ? forceSyncError.message 
+              : "An unknown error occurred during synchronization"}
           </AlertDescription>
         </Alert>
       )}

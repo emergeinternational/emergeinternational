@@ -10,7 +10,8 @@ import {
   checkTalentExists,
   updateTalentInDB,
   getSyncStatusSummary,
-  getTalentRegistrationCounts
+  getTalentRegistrationCounts,
+  forceSyncTalentData
 } from "@/services/talentSyncService";
 import { Talent } from "@/types/talentTypes";
 
@@ -32,15 +33,27 @@ export function useTalentSync() {
     queryFn: getSyncStatusSummary,
   });
   
-  // Query to fetch registration counts
+  // Registration counts query
   const registrationCountsQuery = useQuery({
     queryKey: ['talent-registration-counts'],
     queryFn: getTalentRegistrationCounts,
   });
   
-  // Mutation to run talent sync operation
+  // Standard sync mutation
   const syncMutation = useMutation({
     mutationFn: syncTalentData,
+    onSuccess: () => {
+      // Invalidate and refetch queries related to talent data
+      queryClient.invalidateQueries({ queryKey: ['talent-data'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-sync-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-sync-status'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-registration-counts'] });
+    },
+  });
+  
+  // Force sync mutation
+  const forceSyncMutation = useMutation({
+    mutationFn: forceSyncTalentData,
     onSuccess: () => {
       // Invalidate and refetch queries related to talent data
       queryClient.invalidateQueries({ queryKey: ['talent-data'] });
@@ -80,6 +93,11 @@ export function useTalentSync() {
     return syncMutation.mutateAsync();
   }, [syncMutation]);
   
+  // Function to force sync
+  const runForceSync = useCallback(() => {
+    return forceSyncMutation.mutateAsync();
+  }, [forceSyncMutation]);
+  
   // Function to add a single talent
   const addOrUpdateTalent = useCallback((data: ExternalTalentData) => {
     return addTalentMutation.mutateAsync(data);
@@ -88,13 +106,17 @@ export function useTalentSync() {
   return {
     // Sync operations
     runSync,
+    runForceSync,
     addOrUpdateTalent,
     isSyncing: syncMutation.isPending,
+    isForceSyncing: forceSyncMutation.isPending,
     isAdding: addTalentMutation.isPending,
     
     // Sync results
     syncResult: syncMutation.data,
+    forceSyncResult: forceSyncMutation.data,
     syncError: syncMutation.error,
+    forceSyncError: forceSyncMutation.error,
     
     // Sync logs
     syncLogs: syncLogsQuery.data || [],
