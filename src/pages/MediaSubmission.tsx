@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,6 +31,7 @@ const mediaFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
+  gender: z.enum(["Male", "Female", "Non-Binary", "Prefer not to say"]),
   category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Fashion Designer"]),
   description: z.string().min(10, "Please provide a description").max(500, "Description must not exceed 500 characters"),
   instagramHandle: z.string().optional(),
@@ -48,6 +50,7 @@ const MediaSubmission = () => {
     resolver: zodResolver(mediaFormSchema),
     defaultValues: {
       category: undefined,
+      gender: undefined,
     },
   });
 
@@ -61,6 +64,7 @@ const MediaSubmission = () => {
         email: data.email,
         phone_number: data.phoneNumber,
         age: parseInt(data.age, 10),
+        gender: data.gender,
         category: data.category,
         talent_description: data.description,
         instagram: data.instagramHandle || null,
@@ -206,21 +210,21 @@ const MediaSubmission = () => {
 
                     <FormField
                       control={form.control}
-                      name="category"
+                      name="gender"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Select Your Category</FormLabel>
+                          <FormLabel className="text-white">Gender</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                                <SelectValue placeholder="Select a category" />
+                                <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                              <SelectItem value="Top Model">Top Model</SelectItem>
-                              <SelectItem value="Top Performer">Top Performer</SelectItem>
-                              <SelectItem value="Top Dancer">Top Dancer</SelectItem>
-                              <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Non-Binary">Non-Binary</SelectItem>
+                              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -228,6 +232,30 @@ const MediaSubmission = () => {
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Select Your Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectItem value="Top Model">Top Model</SelectItem>
+                            <SelectItem value="Top Performer">Top Performer</SelectItem>
+                            <SelectItem value="Top Dancer">Top Dancer</SelectItem>
+                            <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

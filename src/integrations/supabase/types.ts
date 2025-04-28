@@ -1252,6 +1252,7 @@ export type Database = {
           experience_level: string | null
           experience_years: number | null
           full_name: string
+          gender: string | null
           height: number | null
           id: string
           languages_spoken: string[] | null
@@ -1280,6 +1281,7 @@ export type Database = {
           experience_level?: string | null
           experience_years?: number | null
           full_name: string
+          gender?: string | null
           height?: number | null
           id?: string
           languages_spoken?: string[] | null
@@ -1308,6 +1310,7 @@ export type Database = {
           experience_level?: string | null
           experience_years?: number | null
           full_name?: string
+          gender?: string | null
           height?: number | null
           id?: string
           languages_spoken?: string[] | null
