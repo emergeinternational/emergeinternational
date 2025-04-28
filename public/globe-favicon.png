@@ -1,2 +1,5 @@
-
-[THIS IS A PLACEHOLDER: You'll need to replace this file with an actual PNG image of a globe or Emerge International logo]
+<!-- Emerge International Favicon -->
+<link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
