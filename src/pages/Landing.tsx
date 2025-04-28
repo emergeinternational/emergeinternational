@@ -24,7 +24,7 @@ const Landing = () => {
           <div className="emerge-container relative z-10">
             <div className="max-w-3xl mx-auto text-center space-y-8">
               <h1 className="emerge-heading text-4xl md:text-6xl mb-6 relative">
-                <span className="block text-2xl md:text-3xl mb-4">Welcome To</span>
+                <span className="block text-4xl md:text-6xl mb-4">Welcome To</span>
                 <span className="block text-emerge-gold text-4xl md:text-6xl">Emerge International</span>
               </h1>
               
