@@ -813,6 +813,54 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          category: Database["public"]["Enums"]["product_category"]
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean
+          is_published: boolean
+          price: number
+          revenue: number | null
+          sales_count: number | null
+          title: string
+          updated_at: string | null
+          variations: Json[] | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["product_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean
+          is_published?: boolean
+          price?: number
+          revenue?: number | null
+          sales_count?: number | null
+          title: string
+          updated_at?: string | null
+          variations?: Json[] | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["product_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean
+          is_published?: boolean
+          price?: number
+          revenue?: number | null
+          sales_count?: number | null
+          title?: string
+          updated_at?: string | null
+          variations?: Json[] | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1329,6 +1377,7 @@ export type Database = {
       course_level: "beginner" | "intermediate" | "expert"
       event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
+      product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
     }
     CompositeTypes: {
@@ -1469,6 +1518,7 @@ export const Constants = {
       course_level: ["beginner", "intermediate", "expert"],
       event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
+      product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
     },
   },
