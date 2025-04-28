@@ -18,6 +18,7 @@ export { trackCourseEngagement } from './courseEngagementService';
 export const getCourseById = getCourseByIdQuery;
 export const getAllCourses = getAllCoursesQuery;
 export const getPopularCourses = getPopularCoursesQuery;
+export { getStaticCourses };
 
 export const getCoursesWithProgress = async (
   userId?: string
@@ -70,5 +71,3 @@ export const getCoursesForCategory = async (
     return [];
   }
 };
-
-export { getStaticCourses };

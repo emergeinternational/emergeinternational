@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
+import { generateCourseHash } from "../courseTypes";
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
