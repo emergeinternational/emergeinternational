@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -55,7 +54,7 @@ export const LoginSignupForm = ({
         // Implement exponential backoff for signup attempts
         let success = false;
         let attempts = 0;
-        const maxAttempts = 5; // Increase from 3 to 5 for more retries
+        const maxAttempts = 5; // Increased attempts for more reliability
         let delayMs = 500; // Start with 500ms delay
         
         while (!success && attempts < maxAttempts) {
@@ -73,7 +72,7 @@ export const LoginSignupForm = ({
           } catch (retryError) {
             console.log(`Signup attempt ${attempts} failed:`, retryError);
             
-            // Special handling for database errors
+            // Detect database-related errors
             if (retryError instanceof Error && 
                 (retryError.message.includes("database") || 
                  retryError.message.includes("foreign key") ||

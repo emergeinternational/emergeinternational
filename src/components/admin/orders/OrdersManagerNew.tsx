@@ -10,6 +10,28 @@ import OrderDetailsDialog from "./OrderDetailsDialog";
 import { Search, RefreshCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
+// Define the export constants needed by other components
+export interface OrderFiltersState {
+  status: string[];
+  searchQuery: string;
+  paymentStatus: string[];
+  dateRange: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
+}
+
+export const ORDER_STATUSES = [
+  { value: "pending", label: "Pending" },
+  { value: "processing", label: "Processing" },
+  { value: "completed", label: "Completed" },
+  { value: "shipped", label: "Shipped" },
+  { value: "delivered", label: "Delivered" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "refunded", label: "Refunded" },
+  { value: "abandoned", label: "Abandoned" }
+];
+
 const OrdersManagerNew = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");

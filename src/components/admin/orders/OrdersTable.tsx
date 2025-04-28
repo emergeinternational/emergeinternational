@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import {
   Table,
@@ -48,13 +47,13 @@ const getOrderStatusBadge = (status: string) => {
     case "processing":
       return <Badge variant="secondary" className="flex items-center gap-1"><Package className="h-3 w-3" /> Processing</Badge>;
     case "completed":
-      return <Badge variant="success" className="flex items-center gap-1 bg-green-100 text-green-800 hover:bg-green-200"><CheckCircle2 className="h-3 w-3" /> Completed</Badge>;
+      return <Badge className="flex items-center gap-1 bg-green-100 text-green-800 hover:bg-green-200"><CheckCircle2 className="h-3 w-3" /> Completed</Badge>;
     case "cancelled":
       return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelled</Badge>;
     case "shipped":
-      return <Badge variant="default" className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200"><Truck className="h-3 w-3" /> Shipped</Badge>;
+      return <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200"><Truck className="h-3 w-3" /> Shipped</Badge>;
     case "delivered":
-      return <Badge variant="success" className="flex items-center gap-1 bg-green-100 text-green-800 hover:bg-green-200"><PackageCheck className="h-3 w-3" /> Delivered</Badge>;
+      return <Badge className="flex items-center gap-1 bg-green-100 text-green-800 hover:bg-green-200"><PackageCheck className="h-3 w-3" /> Delivered</Badge>;
     case "refunded":
       return <Badge variant="outline" className="flex items-center gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200"><RotateCcw className="h-3 w-3" /> Refunded</Badge>;
     default:

@@ -9,41 +9,8 @@ export type CreatorCategory =
   | 'model'
   | 'creative_director';
 
-// Specialty types for each category
-// FashionDesigner specialties
-export type FashionDesignerSpecialty = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
-
-// InteriorDesigner specialties
-export type InteriorDesignerSpecialty = 'residential' | 'commercial' | 'hospitality' | 'other';
-
-// GraphicDesigner specialties
-export type GraphicDesignerSpecialty = 'branding' | 'digital' | 'print' | 'illustration' | 'other';
-
-// VisualArtist specialties
-export type VisualArtistSpecialty = 'painting' | 'sculpture' | 'digital_art' | 'mixed_media' | 'other';
-
-// Photographer specialties
-export type PhotographerSpecialty = 'portrait' | 'fashion' | 'event' | 'commercial' | 'other';
-
-// EventPlanner specialties
-export type EventPlannerSpecialty = 'weddings' | 'corporate' | 'social' | 'non_profit' | 'other';
-
-// Model specialties
-export type ModelSpecialty = 'runway' | 'commercial' | 'editorial' | 'fitness' | 'other';
-
-// CreativeDirector specialties
-export type CreativeDirectorSpecialty = 'fashion' | 'advertising' | 'brand' | 'art_direction' | 'other';
-
-// Union type for all specialties
-export type DesignerSpecialty =
-  | FashionDesignerSpecialty
-  | InteriorDesignerSpecialty
-  | GraphicDesignerSpecialty
-  | VisualArtistSpecialty
-  | PhotographerSpecialty
-  | EventPlannerSpecialty
-  | ModelSpecialty
-  | CreativeDirectorSpecialty;
+// We'll use string type directly for specialties to match database expectations
+export type DesignerSpecialty = string;
 
 export interface FeaturedProject {
   title: string;
@@ -150,13 +117,13 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: string;
   }
 };
 
-// Helper function to get the appropriate specialty type based on category
+// Simplified helper function that just returns the specialty as a string
 export const getCategorySpecialty = (category: CreatorCategory, specialty: string): string => {
   // Simply return the specialty as a string
   return specialty;
 };
 
-// This function helps cast specialties to the database-expected types
-export const castSpecialtyForDatabase = (specialty: string | DesignerSpecialty): string => {
-  return specialty.toString();
+// This function is now simplified to just return the string
+export const castSpecialtyForDatabase = (specialty: string): string => {
+  return specialty;
 };

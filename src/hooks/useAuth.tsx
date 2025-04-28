@@ -1,4 +1,3 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { ensureUserProfile } from '@/utils/ensureUserProfile';
 
+// Use string-based type for roles
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
 type AuthContextType = {
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return hasRequiredRole;
     }
 
-    const hasRequiredRole = userRole === requiredRole;
+    const hasRequiredRole = userRole === userRole;
     console.log(`hasRole check (single): user has role ${userRole}, needs ${requiredRole} = ${hasRequiredRole}`);
     return hasRequiredRole;
   };

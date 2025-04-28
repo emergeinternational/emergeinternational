@@ -22,7 +22,7 @@ export interface Order {
   id: string;
   user_id: string;
   total_amount: number;
-  status: string; // Allow any string to match database
+  status: string; // Keep as string to match database
   payment_method?: string;
   shipping_address_id?: string;
   created_at?: string;
@@ -31,14 +31,14 @@ export interface Order {
   profiles?: {
     full_name?: string;
     email?: string;
-  };
+  } | null; // Add null to handle potential null values
   shipping_addresses?: {
     address_line1: string;
     city: string;
     state: string;
     postal_code: string;
     country: string;
-  };
+  } | null; // Add null to handle potential null values
 }
 
 export interface OrdersTableProps {

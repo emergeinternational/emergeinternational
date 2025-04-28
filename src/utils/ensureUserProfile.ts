@@ -40,7 +40,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
         id: userId,
         email: email,
         updated_at: new Date().toISOString(),
-        role: 'user' // Use string directly rather than enum
+        role: 'user' // Use string directly
       });
 
     if (error) {
@@ -57,7 +57,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
             id: userId,
             email: email,
             updated_at: new Date().toISOString(),
-            role: 'user' // Use string directly rather than enum
+            role: 'user' // Use string directly
           });
           
         if (retryError) {
@@ -84,18 +84,17 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
         .maybeSingle();
         
       if (!existingRole) {
-        // Insert user role as string instead of enum
+        // Insert user role as string
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
             user_id: userId,
-            role: 'user'  // Use string instead of enum
+            role: 'user'  // Use string
           });
           
         if (roleError) {
           console.error("Could not set user role in user_roles table:", roleError);
           console.log("Role insertion error:", roleError.message);
-          // Don't try to fall back to setting role in profile since we already did that above
         } else {
           console.log("User role set successfully in user_roles table");
         }
@@ -104,7 +103,6 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
       }
     } catch (roleError) {
       console.error("Error setting user role in user_roles table:", roleError);
-      // No fallback needed since we already set role in profile
     }
     
     return true;
