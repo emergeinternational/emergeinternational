@@ -27,8 +27,13 @@ const CreativeProfessionals = () => {
       const { data, error } = await supabase
         .from('designers')
         .select('*');
+      
       if (error) throw error;
-      return data as Designer[];
+      
+      return (data as any[]).map(item => ({
+        ...item,
+        featured_project: item.featured_project || null
+      })) as Designer[];
     },
   });
 
@@ -49,7 +54,7 @@ const CreativeProfessionals = () => {
   );
 
   const featuredDesigners = designers?.filter(designer => designer.featured) || [];
-
+  
   const activeCategory = categories.find(cat => cat.value === selectedCategory);
 
   return (

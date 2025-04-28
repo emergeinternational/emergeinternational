@@ -39,7 +39,7 @@ export interface Designer {
   sales_count?: number;
   created_at?: string;
   updated_at?: string;
-  featured_project?: FeaturedProject;
+  featured_project?: FeaturedProject | null;
   achievements?: string[];
   showcase_images?: string[];
 }
