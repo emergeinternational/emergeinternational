@@ -1,107 +1,166 @@
-
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
-export type CourseLevel = 'beginner' | 'intermediate' | 'advanced' | 'all_levels' | 'expert';
-export type CourseHostingType = 'hosted' | 'external' | 'embedded';
+export type CourseLevel = 'beginner' | 'intermediate' | 'expert';
+export type CourseHostingType = 'hosted' | 'embedded' | 'external';
 
 export interface Course {
   id: string;
   title: string;
   summary?: string;
+  description?: string;
   category: CourseCategory;
-  level?: CourseLevel;
-  external_link?: string;
-  video_embed_url?: string;
-  image_url?: string;
-  hosting_type: CourseHostingType;
-  is_published: boolean;
-  price?: number;
+  level: CourseLevel;
+  duration?: string;
+  link?: string;
+  slug?: string;
+  rating?: number;
+  reviews?: number;
+  isPopular?: boolean;
+  isFeatured?: boolean;
+  prerequisites?: string[];
   created_at?: string;
   updated_at?: string;
-  // Additional properties for Education and CourseDetail pages
   source_url?: string;
-  link?: string;
+  image_url?: string;
   image?: string;
   content_type?: string;
-  duration?: string;
+  category_id?: string;
   career_interests?: string[];
-  category_id?: string; // For backwards compatibility
+  video_embed_url?: string;
+  external_link?: string;
+  hosting_type: CourseHostingType;
+  is_published?: boolean;
+  content?: string;
+  location?: string;
+  price?: number;
+  source_id?: string;
+  source_platform?: string;
+  hash_identifier?: string;
 }
 
-export interface ScrapedCourse {
+export interface ScrapedCourse extends Omit<Course, 'id'> {
   id: string;
-  title: string;
-  summary?: string;
-  category: CourseCategory;
-  level?: CourseLevel;
-  external_link?: string;
-  video_embed_url?: string;
-  image_url?: string;
-  hosting_type: CourseHostingType;
   scraper_source: string;
-  hash_identifier: string;
   is_reviewed: boolean;
   is_approved: boolean;
   review_notes?: string;
-  created_at?: string;
-  updated_at?: string;
   is_duplicate?: boolean;
-  duplicate_confidence?: number;
   duplicate_of?: string;
+  duplicate_confidence?: number;
+  hash_identifier: string;
 }
 
-// Helper function to generate a course hash identifier
-export const generateCourseHash = (course: Partial<ScrapedCourse>): string => {
-  const titleHash = course.title ? course.title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-  const sourceHash = course.scraper_source ? course.scraper_source.toLowerCase() : '';
-  return `${titleHash}-${sourceHash}`;
-};
-
-// CourseProgress interface
 export interface CourseProgress {
   id: string;
   user_id: string;
   course_id: string;
   progress: number;
-  status: string;
+  status: 'not_started' | 'started' | 'in_progress' | 'completed';
   date_started?: string;
   date_completed?: string;
+  course_category?: string;
   created_at?: string;
   updated_at?: string;
-  course_category?: string;
 }
 
-// Helper functions referenced in other files
-export const sanitizeCourseData = (course: any): Course => {
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Review {
+  id: string;
+  course_id: string;
+  user_id: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+}
+
+export const getDefaultCourseCategory = (category?: string): CourseCategory => {
+  const validCategories: CourseCategory[] = ['model', 'designer', 'photographer', 'videographer', 'musical_artist', 'fine_artist', 'event_planner'];
+  return validCategories.includes(category as CourseCategory) ? (category as CourseCategory) : 'model';
+};
+
+export const getDefaultCourseLevel = (level?: string): CourseLevel => {
+  const validLevels: CourseLevel[] = ['beginner', 'intermediate', 'expert'];
+  return validLevels.includes(level as CourseLevel) ? (level as CourseLevel) : 'beginner';
+};
+
+export const getDefaultHostingType = (type?: string): CourseHostingType => {
+  const validTypes: CourseHostingType[] = ['hosted', 'embedded', 'external'];
+  return validTypes.includes(type as CourseHostingType) ? (type as CourseHostingType) : 'hosted';
+};
+
+export const generateCourseHash = (title: string, source?: string): string => {
+  const normalizedTitle = title.toLowerCase().trim().replace(/\s+/g, '');
+  const normalizedSource = (source || '').toLowerCase().trim();
+  return `${normalizedTitle}-${normalizedSource}`;
+};
+
+export const sanitizeCourseData = (data: any): Course => {
+  const sourceUrl = data.source_url || data.external_link || '';
+  const sourcePlatform = data.source_platform || data.scraper_source || '';
+  
   return {
-    ...course,
-    title: course.title?.trim() || "",
-    summary: course.summary?.trim(),
-    external_link: course.external_link?.trim(),
-    image_url: course.image_url?.trim(),
-    video_embed_url: course.video_embed_url?.trim(),
-    is_published: course.is_published === undefined ? false : course.is_published,
+    id: data.id || '',
+    title: data.title || 'Coming Soon',
+    summary: data.summary || '',
+    description: data.description || '',
+    category: getDefaultCourseCategory(data.category || data.category_id),
+    level: getDefaultCourseLevel(data.level || data.content_type),
+    duration: data.duration || '',
+    image_url: data.image_url || '',
+    image: data.image_url || '',
+    source_url: sourceUrl,
+    content_type: data.content_type || '',
+    category_id: data.category_id || '',
+    created_at: data.created_at || '',
+    updated_at: data.updated_at || '',
+    career_interests: data.career_interests || [],
+    video_embed_url: data.video_embed_url || data.source_url || '',
+    external_link: data.external_link || data.source_url || '',
+    hosting_type: getDefaultHostingType(data.hosting_type),
+    is_published: data.is_published !== undefined ? data.is_published : true,
+    price: data.price || 0,
+    source_id: data.source_id || '',
+    source_platform: sourcePlatform,
+    hash_identifier: data.hash_identifier || generateCourseHash(data.title || 'Coming Soon', sourcePlatform)
   };
 };
 
-export const sanitizeCourseProgress = (progress: any): CourseProgress => {
+export const sanitizeCourseProgress = (data: any): CourseProgress => {
+  const validStatuses = ['not_started', 'started', 'in_progress', 'completed'];
+  const status = validStatuses.includes(data.status) ? data.status : 'not_started';
+  
   return {
-    ...progress,
-    progress: Number(progress.progress) || 0,
-    status: progress.status || 'started'
+    id: data.id || '',
+    user_id: data.user_id || '',
+    course_id: data.course_id || '',
+    progress: typeof data.progress === 'number' ? data.progress : 0,
+    status: status as 'not_started' | 'started' | 'in_progress' | 'completed',
+    date_started: data.date_started || null,
+    date_completed: data.date_completed || null,
+    course_category: data.course_category || null,
+    created_at: data.created_at || null,
+    updated_at: data.updated_at || null
   };
 };
 
-// Add sanitizeScrapedCourse which is referenced in courseScraperCore.ts
-export const sanitizeScrapedCourse = (course: any): ScrapedCourse => {
+export const sanitizeScrapedCourse = (data: any): ScrapedCourse => {
+  const courseData = sanitizeCourseData(data);
   return {
-    ...course,
-    title: course.title?.trim() || "",
-    summary: course.summary?.trim(),
-    external_link: course.external_link?.trim(),
-    image_url: course.image_url?.trim(),
-    video_embed_url: course.video_embed_url?.trim(),
-    hash_identifier: course.hash_identifier || generateCourseHash(course),
-    is_reviewed: course.is_reviewed === undefined ? false : course.is_reviewed,
-    is_approved: course.is_approved === undefined ? false : course.is_approved,
+    ...courseData,
+    id: data.id || '',
+    scraper_source: data.scraper_source || '',
+    is_reviewed: data.is_reviewed || false,
+    is_approved: data.is_approved || false,
+    review_notes: data.review_notes,
+    is_duplicate: data.is_duplicate || false,
+    duplicate_of: data.duplicate_of,
+    duplicate_confidence: data.duplicate_confidence || 0,
+    hash_identifier: data.hash_identifier || generateCourseHash(data.title || '', data.source_platform || '')
   };
 };

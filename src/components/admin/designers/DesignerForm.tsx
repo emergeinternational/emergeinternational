@@ -1,318 +1,399 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Designer } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, DesignerCategory } from "@/services/designerTypes";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
+// Define the designer specialties
+const specialties = [
+  { value: "apparel", label: "Apparel" },
+  { value: "accessories", label: "Accessories" },
+  { value: "footwear", label: "Footwear" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "other", label: "Other" },
+];
+
+// Define the form schema with validation rules
+const designerFormSchema = z.object({
+  full_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
+  specialty: z.enum(["apparel", "accessories", "footwear", "jewelry", "other"]),
+  bio: z.string().optional().or(z.literal("")),
+  portfolio_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
+  image_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
+  featured: z.boolean().default(false),
+  social_media: z
+    .object({
+      instagram: z.string().optional().or(z.literal("")),
+      facebook: z.string().optional().or(z.literal("")),
+      twitter: z.string().optional().or(z.literal("")),
+      website: z.string().optional().or(z.literal("")),
+    })
+    .optional(),
+});
 
 interface DesignerFormProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   designer: Designer | null;
+  onSuccess?: () => void;
 }
 
-const DesignerForm = ({ open, setOpen, designer }: DesignerFormProps) => {
+const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps) => {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<Partial<Designer>>({
-    full_name: "",
-    email: "",
-    specialty: "apparel",
-    bio: "",
-    portfolio_url: "",
-    image_url: "",
-    featured: false,
-    social_media: { instagram: "", facebook: "", twitter: "", website: "" },
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Create form with validation
+  const form = useForm<z.infer<typeof designerFormSchema>>({
+    resolver: zodResolver(designerFormSchema),
+    defaultValues: {
+      full_name: "",
+      email: "",
+      specialty: "apparel",
+      bio: "",
+      portfolio_url: "",
+      image_url: "",
+      featured: false,
+      social_media: {
+        instagram: "",
+        facebook: "",
+        twitter: "",
+        website: "",
+      },
+    },
   });
 
   // Load designer data when editing
   useEffect(() => {
     if (designer) {
-      setFormData({
+      form.reset({
         full_name: designer.full_name,
-        email: designer.email,
+        email: designer.email || "",
         specialty: designer.specialty,
-        bio: designer.bio,
-        portfolio_url: designer.portfolio_url,
-        image_url: designer.image_url,
+        bio: designer.bio || "",
+        portfolio_url: designer.portfolio_url || "",
+        image_url: designer.image_url || "",
         featured: designer.featured,
-        social_media: designer.social_media || { instagram: "", facebook: "", twitter: "", website: "" },
+        social_media: designer.social_media || {
+          instagram: "",
+          facebook: "",
+          twitter: "",
+          website: "",
+        },
+      });
+    } else {
+      form.reset({
+        full_name: "",
+        email: "",
+        specialty: "apparel",
+        bio: "",
+        portfolio_url: "",
+        image_url: "",
+        featured: false,
+        social_media: {
+          instagram: "",
+          facebook: "",
+          twitter: "",
+          website: "",
+        },
       });
     }
-  }, [designer]);
+  }, [designer, form]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: checked }));
-  };
-
-  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      social_media: { ...prev.social_media, [name]: value },
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
+  // Handle form submission
+  const onSubmit = async (values: z.infer<typeof designerFormSchema>) => {
+    setIsSubmitting(true);
     try {
-      // Make sure required fields are present
-      if (!formData.full_name || !formData.specialty) {
-        toast({
-          title: "Missing required fields",
-          description: "Please fill in all required fields.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Prepare data with required fields
-      const dataToSend = {
-        full_name: formData.full_name,
-        specialty: formData.specialty as DesignerCategory,
-        email: formData.email || null,
-        bio: formData.bio || null,
-        portfolio_url: formData.portfolio_url || null,
-        image_url: formData.image_url || null,
-        featured: formData.featured || false,
-        social_media: formData.social_media ? { ...formData.social_media } : null
-      };
-
       if (designer) {
         // Update existing designer
         const { error } = await supabase
           .from("designers")
-          .update(dataToSend)
+          .update({
+            ...values,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", designer.id);
 
         if (error) throw error;
 
         toast({
           title: "Designer updated",
-          description: "The designer has been successfully updated.",
+          description: `${values.full_name} has been updated successfully.`,
         });
       } else {
         // Create new designer
-        const { error } = await supabase
-          .from("designers")
-          .insert([dataToSend]);
+        const { error } = await supabase.from("designers").insert([
+          {
+            ...values,
+            created_at: new Date().toISOString(),
+          },
+        ]);
 
         if (error) throw error;
 
         toast({
           title: "Designer created",
-          description: "The designer has been successfully created.",
+          description: `${values.full_name} has been added successfully.`,
         });
       }
 
-      // Close the form and reset
+      // Close form and refresh data
       setOpen(false);
+      if (onSuccess) onSuccess();
     } catch (error: any) {
       toast({
-        title: "Error saving designer",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{designer ? "Edit Designer" : "Add New Designer"}</DialogTitle>
+          <DialogTitle>{designer ? "Edit Designer" : "Add Designer"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="full_name" className="text-sm font-medium">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="full_name"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
                 name="full_name"
-                type="text"
-                className="w-full p-2 border rounded-md"
-                value={formData.full_name || ""}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <input
-                id="email"
+              <FormField
+                control={form.control}
                 name="email"
-                type="email"
-                className="w-full p-2 border rounded-md"
-                value={formData.email || ""}
-                onChange={handleChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <label htmlFor="specialty" className="text-sm font-medium">
-                Specialty <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="specialty"
+              <FormField
+                control={form.control}
                 name="specialty"
-                className="w-full p-2 border rounded-md"
-                value={formData.specialty || "apparel"}
-                onChange={handleChange}
-                required
-              >
-                <option value="apparel">Apparel</option>
-                <option value="accessories">Accessories</option>
-                <option value="footwear">Footwear</option>
-                <option value="jewelry">Jewelry</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="portfolio_url" className="text-sm font-medium">
-                Portfolio URL
-              </label>
-              <input
-                id="portfolio_url"
-                name="portfolio_url"
-                type="url"
-                className="w-full p-2 border rounded-md"
-                value={formData.portfolio_url || ""}
-                onChange={handleChange}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Specialty</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select specialty" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {specialties.map((specialty) => (
+                          <SelectItem key={specialty.value} value={specialty.value}>
+                            {specialty.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <label htmlFor="image_url" className="text-sm font-medium">
-                Image URL
-              </label>
-              <input
-                id="image_url"
-                name="image_url"
-                type="url"
-                className="w-full p-2 border rounded-md"
-                value={formData.image_url || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="space-y-2 flex items-center">
-              <input
-                id="featured"
+              <FormField
+                control={form.control}
                 name="featured"
-                type="checkbox"
-                className="mr-2"
-                checked={formData.featured || false}
-                onChange={handleCheckboxChange}
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Featured Designer</FormLabel>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <label htmlFor="featured" className="text-sm font-medium">
-                Featured Designer
-              </label>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label htmlFor="bio" className="text-sm font-medium">
-              Bio
-            </label>
-            <textarea
-              id="bio"
+            <FormField
+              control={form.control}
               name="bio"
-              rows={4}
-              className="w-full p-2 border rounded-md"
-              value={formData.bio || ""}
-              onChange={handleChange}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Designer biography"
+                      {...field}
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Social Media</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="instagram" className="text-sm">
-                  Instagram
-                </label>
-                <input
-                  id="instagram"
-                  name="instagram"
-                  type="text"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.social_media?.instagram || ""}
-                  onChange={handleSocialMediaChange}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="portfolio_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Portfolio URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="image_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Image URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Social Media</h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="social_media.instagram"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instagram</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Instagram username" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <label htmlFor="facebook" className="text-sm">
-                  Facebook
-                </label>
-                <input
-                  id="facebook"
-                  name="facebook"
-                  type="text"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.social_media?.facebook || ""}
-                  onChange={handleSocialMediaChange}
+                <FormField
+                  control={form.control}
+                  name="social_media.facebook"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Facebook profile" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <label htmlFor="twitter" className="text-sm">
-                  Twitter
-                </label>
-                <input
-                  id="twitter"
-                  name="twitter"
-                  type="text"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.social_media?.twitter || ""}
-                  onChange={handleSocialMediaChange}
+                <FormField
+                  control={form.control}
+                  name="social_media.twitter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Twitter</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Twitter handle" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <label htmlFor="website" className="text-sm">
-                  Website
-                </label>
-                <input
-                  id="website"
-                  name="website"
-                  type="text"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.social_media?.website || ""}
-                  onChange={handleSocialMediaChange}
+                <FormField
+                  control={form.control}
+                  name="social_media.website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Personal website" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" type="button" onClick={() => setOpen(false)} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : designer ? "Update Designer" : "Create Designer"}
-            </Button>
-          </div>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : designer
+                  ? "Update Designer"
+                  : "Create Designer"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -7,10 +7,9 @@ import OrdersSummary from "./OrdersSummary";
 import OrderFilters from "./OrderFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
-import { Order, OrderStatus } from "@/services/orderTypes";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { Order } from "@/services/orderTypes";
 
+// Define order status options
 export const ORDER_STATUSES = [
   { value: "pending", label: "Pending" },
   { value: "processing", label: "Processing" },
@@ -22,6 +21,7 @@ export const ORDER_STATUSES = [
   { value: "abandoned", label: "Abandoned" },
 ];
 
+// Define payment status options
 export const PAYMENT_STATUSES = [
   { value: "pending", label: "Pending" },
   { value: "completed", label: "Completed" },
@@ -53,58 +53,53 @@ const OrdersManager = () => {
 
   // Fetch orders with filters
   const {
-    data: orders = [],
+    data: orders,
     isLoading,
     error,
     refetch,
   } = useQuery({
     queryKey: ["admin-orders", filters],
     queryFn: async () => {
-      try {
-        let query = supabase
-          .from("orders")
-          .select(`
-            *,
-            user:profiles (
-              full_name,
-              email,
-              phone_number
-            ),
-            order_items (*)
-          `)
-          .order("created_at", { ascending: false });
+      let query = supabase
+        .from("orders")
+        .select(`
+          *,
+          user:profiles (
+            full_name,
+            email,
+            phone_number
+          ),
+          order_items (*)
+        `)
+        .order("created_at", { ascending: false });
 
-        // Apply status filters
-        if (filters.status.length > 0) {
-          query = query.in("status", filters.status);
-        }
-
-        // Apply payment status filters
-        if (filters.paymentStatus.length > 0) {
-          query = query.in("payment_status", filters.paymentStatus);
-        }
-
-        // Apply date range filters
-        if (filters.dateRange.from) {
-          query = query.gte("created_at", filters.dateRange.from.toISOString());
-        }
-
-        if (filters.dateRange.to) {
-          const endDate = new Date(filters.dateRange.to);
-          endDate.setDate(endDate.getDate() + 1);
-          query = query.lt("created_at", endDate.toISOString());
-        }
-
-        const { data: ordersData, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
-        return ordersData as Order[] || [];
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-        throw new Error("Failed to fetch orders");
+      // Apply status filters
+      if (filters.status.length > 0) {
+        query = query.in("status", filters.status);
       }
+
+      // Apply payment status filters
+      if (filters.paymentStatus.length > 0) {
+        query = query.in("payment_status", filters.paymentStatus);
+      }
+
+      // Apply date range filters
+      if (filters.dateRange.from) {
+        query = query.gte("created_at", filters.dateRange.from.toISOString());
+      }
+
+      if (filters.dateRange.to) {
+        // Add 1 day to include the end date
+        const endDate = new Date(filters.dateRange.to);
+        endDate.setDate(endDate.getDate() + 1);
+        query = query.lt("created_at", endDate.toISOString());
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data as Order[];
     },
-    retry: 1,
   });
 
   // Set up realtime updates
@@ -126,24 +121,48 @@ const OrdersManager = () => {
     );
   });
 
+  // Calculate summary statistics
+  const calculateSummary = () => {
+    if (!orders) return {
+      totalOrders: 0,
+      pendingOrders: 0,
+      completedOrders: 0,
+      abandonedOrders: 0,
+      totalRevenue: 0,
+    };
+
+    return {
+      totalOrders: orders.length,
+      pendingOrders: orders.filter(order => order.status === 'pending').length,
+      completedOrders: orders.filter(order => order.status === 'completed').length,
+      abandonedOrders: orders.filter(order => order.status === 'abandoned').length,
+      totalRevenue: orders.reduce((sum, order) => 
+        order.status === 'completed' ? sum + Number(order.total_amount || 0) : sum, 0
+      ),
+    };
+  };
+
+  const orderSummary = calculateSummary();
+
   // Handle order status updates
-  const handleOrderStatusUpdate = async (orderId: string, status: OrderStatus) => {
+  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
     try {
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("orders")
         .update({ status })
         .eq("id", orderId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
       toast({
         title: "Order updated",
         description: `Order #${orderId.slice(0, 8)} status changed to ${status}`,
       });
       
+      // Refetch orders to update the list
       refetch();
-    } catch (err) {
-      console.error("Error updating order:", err);
+    } catch (error) {
+      console.error("Error updating order:", error);
       toast({
         title: "Update failed",
         description: "There was an error updating the order status.",
@@ -152,45 +171,27 @@ const OrdersManager = () => {
     }
   };
 
-  // Calculate summary statistics
-  const summary = {
-    totalOrders: orders?.length || 0,
-    pendingOrders: orders?.filter(order => order.status === 'pending').length || 0,
-    completedOrders: orders?.filter(order => order.status === 'completed').length || 0,
-    abandonedOrders: orders?.filter(order => order.status === 'abandoned').length || 0,
-    totalRevenue: orders?.reduce((sum, order) => 
-      order.status === 'completed' ? sum + Number(order.total_amount || 0) : sum, 0
-    ) || 0,
-  };
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-500">Error loading orders data</p>
+        <button onClick={() => refetch()} className="mt-4 px-4 py-2 bg-primary text-white rounded">
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Orders Management</h2>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      <OrdersSummary summary={summary} />
+      <OrdersSummary summary={orderSummary} />
       <OrderFilters filters={filters} setFilters={setFilters} />
-      
-      {error ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-red-500 mb-4">Error loading orders data</p>
-          <Button onClick={() => refetch()}>
-            Try Again
-          </Button>
-        </div>
-      ) : (
-        <OrdersTable 
-          orders={filteredOrders} 
-          isLoading={isLoading}
-          onStatusUpdate={handleOrderStatusUpdate}
-          onRefresh={refetch}
-        />
-      )}
+      <OrdersTable 
+        orders={filteredOrders || []} 
+        isLoading={isLoading}
+        onStatusUpdate={handleOrderStatusUpdate}
+        onRefresh={refetch}
+      />
     </div>
   );
 };

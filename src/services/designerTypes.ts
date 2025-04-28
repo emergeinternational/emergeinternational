@@ -6,14 +6,12 @@ export interface SocialMedia {
   website?: string;
 }
 
-export type DesignerCategory = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
-
 export interface Designer {
   id: string;
   full_name: string;
   email?: string;
   bio?: string;
-  specialty: DesignerCategory;
+  specialty: 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
   portfolio_url?: string;
   image_url?: string;
   social_media?: SocialMedia;
