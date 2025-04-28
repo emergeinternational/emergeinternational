@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, getSpecialtyOptions, DesignerSpecialty } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -60,6 +60,7 @@ const designerFormSchema = z.object({
     "creative_director"
   ]),
   bio: z.string().optional().or(z.literal("")),
+  location: z.string().optional().or(z.literal("")),
   portfolio_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
   image_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
   featured: z.boolean().default(false),
@@ -100,6 +101,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
       specialty: "apparel",
       category: "fashion_designer",
       bio: "",
+      location: "",
       portfolio_url: "",
       image_url: "",
       featured: false,
@@ -139,6 +141,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         specialty: designer.specialty,
         category: designer.category,
         bio: designer.bio || "",
+        location: designer.location || "",
         portfolio_url: designer.portfolio_url || "",
         image_url: designer.image_url || "",
         featured: designer.featured,
@@ -166,6 +169,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         specialty: "apparel",
         category: "fashion_designer",
         bio: "",
+        location: "",
         portfolio_url: "",
         image_url: "",
         featured: false,
@@ -198,9 +202,10 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .update({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty,
+            specialty: values.specialty as DesignerSpecialty,
             category: values.category,
             bio: values.bio || null,
+            location: values.location || null,
             portfolio_url: values.portfolio_url || null,
             image_url: values.image_url || null,
             featured: values.featured,
@@ -224,9 +229,10 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .insert({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty,
+            specialty: values.specialty as DesignerSpecialty,
             category: values.category,
             bio: values.bio || null,
+            location: values.location || null,
             portfolio_url: values.portfolio_url || null,
             image_url: values.image_url || null,
             featured: values.featured,
@@ -326,6 +332,20 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input placeholder="Email address" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City, Country" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

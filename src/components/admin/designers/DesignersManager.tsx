@@ -31,7 +31,8 @@ const DesignersManager = () => {
       designer.full_name.toLowerCase().includes(query) ||
       designer.email?.toLowerCase().includes(query) ||
       designer.specialty.toLowerCase().includes(query) ||
-      designer.category.toLowerCase().includes(query)
+      designer.category.toLowerCase().includes(query) ||
+      designer.location?.toLowerCase().includes(query)
     );
   }) ?? [];
 

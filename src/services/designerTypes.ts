@@ -116,4 +116,3 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: string;
 
   return specialtyMap[category];
 };
-
