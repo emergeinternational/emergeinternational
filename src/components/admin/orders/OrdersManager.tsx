@@ -95,10 +95,10 @@ const OrdersManager = () => {
           query = query.lt("created_at", endDate.toISOString());
         }
 
-        const { data, error: fetchError } = await query;
+        const { data: ordersData, error: fetchError } = await query;
 
         if (fetchError) throw fetchError;
-        return data as Order[];
+        return ordersData as Order[] || [];
       } catch (err) {
         console.error("Error fetching orders:", err);
         throw new Error("Failed to fetch orders");
@@ -152,10 +152,6 @@ const OrdersManager = () => {
     }
   };
 
-  const handleRefresh = () => {
-    refetch();
-  };
-
   // Calculate summary statistics
   const summary = {
     totalOrders: orders?.length || 0,
@@ -171,7 +167,7 @@ const OrdersManager = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Orders Management</h2>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>

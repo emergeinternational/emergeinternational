@@ -2,7 +2,12 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { OrderStatus, PaymentStatus } from '@/services/orderTypes';
+
+export interface OrderStatusChange {
+  id: string;
+  status?: string;
+  payment_status?: string;
+}
 
 export const useOrdersRealtime = (onOrderChange?: () => void) => {
   const { toast } = useToast();
@@ -30,6 +35,14 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
               toast({
                 title: "Order Status Updated",
                 description: `Order #${payload.new.id.slice(0, 8)} status changed to ${payload.new.status}`,
+              });
+            }
+            
+            // Show toast for payment status changes
+            if (payload.old.payment_status !== payload.new.payment_status && payload.new.payment_status) {
+              toast({
+                title: "Payment Status Updated",
+                description: `Order #${payload.new.id.slice(0, 8)} payment status is now ${payload.new.payment_status}`,
               });
             }
           }

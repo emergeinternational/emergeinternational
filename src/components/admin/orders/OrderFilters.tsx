@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,10 +33,12 @@ const OrderFilters = ({ filters, setFilters }: OrderFiltersProps) => {
 
   // Update parent filters when date range changes
   useEffect(() => {
-    setFilters({
-      ...filters,
-      dateRange,
-    });
+    if (dateRange.from !== filters.dateRange.from || dateRange.to !== filters.dateRange.to) {
+      setFilters({
+        ...filters,
+        dateRange,
+      });
+    }
   }, [dateRange]);
 
   const handleStatusChange = (value: string) => {
@@ -151,12 +154,10 @@ const OrderFilters = ({ filters, setFilters }: OrderFiltersProps) => {
                   to: dateRange.to
                 }}
                 onSelect={(selected) => {
-                  if (selected) {
-                    setDateRange({
-                      from: selected.from,
-                      to: selected.to
-                    });
-                  }
+                  setDateRange({
+                    from: selected?.from,
+                    to: selected?.to
+                  });
                 }}
                 numberOfMonths={2}
               />
