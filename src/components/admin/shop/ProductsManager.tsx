@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,17 +26,27 @@ const ProductsManager = () => {
   const [priceFilter, setPriceFilter] = useState<{min?: number, max?: number}>({});
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch all products
+  // Fetch all products with additional logging
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ["admin-products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
+      try {
+        const { data, error: fetchError } = await supabase
+          .from("products")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as Product[] || [];
+        if (fetchError) {
+          console.error("Error fetching products:", fetchError);
+          throw fetchError;
+        }
+
+        console.log("Products fetched successfully:", data);
+        return data as Product[] || [];
+      } catch (err) {
+        console.error("Error in queryFn:", err);
+        throw err;
+      }
     },
   });
 

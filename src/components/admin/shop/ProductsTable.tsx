@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -79,8 +78,8 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="font-medium">
+              <TableRow key={product.id} className="cursor-pointer hover:bg-gray-50">
+                <TableCell className="font-medium" onClick={() => onEdit(product)}>
                   <div className="flex items-center space-x-3">
                     {product.image_url ? (
                       <div className="h-10 w-10 bg-gray-100 rounded-md overflow-hidden">
@@ -91,37 +90,33 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                         />
                       </div>
                     ) : (
-                      <div className="h-10 w-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
-                        <Eye size={16} />
-                      </div>
+                      <div className="h-10 w-10 bg-gray-100 rounded-md" />
                     )}
                     <span className="truncate max-w-[200px]">{product.title}</span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => onEdit(product)}>
                   <span className="capitalize">
                     {product.category?.replace(/_/g, " ") || "Uncategorized"}
                   </span>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => onEdit(product)}>
                   {product.price ? (
                     <>${parseFloat(product.price.toString()).toFixed(2)}</>
                   ) : (
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell>
-                  {product.in_stock ? (
-                    <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
-                      In Stock
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">
-                      Out of Stock
-                    </Badge>
-                  )}
+                <TableCell onClick={() => onEdit(product)}>
+                  <Badge variant="outline" className={
+                    product.in_stock 
+                      ? "bg-green-100 text-green-800 hover:bg-green-100" 
+                      : "bg-red-100 text-red-800 hover:bg-red-100"
+                  }>
+                    {product.in_stock ? "In Stock" : "Out of Stock"}
+                  </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => onEdit(product)}>
                   <Badge 
                     variant={product.is_published ? "default" : "outline"}
                     className={product.is_published ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
@@ -129,7 +124,7 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                     {product.is_published ? "Published" : "Draft"}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={() => onEdit(product)}>
                   {product.sales_count || 0}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
@@ -139,7 +134,8 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                     onClick={() => onEdit(product)}
                     title="Edit product"
                   >
-                    <Edit size={16} />
+                    <Edit size={16} className="mr-1" />
+                    Edit
                   </Button>
                   <Button
                     variant="outline"
@@ -151,7 +147,8 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                       setDeleteDialogOpen(true);
                     }}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} className="mr-1" />
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>
