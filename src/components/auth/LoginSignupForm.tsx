@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +23,7 @@ export const LoginSignupForm = ({
   const [password, setPassword] = useState("");
   const [showOTPDialog, setShowOTPDialog] = useState(false);
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,14 +50,7 @@ export const LoginSignupForm = ({
       if (isLogin) {
         await signIn(email, password);
       } else {
-        const { error } = await supabase.auth.signUp({ 
-          email, 
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/profile`
-          }
-        });
-        if (error) throw error;
+        await signUp(email, password);
         
         toast({
           title: "Account created",
@@ -64,11 +58,23 @@ export const LoginSignupForm = ({
         });
       }
     } catch (error) {
-      toast({
-        title: "Authentication error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
+      const errorMessage = error instanceof Error ? error.message : "An error occurred";
+      
+      // Handle potential database error saving new user
+      if (errorMessage.includes("database") || errorMessage.includes("saving")) {
+        console.error("Database error during user registration:", error);
+        toast({
+          title: "Registration issue",
+          description: "There was a problem creating your account. Please try again or contact support.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Authentication error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     }
   };
 

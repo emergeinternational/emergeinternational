@@ -193,14 +193,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentOrigin = window.location.origin;
       console.log("Sign up with redirect to:", `${currentOrigin}/profile`);
       
-      const { error } = await supabase.auth.signUp({ 
+      const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          emailRedirectTo: `${currentOrigin}/profile`
+          emailRedirectTo: `${currentOrigin}/profile`,
+          data: {
+            full_name: email.split('@')[0], // Create basic profile data
+          }
         } 
       });
+      
       if (error) throw error;
+      
+      // Only create a profile if we got a user back and the auto-profile creation didn't work
+      if (data && data.user) {
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({ 
+              id: data.user.id,
+              email: email,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+          if (profileError) {
+            console.error("Error creating profile during signup:", profileError);
+          }
+        } catch (profileError) {
+          console.error("Exception creating profile during signup:", profileError);
+        }
+      }
     } catch (error) {
       throw error;
     } finally {
