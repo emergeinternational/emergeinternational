@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory, DesignerSpecialty } from "@/services/designerTypes";
+import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -44,20 +44,11 @@ const creatorCategories: { value: CreatorCategory; label: string }[] = [
   { value: "creative_director", label: "Creative Director" },
 ];
 
-// Define the specialty options
-const specialtyOptions: { value: DesignerSpecialty; label: string }[] = [
-  { value: "apparel", label: "Apparel" },
-  { value: "accessories", label: "Accessories" },
-  { value: "footwear", label: "Footwear" },
-  { value: "jewelry", label: "Jewelry" },
-  { value: "other", label: "Other" },
-];
-
 // Define the form schema with validation rules
 const designerFormSchema = z.object({
   full_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
-  specialty: z.enum(["apparel", "accessories", "footwear", "jewelry", "other"]),
+  specialty: z.string(),
   category: z.enum([
     "fashion_designer",
     "interior_designer",
@@ -98,6 +89,8 @@ interface DesignerFormProps {
 const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<CreatorCategory>("fashion_designer");
+  const specialtyOptions = getSpecialtyOptions(currentCategory);
 
   const form = useForm<z.infer<typeof designerFormSchema>>({
     resolver: zodResolver(designerFormSchema),
@@ -127,6 +120,17 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
     },
   });
 
+  // Update specialty options when category changes
+  useEffect(() => {
+    const category = form.getValues("category") as CreatorCategory;
+    setCurrentCategory(category);
+    
+    // Reset specialty to the first option in the new category
+    if (specialtyOptions.length > 0) {
+      form.setValue("specialty", specialtyOptions[0].value);
+    }
+  }, [form.watch("category")]);
+
   useEffect(() => {
     if (designer) {
       form.reset({
@@ -153,6 +157,8 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         achievements: designer.achievements || [],
         showcase_images: designer.showcase_images || [],
       });
+      
+      setCurrentCategory(designer.category);
     } else {
       form.reset({
         full_name: "",
@@ -178,6 +184,8 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         achievements: [],
         showcase_images: [],
       });
+      
+      setCurrentCategory("fashion_designer");
     }
   }, [designer, form]);
 
@@ -283,7 +291,10 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                   <FormItem>
                     <FormLabel>Creator Category</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setCurrentCategory(value as CreatorCategory);
+                      }}
                       defaultValue={field.value}
                       value={field.value}
                     >
@@ -478,7 +489,6 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
               </div>
             </div>
 
-            {/* Featured Project */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Featured Project</h3>
               <div className="grid grid-cols-1 gap-4">

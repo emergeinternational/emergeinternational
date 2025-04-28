@@ -54,8 +54,8 @@ export interface Designer {
 }
 
 // Helper function to get specialty options based on category
-export const getSpecialtyOptions = (category: CreatorCategory): { value: DesignerSpecialty; label: string }[] => {
-  const specialtyMap: Record<CreatorCategory, Array<{ value: DesignerSpecialty; label: string }>> = {
+export const getSpecialtyOptions = (category: CreatorCategory): { value: string; label: string }[] => {
+  const specialtyMap: Record<CreatorCategory, Array<{ value: string; label: string }>> = {
     fashion_designer: [
       { value: 'apparel', label: 'Apparel' },
       { value: 'accessories', label: 'Accessories' },

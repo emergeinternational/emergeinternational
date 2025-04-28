@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,7 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<DesignerSpecialty>("apparel");
+  const [specialty, setSpecialty] = useState<string>("");
   const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -49,6 +50,9 @@ const DesignerFormDialog = ({
   const [website, setWebsite] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [featured, setFeatured] = useState(false);
+  
+  // Get specialty options based on the current category
+  const specialtyOptions = getSpecialtyOptions(category);
   
   useEffect(() => {
     if (designer) {
@@ -68,12 +72,20 @@ const DesignerFormDialog = ({
     }
   }, [designer]);
 
+  // Set initial specialty when category changes
+  useEffect(() => {
+    // When category changes, set specialty to the first option in the new category's specialty list
+    if (specialtyOptions.length > 0) {
+      setSpecialty(specialtyOptions[0].value);
+    }
+  }, [category]);
+
   const resetForm = () => {
     setFullName("");
     setEmail("");
     setBio("");
-    setSpecialty("apparel");
     setCategory("fashion_designer");
+    setSpecialty("apparel"); // Default for fashion_designer
     setPortfolioUrl("");
     setInstagram("");
     setTwitter("");
@@ -139,17 +151,17 @@ const DesignerFormDialog = ({
       
       const designerData = {
         full_name: fullName,
-        email,
-        bio,
+        email: email || null,
+        bio: bio || null,
         specialty,
         category,
-        portfolio_url: portfolioUrl,
+        portfolio_url: portfolioUrl || null,
         social_media: {
           instagram: instagram || null,
           twitter: twitter || null,
           website: website || null,
         },
-        image_url: imageUrl,
+        image_url: imageUrl || null,
         featured,
         updated_at: new Date().toISOString(),
       };
@@ -194,8 +206,6 @@ const DesignerFormDialog = ({
       setIsSubmitting(false);
     }
   };
-  
-  const specialtyOptions = getSpecialtyOptions(category);
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose(false)}>
@@ -248,8 +258,6 @@ const DesignerFormDialog = ({
                   value={category}
                   onValueChange={(value) => {
                     setCategory(value as CreatorCategory);
-                    // Reset specialty when category changes
-                    setSpecialty(getSpecialtyOptions(value as CreatorCategory)[0].value);
                   }}
                 >
                   <SelectTrigger id="category">
@@ -269,7 +277,7 @@ const DesignerFormDialog = ({
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
                   value={specialty}
-                  onValueChange={(value) => setSpecialty(value as DesignerSpecialty)}
+                  onValueChange={(value) => setSpecialty(value)}
                 >
                   <SelectTrigger id="specialty">
                     <SelectValue placeholder="Select specialty" />
