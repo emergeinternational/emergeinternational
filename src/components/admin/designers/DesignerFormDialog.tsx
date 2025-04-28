@@ -1,158 +1,98 @@
 
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Designer, getSpecialtyOptions, CreatorCategory } from "@/services/designerTypes";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Designer, CreatorCategory } from '@/services/designerTypes';
 
 interface DesignerFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  designer?: Designer | null;
-  onSave?: () => void;
+  designer?: Designer;
+  onSuccess: () => void;
 }
 
-const DesignerFormDialog = ({
-  open,
-  onOpenChange,
-  designer,
-  onSave
-}: DesignerFormDialogProps) => {
+const DesignerFormDialog: React.FC<DesignerFormDialogProps> = ({ 
+  open, 
+  onOpenChange, 
+  designer, 
+  onSuccess 
+}) => {
+  const isEditing = !!designer;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<Partial<Designer>>(
-    designer
-      ? { ...designer }
-      : {
-          full_name: "",
-          email: "",
-          bio: "",
-          category: "fashion_designer" as CreatorCategory,
-          specialty: "apparel", // Changed to string to match database
-          portfolio_url: "",
-          location: "",
-          social_media: {
-            instagram: "",
-            website: "",
-            twitter: "",
-          },
-          image_url: "",
-          featured: false,
-        }
-  );
-  const { toast } = useToast();
+  const [formData, setFormData] = useState<Partial<Designer>>(designer || {
+    full_name: '',
+    email: '',
+    bio: '',
+    specialty: '',
+    category: 'fashion_designer' as CreatorCategory,
+    portfolio_url: '',
+    location: '',
+    social_media: {
+      instagram: '',
+      facebook: '',
+      twitter: '',
+      website: '',
+    },
+    image_url: '',
+    featured: false,
+  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
+  const handleSocialMediaChange = (platform: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
       social_media: {
-        ...formData.social_media,
-        [e.target.name]: e.target.value,
-      },
-    });
-  };
-
-  const handleCategoryChange = (value: string) => {
-    const category = value as CreatorCategory;
-    const specialtyOptions = getSpecialtyOptions(category);
-    
-    setFormData({
-      ...formData,
-      category,
-      specialty: specialtyOptions[0].value
-    });
-  };
-
-  const handleSpecialtyChange = (value: string) => {
-    setFormData({
-      ...formData,
-      specialty: value // Store directly as string to match database
-    });
+        ...(prev.social_media || {}),
+        [platform]: value
+      }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
+    
     try {
-      const designerData = {
-        full_name: formData.full_name!,
-        email: formData.email,
-        bio: formData.bio!,
-        specialty: formData.specialty as string, // Store as string
-        category: formData.category!,
-        portfolio_url: formData.portfolio_url,
-        location: formData.location,
-        social_media: formData.social_media,
-        image_url: formData.image_url,
-        featured: formData.featured,
+      const submitData = {
+        ...formData,
         updated_at: new Date().toISOString()
       };
 
-      if (designer?.id) {
-        // Update existing designer
+      if (isEditing && designer) {
         const { error } = await supabase
-          .from("designers")
-          .update(designerData)
-          .eq("id", designer.id);
+          .from('designers')
+          .update(submitData)
+          .eq('id', designer.id);
 
         if (error) throw error;
-
-        toast({
-          title: "Designer updated",
-          description: `${formData.full_name} has been updated successfully.`,
-        });
+        toast.success('Designer updated successfully');
       } else {
-        // Create new designer
         const { error } = await supabase
-          .from("designers")
-          .insert({
-            ...designerData,
-            updated_at: new Date().toISOString()
-          });
+          .from('designers')
+          .insert([submitData]);
 
         if (error) throw error;
-
-        toast({
-          title: "Designer created",
-          description: `${formData.full_name} has been added to the platform.`,
-        });
+        toast.success('Designer created successfully');
       }
-
+      
+      onSuccess();
       onOpenChange(false);
-      if (onSave) onSave();
     } catch (error) {
-      console.error("Error saving designer:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save designer",
-        variant: "destructive",
-      });
+      console.error('Error saving designer:', error);
+      toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -160,171 +100,146 @@ const DesignerFormDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {designer?.id ? "Edit Designer" : "Add New Designer"}
+            {isEditing ? 'Edit Designer' : 'Add New Designer'}
           </DialogTitle>
-          <DialogDescription>
-            {designer?.id
-              ? "Update this designer's information"
-              : "Add a new designer to the platform"}
-          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+        
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>
               <Input
                 id="full_name"
-                name="full_name"
-                value={formData.full_name || ""}
-                onChange={handleInputChange}
+                value={formData.full_name || ''}
+                onChange={(e) => handleChange('full_name', e.target.value)}
+                placeholder="Designer name"
                 required
               />
             </div>
-            <div className="grid gap-2">
+
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                name="email"
                 type="email"
-                value={formData.email || ""}
-                onChange={handleInputChange}
+                value={formData.email || ''}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="designer@example.com"
                 required
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="bio">Biography</Label>
-              <Textarea
-                id="bio"
-                name="bio"
-                className="min-h-[100px]"
-                value={formData.bio || ""}
-                onChange={handleInputChange}
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => handleChange('category', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
+                  <SelectItem value="interior_designer">Interior Designer</SelectItem>
+                  <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
+                  <SelectItem value="photographer">Photographer</SelectItem>
+                  <SelectItem value="model">Model</SelectItem>
+                  <SelectItem value="visual_artist">Visual Artist</SelectItem>
+                  <SelectItem value="event_planner">Event Planner</SelectItem>
+                  <SelectItem value="creative_director">Creative Director</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="specialty">Specialty</Label>
+              <Input
+                id="specialty"
+                value={formData.specialty || ''}
+                onChange={(e) => handleChange('specialty', e.target.value)}
+                placeholder="e.g., Apparel, Accessories, etc."
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={handleCategoryChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
-                    <SelectItem value="interior_designer">Interior Designer</SelectItem>
-                    <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
-                    <SelectItem value="visual_artist">Visual Artist</SelectItem>
-                    <SelectItem value="photographer">Photographer</SelectItem>
-                    <SelectItem value="event_planner">Event Planner</SelectItem>
-                    <SelectItem value="model">Model</SelectItem>
-                    <SelectItem value="creative_director">Creative Director</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="specialty">Specialty</Label>
-                <Select
-                  value={formData.specialty}
-                  onValueChange={handleSpecialtyChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a specialty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.category && getSpecialtyOptions(formData.category).map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2">
+
+            <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
               <Input
                 id="location"
-                name="location"
-                value={formData.location || ""}
-                onChange={handleInputChange}
+                value={formData.location || ''}
+                onChange={(e) => handleChange('location', e.target.value)}
+                placeholder="City, Country"
               />
             </div>
-            <div className="grid gap-2">
+
+            <div className="space-y-2">
               <Label htmlFor="portfolio_url">Portfolio URL</Label>
               <Input
                 id="portfolio_url"
-                name="portfolio_url"
-                value={formData.portfolio_url || ""}
-                onChange={handleInputChange}
+                value={formData.portfolio_url || ''}
+                onChange={(e) => handleChange('portfolio_url', e.target.value)}
+                placeholder="https://example.com"
               />
             </div>
-            <div className="grid gap-2">
+
+            <div className="space-y-2">
               <Label htmlFor="image_url">Profile Image URL</Label>
               <Input
                 id="image_url"
-                name="image_url"
-                value={formData.image_url || ""}
-                onChange={handleInputChange}
+                value={formData.image_url || ''}
+                onChange={(e) => handleChange('image_url', e.target.value)}
+                placeholder="https://example.com/image.jpg"
               />
             </div>
-            <h3 className="font-medium pt-2">Social Media</h3>
-            <div className="grid gap-2">
+
+            <div className="space-y-2">
               <Label htmlFor="instagram">Instagram</Label>
               <Input
                 id="instagram"
-                name="instagram"
-                value={formData.social_media?.instagram || ""}
-                onChange={handleSocialMediaChange}
+                value={formData.social_media?.instagram || ''}
+                onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
+                placeholder="@username"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                name="website"
-                value={formData.social_media?.website || ""}
-                onChange={handleSocialMediaChange}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="twitter">Twitter/X</Label>
-              <Input
-                id="twitter"
-                name="twitter"
-                value={formData.social_media?.twitter || ""}
-                onChange={handleSocialMediaChange}
-              />
-            </div>
-            <div className="flex items-center space-x-2 pt-2">
-              <Switch
-                id="featured"
-                checked={formData.featured || false}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, featured: checked })
-                }
-              />
+
+            <div className="space-y-2">
               <Label htmlFor="featured">Featured Designer</Label>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="featured"
+                  checked={formData.featured || false}
+                  onCheckedChange={(checked) => handleChange('featured', checked)}
+                />
+                <Label htmlFor="featured" className="cursor-pointer">
+                  {formData.featured ? 'Yes' : 'No'}
+                </Label>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">Biography</Label>
+            <Textarea
+              id="bio"
+              value={formData.bio || ''}
+              onChange={(e) => handleChange('bio', e.target.value)}
+              placeholder="Brief description of the designer's background and style"
+              rows={4}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : designer?.id ? "Update" : "Create"}
+              {isSubmitting ? 'Saving...' : isEditing ? 'Update Designer' : 'Create Designer'}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

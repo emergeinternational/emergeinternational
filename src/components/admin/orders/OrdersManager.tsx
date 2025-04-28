@@ -1,362 +1,212 @@
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import OrderFilters from "./OrderFilters";
-import OrdersTable from "./OrdersTable";
-import OrderDetailsView from "./OrderDetailsView";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toaster } from "@/components/ui/toaster";
-import type { Order } from "@/services/orderTypes";
-
-export interface OrderStatus {
-  value: string;
-  label: string;
-}
-
-export interface PaymentStatus {
-  value: string;
-  label: string;
-}
-
-export const ORDER_STATUSES: OrderStatus[] = [
-  { value: "pending", label: "Pending" },
-  { value: "processing", label: "Processing" },
-  { value: "completed", label: "Completed" },
-  { value: "shipped", label: "Shipped" },
-  { value: "delivered", label: "Delivered" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "refunded", label: "Refunded" },
-  { value: "abandoned", label: "Abandoned" }
-];
-
-export const PAYMENT_STATUSES: PaymentStatus[] = [
-  { value: "pending", label: "Pending" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "refunded", label: "Refunded" }
-];
-
-export interface OrderFiltersState {
-  status: string[];
-  searchQuery: string;
-  paymentStatus: string[];
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
-}
-
-// Simple OrdersSummary component to fix build error
-const OrdersSummary = ({ orders }: { orders: Order[] }) => {
-  return (
-    <div className="grid grid-cols-4 gap-4 mb-6">
-      <div className="bg-white rounded-lg p-4 shadow">
-        <h3 className="text-lg font-medium">Total Orders</h3>
-        <p className="text-2xl font-bold">{orders.length}</p>
-      </div>
-      <div className="bg-white rounded-lg p-4 shadow">
-        <h3 className="text-lg font-medium">Pending</h3>
-        <p className="text-2xl font-bold">
-          {orders.filter(order => order.status === 'pending').length}
-        </p>
-      </div>
-      <div className="bg-white rounded-lg p-4 shadow">
-        <h3 className="text-lg font-medium">Processing</h3>
-        <p className="text-2xl font-bold">
-          {orders.filter(order => order.status === 'processing').length}
-        </p>
-      </div>
-      <div className="bg-white rounded-lg p-4 shadow">
-        <h3 className="text-lg font-medium">Completed</h3>
-        <p className="text-2xl font-bold">
-          {orders.filter(order => order.status === 'completed').length}
-        </p>
-      </div>
-    </div>
-  );
-};
+import React, { useState, useEffect } from 'react';
+import { OrdersTable } from './OrdersTable';
+import { OrdersSummary } from './OrdersSummary';
+import { Button } from '@/components/ui/button';
+import { Download, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Order } from '@/types/orderTypes';
+import { OrderDetailsDialog } from './OrderDetailsDialog';
+import { OrderFiltersNew } from './OrderFiltersNew';
 
 const OrdersManager = () => {
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  // Fetch all orders with order items and customer info
-  const { data: orders, isLoading, error, refetch } = useQuery({
-    queryKey: ["admin-orders"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [filters, setFilters] = useState({
+    status: '',
+    searchQuery: '',
+    paymentStatus: '',
+    dateRange: {
+      from: null as Date | null,
+      to: null as Date | null
+    }
+  });
+
+  useEffect(() => {
+    fetchOrders();
+  }, [refreshKey]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      // Create the query
+      let query = supabase
+        .from('orders')
         .select(`
           *,
           order_items(*),
-          profiles:user_id(id, full_name, email),
-          shipping_addresses:shipping_address_id(*)
-        `)
-        .order('created_at', { ascending: false });
+          shipping_addresses(*),
+          profiles(id, email, full_name)
+        `);
+
+      // Apply filters if any
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters.searchQuery) {
+        // Search by order ID or customer email/name
+        query = query.or(`id.ilike.%${filters.searchQuery}%,profiles.email.ilike.%${filters.searchQuery}%,profiles.full_name.ilike.%${filters.searchQuery}%`);
+      }
+
+      if (filters.dateRange.from) {
+        query = query.gte('created_at', filters.dateRange.from.toISOString());
+      }
+
+      if (filters.dateRange.to) {
+        const toDate = new Date(filters.dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', toDate.toISOString());
+      }
+
+      // Execute the query
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
-    },
-  });
 
-  // Filter orders based on status and search query
-  const filteredOrders = orders?.filter((order) => {
-    const matchesStatus = filterStatus === "all" || order.status === filterStatus;
-    
-    const matchesSearch = 
-      searchQuery === "" || 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (order.profiles?.full_name && order.profiles.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (order.profiles?.email && order.profiles.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    return matchesStatus && matchesSearch;
-  });
+      // Transform the data to match the Order type
+      const transformedOrders: Order[] = data.map((order: any) => {
+        return {
+          ...order,
+          customer: {
+            id: order.profiles?.id || '',
+            email: order.profiles?.email || '',
+            full_name: order.profiles?.full_name || '',
+          },
+          shipping_address: order.shipping_addresses,
+          items: order.order_items,
+        };
+      });
 
-  // Handler for clicking on an order to view details
-  const handleViewOrder = (orderId: string) => {
-    setSelectedOrderId(orderId);
-  };
-
-  // Handler for closing the order details view
-  const handleCloseDetails = () => {
-    setSelectedOrderId(null);
-  };
-
-  // Handler for updating the order status
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", orderId);
-      
-      if (error) throw error;
-      
-      refetch();
-      return true;
-    } catch (err) {
-      console.error("Error updating order status:", err);
-      return false;
+      setOrders(transformedOrders);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Failed to load orders data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Get selected order details
-  const selectedOrder = selectedOrderId 
-    ? orders?.find(order => order.id === selectedOrderId) 
-    : null;
-  
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Update local state
+      setOrders(prev =>
+        prev.map(order =>
+          order.id === orderId ? { ...order, status } : order
+        )
+      );
+
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, status });
+      }
+
+      toast.success(`Order status updated to ${status}`);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Failed to update order status');
+    }
+  };
+
+  // Filter orders based on the current filters
+  const filteredOrders = orders;
+
+  // Calculate summary data
+  const summary = {
+    total: orders.length,
+    pending: orders.filter(order => order.status === 'pending').length,
+    processing: orders.filter(order => order.status === 'processing').length,
+    completed: orders.filter(order => order.status === 'completed').length,
+    cancelled: orders.filter(order => order.status === 'cancelled').length,
+  };
+
+  // Export orders to CSV
+  const exportToCSV = () => {
+    // Simple CSV export implementation
+    const headers = ['Order ID', 'Customer', 'Status', 'Total', 'Date'];
+    const rows = orders.map(order => [
+      order.id,
+      order.customer?.full_name || order.customer?.email || 'Unknown',
+      order.status,
+      `$${order.total_amount.toFixed(2)}`,
+      new Date(order.created_at || '').toLocaleDateString()
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `orders-${new Date().toISOString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Order Summary Stats */}
-      <OrdersSummary orders={orders || []} />
-      
-      {/* Filters and Search */}
-      <div className="flex justify-between mb-6">
-        <div className="w-1/3">
-          <input
-            type="text"
-            placeholder="Search orders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-          />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <OrdersSummary {...summary} />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportToCSV}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         </div>
       </div>
-      
-      {/* Orders List / Details View */}
-      {selectedOrder ? (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <button 
-            onClick={handleCloseDetails}
-            className="mb-4 text-blue-600 hover:underline flex items-center"
-          >
-            &larr; Back to all orders
-          </button>
-          <h2 className="text-2xl font-bold mb-4">Order Details: {selectedOrder.id}</h2>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Order Information</h3>
-              <p><strong>Status:</strong> {selectedOrder.status}</p>
-              <p><strong>Date:</strong> {new Date(selectedOrder.created_at || "").toLocaleString()}</p>
-              <p><strong>Total:</strong> ${selectedOrder.total_amount}</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-medium mb-2">Customer Information</h3>
-              <p><strong>Name:</strong> {selectedOrder.profiles?.full_name || "N/A"}</p>
-              <p><strong>Email:</strong> {selectedOrder.profiles?.email || "N/A"}</p>
-            </div>
-          </div>
-          <div className="mt-6">
-            <h3 className="text-lg font-medium mb-2">Order Items</h3>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-2 text-left">Product</th>
-                  <th className="p-2 text-left">Price</th>
-                  <th className="p-2 text-left">Quantity</th>
-                  <th className="p-2 text-left">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedOrder.order_items?.map(item => (
-                  <tr key={item.id} className="border-b">
-                    <td className="p-2">{item.product_name}</td>
-                    <td className="p-2">${item.unit_price}</td>
-                    <td className="p-2">{item.quantity}</td>
-                    <td className="p-2">${item.unit_price * item.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-6">
-            <h3 className="text-lg font-medium mb-2">Update Status</h3>
-            <div className="flex space-x-2">
-              {ORDER_STATUSES.map(status => (
-                <button
-                  key={status.value}
-                  onClick={() => handleUpdateStatus(selectedOrder.id, status.value)}
-                  disabled={selectedOrder.status === status.value}
-                  className={`px-3 py-1 rounded ${
-                    selectedOrder.status === status.value
-                      ? "bg-blue-200 text-blue-800"
-                      : "bg-blue-500 text-white hover:bg-blue-600"
-                  }`}
-                >
-                  {status.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <Tabs defaultValue="all" value={filterStatus} onValueChange={setFilterStatus}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="all">All Orders</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="processing">Processing</TabsTrigger>
-            <TabsTrigger value="shipped">Shipped</TabsTrigger>
-            <TabsTrigger value="delivered">Delivered</TabsTrigger>
-            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all" className="mt-0">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="p-2 text-left">Order ID</th>
-                    <th className="p-2 text-left">Customer</th>
-                    <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Status</th>
-                    <th className="p-2 text-left">Total</th>
-                    <th className="p-2 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="p-4 text-center">Loading orders...</td>
-                    </tr>
-                  ) : filteredOrders?.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-4 text-center">No orders found</td>
-                    </tr>
-                  ) : (
-                    filteredOrders?.map(order => (
-                      <tr key={order.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2">{order.id.substring(0, 8)}...</td>
-                        <td className="p-2">{order.profiles?.full_name || 'Unknown'}</td>
-                        <td className="p-2">{new Date(order.created_at || "").toLocaleDateString()}</td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </td>
-                        <td className="p-2">${order.total_amount}</td>
-                        <td className="p-2">
-                          <button
-                            onClick={() => handleViewOrder(order.id)}
-                            className="text-blue-600 hover:underline"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </TabsContent>
-          
-          {["pending", "processing", "shipped", "delivered", "cancelled"].map((status) => (
-            <TabsContent key={status} value={status} className="mt-0">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2 text-left">Order ID</th>
-                      <th className="p-2 text-left">Customer</th>
-                      <th className="p-2 text-left">Date</th>
-                      <th className="p-2 text-left">Status</th>
-                      <th className="p-2 text-left">Total</th>
-                      <th className="p-2 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center">Loading orders...</td>
-                      </tr>
-                    ) : filteredOrders?.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="p-4 text-center">No orders found</td>
-                      </tr>
-                    ) : (
-                      filteredOrders?.map(order => (
-                        <tr key={order.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2">{order.id.substring(0, 8)}...</td>
-                          <td className="p-2">{order.profiles?.full_name || 'Unknown'}</td>
-                          <td className="p-2">{new Date(order.created_at || "").toLocaleDateString()}</td>
-                          <td className="p-2">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              'bg-blue-100 text-blue-800'
-                            }`}>
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="p-2">${order.total_amount}</td>
-                          <td className="p-2">
-                            <button
-                              onClick={() => handleViewOrder(order.id)}
-                              className="text-blue-600 hover:underline"
-                            >
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+
+      <OrderFiltersNew filters={filters} onFilterChange={setFilters} />
+
+      <OrdersTable
+        orders={filteredOrders}
+        isLoading={loading}
+        onViewDetails={handleViewDetails}
+      />
+
+      {selectedOrder && (
+        <OrderDetailsDialog
+          order={selectedOrder}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          onUpdateStatus={handleUpdateOrderStatus}
+        />
       )}
-      <Toaster />
     </div>
   );
 };
