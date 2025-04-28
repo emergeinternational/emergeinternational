@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,16 +60,23 @@ export const LoginSignupForm = ({
       console.error("Authentication error:", error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       
-      if (errorMessage.includes("database") || errorMessage.includes("saving")) {
+      if (errorMessage.includes("type \"app_role\" does not exist") || 
+          errorMessage.includes("Database error saving")) {
         toast({
           title: "Registration issue",
-          description: "There was a problem creating your account. Please try again or contact support.",
+          description: "There was a problem with our database. Our team has been notified and is working on it. Please try again later.",
           variant: "destructive",
         });
       } else if (errorMessage.includes("already registered")) {
         toast({
           title: "Email already registered",
           description: "This email is already in use. Please try logging in instead.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("Invalid login")) {
+        toast({
+          title: "Invalid login",
+          description: "Incorrect email or password. Please try again.",
           variant: "destructive",
         });
       } else {

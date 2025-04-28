@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Fetching user role for:", userId);
       
+      // First try to find role in user_roles table
       const { data: userRoleData, error: userRoleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -193,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentOrigin = window.location.origin;
       console.log("Sign up with redirect to:", `${currentOrigin}/profile`);
       
+      // First attempt to sign up the user
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -206,14 +209,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       
+      // If signup was successful, ensure a profile exists
       if (data && data.user) {
         try {
-          const profileCreated = await ensureUserProfile(data.user.id, email);
+          console.log("Creating profile for new user:", data.user.id);
+          let retries = 0;
+          const maxRetries = 3;
+          let profileCreated = false;
+          
+          // Retry profile creation a few times with increasing delays
+          while (retries < maxRetries && !profileCreated) {
+            try {
+              profileCreated = await ensureUserProfile(data.user.id, email);
+              if (!profileCreated) {
+                retries++;
+                console.warn(`Profile creation attempt ${retries} failed, retrying...`);
+                // Exponential backoff: 200ms, 400ms, 800ms
+                await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, retries - 1)));
+              }
+            } catch (e) {
+              console.error(`Error in profile creation attempt ${retries}:`, e);
+              retries++;
+              // Exponential backoff
+              await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, retries - 1)));
+            }
+          }
+
           if (!profileCreated) {
-            console.warn("Profile creation may have failed during signup - will try again on authentication");
+            console.error("Failed to create user profile after multiple attempts");
+            // Even if profile creation failed, the user account was created
           }
         } catch (profileError) {
           console.error("Exception ensuring user profile during signup:", profileError);
+          // Continue since the auth user was created even if profile creation failed
         }
       }
     } catch (error) {

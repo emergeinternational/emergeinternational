@@ -45,6 +45,29 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     if (error) {
       console.error("Error creating user profile:", error);
+      
+      // Handle specific app_role type error
+      if (error.message.includes('type "app_role" does not exist')) {
+        console.log("Detected app_role type error. Creating profile without role field...");
+        
+        // Try again without the role field
+        const { error: retryError } = await supabase
+          .from('profiles')
+          .insert({ 
+            id: userId,
+            email: email,
+            updated_at: new Date().toISOString()
+          });
+          
+        if (retryError) {
+          console.error("Second attempt to create profile failed:", retryError);
+          return false;
+        } else {
+          console.log("Profile created successfully without role field");
+          return true;
+        }
+      }
+      
       // Check if it's a foreign key constraint issue
       if (error.message.includes('foreign key constraint')) {
         console.log("Foreign key constraint error - this could be a race condition. Retrying...");
@@ -52,6 +75,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
         await new Promise(resolve => setTimeout(resolve, 500));
         return await ensureUserProfile(userId, email);
       }
+      
       return false;
     }
     
