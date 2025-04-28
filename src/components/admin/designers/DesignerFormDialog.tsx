@@ -1,208 +1,161 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { Designer, getCategorySpecialty, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Upload } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface DesignerFormDialogProps {
   open: boolean;
+  onOpenChange: (open: boolean) => void;
   designer?: Designer | null;
-  onClose: (refresh: boolean) => void;
+  onSave?: () => void;
 }
-
-const creatorCategories: { value: CreatorCategory; label: string }[] = [
-  { value: "fashion_designer", label: "Fashion Designer" },
-  { value: "interior_designer", label: "Interior Designer" },
-  { value: "graphic_designer", label: "Graphic Designer" },
-  { value: "visual_artist", label: "Visual Artist" },
-  { value: "photographer", label: "Photographer" },
-  { value: "event_planner", label: "Event Planner" },
-  { value: "model", label: "Model" },
-  { value: "creative_director", label: "Creative Director" },
-];
 
 const DesignerFormDialog = ({
   open,
+  onOpenChange,
   designer,
-  onClose,
+  onSave
 }: DesignerFormDialogProps) => {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  
-  // Form state
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<DesignerSpecialty>('apparel' as DesignerSpecialty);
-  const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
-  const [portfolioUrl, setPortfolioUrl] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [website, setWebsite] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [featured, setFeatured] = useState(false);
-  const [location, setLocation] = useState("");
-  
-  // Get specialty options based on the current category
-  const specialtyOptions = getSpecialtyOptions(category);
+  const [formData, setFormData] = useState<Partial<Designer>>(
+    designer
+      ? { ...designer }
+      : {
+          full_name: "",
+          email: "",
+          bio: "",
+          category: "fashion_designer" as CreatorCategory,
+          specialty: "apparel" as DesignerSpecialty,
+          portfolio_url: "",
+          location: "",
+          social_media: {
+            instagram: "",
+            website: "",
+            twitter: "",
+          },
+          image_url: "",
+          featured: false,
+        }
+  );
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (designer) {
-      setFullName(designer.full_name);
-      setEmail(designer.email || "");
-      setBio(designer.bio || "");
-      setSpecialty(designer.specialty);
-      setCategory(designer.category);
-      setPortfolioUrl(designer.portfolio_url || "");
-      setInstagram(designer.social_media?.instagram || "");
-      setTwitter(designer.social_media?.twitter || "");
-      setWebsite(designer.social_media?.website || "");
-      setImageUrl(designer.image_url || "");
-      setFeatured(designer.featured);
-      setLocation(designer.location || "");
-    } else {
-      resetForm();
-    }
-  }, [designer]);
-
-  // Set initial specialty when category changes
-  useEffect(() => {
-    if (specialtyOptions.length > 0) {
-      setSpecialty(specialtyOptions[0].value);
-    }
-  }, [category]);
-
-  const resetForm = () => {
-    setFullName("");
-    setEmail("");
-    setBio("");
-    setCategory("fashion_designer");
-    setSpecialty('apparel' as DesignerSpecialty);
-    setPortfolioUrl("");
-    setInstagram("");
-    setTwitter("");
-    setWebsite("");
-    setImageUrl("");
-    setFeatured(false);
-    setLocation("");
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
-  
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    try {
-      setUploadingImage(true);
-      
-      // Create a unique file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload to Supabase storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('designers')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('designers')
-        .getPublicUrl(filePath);
-
-      setImageUrl(publicUrl);
-      toast({
-        title: "Image uploaded successfully",
-        description: "The professional's image has been uploaded.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error uploading image",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingImage(false);
-    }
+  const handleSocialMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      social_media: {
+        ...formData.social_media,
+        [e.target.name]: e.target.value,
+      },
+    });
   };
-  
+
+  const handleCategoryChange = (value: string) => {
+    const category = value as CreatorCategory;
+    const specialtyOptions = getSpecialtyOptions(category);
+    
+    setFormData({
+      ...formData,
+      category,
+      specialty: specialtyOptions[0].value as DesignerSpecialty
+    });
+  };
+
+  const handleSpecialtyChange = (value: string) => {
+    const specialty = getCategorySpecialty(
+      formData.category as CreatorCategory, 
+      value
+    );
+    
+    setFormData({
+      ...formData,
+      specialty
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!fullName) {
-      toast({
-        title: "Missing information",
-        description: "Please provide the professional's name",
-        variant: "destructive",
-      });
-      return;
-    }
+    setIsSubmitting(true);
 
     try {
-      setIsSubmitting(true);
-      
       const designerData = {
-        full_name: fullName,
-        email: email || null,
-        bio: bio || null,
-        specialty: specialty,
-        category,
-        portfolio_url: portfolioUrl || null,
-        location: location || null,
-        social_media: {
-          instagram: instagram || null,
-          twitter: twitter || null,
-          website: website || null,
-        },
-        image_url: imageUrl || null,
-        featured,
-        updated_at: new Date().toISOString(),
+        full_name: formData.full_name!,
+        email: formData.email,
+        bio: formData.bio!,
+        specialty: formData.specialty!,
+        category: formData.category!,
+        portfolio_url: formData.portfolio_url,
+        location: formData.location,
+        social_media: formData.social_media,
+        image_url: formData.image_url,
+        featured: formData.featured,
+        updated_at: new Date().toISOString()
       };
 
       if (designer?.id) {
+        // Update existing designer
         const { error } = await supabase
           .from("designers")
           .update(designerData)
           .eq("id", designer.id);
 
         if (error) throw error;
-        
+
         toast({
-          title: "Professional updated",
-          description: `${fullName}'s profile has been updated successfully.`,
+          title: "Designer updated",
+          description: `${formData.full_name} has been updated successfully.`,
         });
       } else {
+        // Create new designer
         const { error } = await supabase
           .from("designers")
           .insert({
             ...designerData,
-            created_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
           });
 
         if (error) throw error;
 
         toast({
-          title: "Professional created",
-          description: `${fullName}'s profile has been added successfully.`,
+          title: "Designer created",
+          description: `${formData.full_name} has been added to the platform.`,
         });
       }
 
-      onClose(true);
-      resetForm();
-    } catch (error: any) {
+      onOpenChange(false);
+      if (onSave) onSave();
+    } catch (error) {
+      console.error("Error saving designer:", error);
       toast({
-        title: "Error saving professional",
-        description: error.message || "Something went wrong",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save designer",
         variant: "destructive",
       });
     } finally {
@@ -211,92 +164,85 @@ const DesignerFormDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose(false)}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {designer ? `Edit Creative Professional: ${designer.full_name}` : "Add New Creative Professional"}
+            {designer?.id ? "Edit Designer" : "Add New Designer"}
           </DialogTitle>
+          <DialogDescription>
+            {designer?.id
+              ? "Update this designer's information"
+              : "Add a new designer to the platform"}
+          </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="full-name">Full Name</Label>
-                <Input
-                  id="full-name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter full name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Enter location"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email address"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="bio">Bio / Description</Label>
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Enter bio or description"
-                  className="min-h-[100px]"
-                />
-              </div>
-              
-              <div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                name="full_name"
+                value={formData.full_name || ""}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email || ""}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="bio">Biography</Label>
+              <Textarea
+                id="bio"
+                name="bio"
+                className="min-h-[100px]"
+                value={formData.bio || ""}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
-                  value={category}
-                  onValueChange={(value) => {
-                    setCategory(value as CreatorCategory);
-                  }}
+                  value={formData.category}
+                  onValueChange={handleCategoryChange}
                 >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {creatorCategories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
+                    <SelectItem value="interior_designer">Interior Designer</SelectItem>
+                    <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
+                    <SelectItem value="visual_artist">Visual Artist</SelectItem>
+                    <SelectItem value="photographer">Photographer</SelectItem>
+                    <SelectItem value="event_planner">Event Planner</SelectItem>
+                    <SelectItem value="model">Model</SelectItem>
+                    <SelectItem value="creative_director">Creative Director</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
+              <div className="grid gap-2">
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
-                  value={specialty}
-                  onValueChange={(value) => setSpecialty(value)}
+                  value={formData.specialty}
+                  onValueChange={handleSpecialtyChange}
                 >
-                  <SelectTrigger id="specialty">
-                    <SelectValue placeholder="Select specialty" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a specialty" />
                   </SelectTrigger>
                   <SelectContent>
-                    {specialtyOptions.map((option) => (
+                    {formData.category && getSpecialtyOptions(formData.category).map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -305,119 +251,85 @@ const DesignerFormDialog = ({
                 </Select>
               </div>
             </div>
-          </div>
-          
-          {/* Social Media / Links */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">Links & Social Media</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="portfolio">Portfolio URL</Label>
-                <Input
-                  id="portfolio"
-                  value={portfolioUrl}
-                  onChange={(e) => setPortfolioUrl(e.target.value)}
-                  placeholder="https://example.com/portfolio"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="instagram">Instagram</Label>
-                <Input
-                  id="instagram"
-                  value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
-                  placeholder="Username without @"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="website">Personal Website</Label>
-                <Input
-                  id="website"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://example.com"
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Image Upload */}
-          <div className="space-y-4">
-            <Label>Profile Image</Label>
-            <div className="flex items-center gap-4">
-              {imageUrl && (
-                <div className="relative h-24 w-24 rounded-full overflow-hidden border">
-                  <img
-                    src={imageUrl}
-                    alt="Profile"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
-              
-              <div>
-                <Label
-                  htmlFor="image-upload"
-                  className="cursor-pointer flex items-center gap-2 border rounded-md px-3 py-2 hover:bg-gray-100"
-                >
-                  {uploadingImage ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  <span>{imageUrl ? "Change Image" : "Upload Image"}</span>
-                </Label>
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                  disabled={uploadingImage}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Featured Status */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="featured" 
-                checked={featured}
-                onCheckedChange={(checked) => setFeatured(!!checked)}
+            <div className="grid gap-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                name="location"
+                value={formData.location || ""}
+                onChange={handleInputChange}
               />
-              <Label htmlFor="featured">Featured Professional</Label>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="portfolio_url">Portfolio URL</Label>
+              <Input
+                id="portfolio_url"
+                name="portfolio_url"
+                value={formData.portfolio_url || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="image_url">Profile Image URL</Label>
+              <Input
+                id="image_url"
+                name="image_url"
+                value={formData.image_url || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+            <h3 className="font-medium pt-2">Social Media</h3>
+            <div className="grid gap-2">
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input
+                id="instagram"
+                name="instagram"
+                value={formData.social_media?.instagram || ""}
+                onChange={handleSocialMediaChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                name="website"
+                value={formData.social_media?.website || ""}
+                onChange={handleSocialMediaChange}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="twitter">Twitter/X</Label>
+              <Input
+                id="twitter"
+                name="twitter"
+                value={formData.social_media?.twitter || ""}
+                onChange={handleSocialMediaChange}
+              />
+            </div>
+            <div className="flex items-center space-x-2 pt-2">
+              <Switch
+                id="featured"
+                checked={formData.featured || false}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, featured: checked })
+                }
+              />
+              <Label htmlFor="featured">Featured Designer</Label>
             </div>
           </div>
-          
-          {/* Form Buttons */}
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button 
-              type="button"
-              variant="outline"
-              onClick={() => onClose(false)}
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit"
-              disabled={isSubmitting || !fullName}
-              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>{designer ? "Update Professional" : "Create Professional"}</>
-              )}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : designer?.id ? "Update" : "Create"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

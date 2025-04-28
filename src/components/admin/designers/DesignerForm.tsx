@@ -1,279 +1,166 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
-import { useToast } from "@/hooks/use-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-
-// Define the creator categories
-const creatorCategories: { value: CreatorCategory; label: string }[] = [
-  { value: "fashion_designer", label: "Fashion Designer" },
-  { value: "interior_designer", label: "Interior Designer" },
-  { value: "graphic_designer", label: "Graphic Designer" },
-  { value: "visual_artist", label: "Visual Artist" },
-  { value: "photographer", label: "Photographer" },
-  { value: "event_planner", label: "Event Planner" },
-  { value: "model", label: "Model" },
-  { value: "creative_director", label: "Creative Director" },
-];
-
-// Define a type-safe specialty schema that uses a generic based on category
-const specialtySchema = z.union([
-  z.enum(['apparel', 'accessories', 'footwear', 'jewelry', 'other']),
-  z.enum(['residential', 'commercial', 'hospitality', 'other']),
-  z.enum(['branding', 'digital', 'print', 'illustration', 'other']),
-  z.enum(['painting', 'sculpture', 'digital_art', 'mixed_media', 'other']),
-  z.enum(['portrait', 'fashion', 'event', 'commercial', 'other']),
-  z.enum(['weddings', 'corporate', 'social', 'non_profit', 'other']),
-  z.enum(['runway', 'commercial', 'editorial', 'fitness', 'other']),
-  z.enum(['fashion', 'advertising', 'brand', 'art_direction', 'other']),
-]);
-
-// Define the form schema with validation rules
-const designerFormSchema = z.object({
-  full_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
-  specialty: specialtySchema,
-  category: z.enum([
-    "fashion_designer",
-    "interior_designer",
-    "graphic_designer",
-    "visual_artist",
-    "photographer",
-    "event_planner",
-    "model",
-    "creative_director"
-  ]),
-  bio: z.string().optional().or(z.literal("")),
-  location: z.string().optional().or(z.literal("")),
-  portfolio_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
-  image_url: z.string().url({ message: "Must be a valid URL" }).optional().or(z.literal("")),
-  featured: z.boolean().default(false),
-  social_media: z.object({
-    instagram: z.string().optional().or(z.literal("")),
-    facebook: z.string().optional().or(z.literal("")),
-    twitter: z.string().optional().or(z.literal("")),
-    website: z.string().optional().or(z.literal("")),
-  }).optional(),
-  featured_project: z.object({
-    title: z.string().optional().or(z.literal("")),
-    description: z.string().optional().or(z.literal("")),
-    image_url: z.string().optional().or(z.literal("")),
-    link: z.string().optional().or(z.literal("")),
-  }).optional(),
-  achievements: z.array(z.string()).optional(),
-  showcase_images: z.array(z.string()).optional(),
-});
-
-type DesignerFormValues = z.infer<typeof designerFormSchema>;
+import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CreatorCategory, DesignerSpecialty, getSpecialtyOptions, getCategorySpecialty } from "@/services/designerTypes";
 
 interface DesignerFormProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  designer: Designer | null;
+  initialData?: {
+    id?: string;
+    full_name?: string;
+    email?: string;
+    bio?: string;
+    specialty?: DesignerSpecialty;
+    category?: CreatorCategory;
+    portfolio_url?: string;
+    location?: string;
+    social_media?: {
+      instagram?: string;
+      website?: string;
+      twitter?: string;
+    };
+    image_url?: string;
+    featured?: boolean;
+  };
   onSuccess?: () => void;
 }
 
-const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps) => {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<CreatorCategory>("fashion_designer");
-  const specialtyOptions = getSpecialtyOptions(currentCategory);
+const formSchema = z.object({
+  full_name: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email"),
+  bio: z.string().min(10, "Bio must be at least 10 characters"),
+  category: z.enum([
+    'fashion_designer',
+    'interior_designer',
+    'graphic_designer',
+    'visual_artist',
+    'photographer',
+    'event_planner',
+    'model',
+    'creative_director'
+  ] as const),
+  specialty: z.string().min(1, "Please select a specialty"),
+  portfolio_url: z.string().url("Please enter a valid URL").or(z.string().length(0)),
+  location: z.string().min(2, "Location must be at least 2 characters"),
+  instagram: z.string().optional(),
+  website: z.string().url("Please enter a valid URL").or(z.string().length(0)).optional(),
+  twitter: z.string().optional(),
+  image_url: z.string().optional(),
+  featured: z.boolean().default(false)
+});
 
-  const form = useForm<DesignerFormValues>({
-    resolver: zodResolver(designerFormSchema),
+type FormValues = z.infer<typeof formSchema>;
+
+const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CreatorCategory>(initialData?.category || 'fashion_designer');
+  const { toast } = useToast();
+
+  const specialtyOptions = getSpecialtyOptions(selectedCategory);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      full_name: "",
-      email: "",
-      specialty: 'apparel' as DesignerSpecialty,
-      category: "fashion_designer",
-      bio: "",
-      location: "",
-      portfolio_url: "",
-      image_url: "",
-      featured: false,
-      social_media: {
-        instagram: "",
-        facebook: "",
-        twitter: "",
-        website: "",
-      },
-      featured_project: {
-        title: "",
-        description: "",
-        image_url: "",
-        link: "",
-      },
-      achievements: [],
-      showcase_images: [],
-    },
+      full_name: initialData.full_name || "",
+      email: initialData.email || "",
+      bio: initialData.bio || "",
+      category: initialData.category || "fashion_designer",
+      specialty: initialData.specialty || specialtyOptions[0].value,
+      portfolio_url: initialData.portfolio_url || "",
+      location: initialData.location || "",
+      instagram: initialData.social_media?.instagram || "",
+      website: initialData.social_media?.website || "",
+      twitter: initialData.social_media?.twitter || "",
+      image_url: initialData.image_url || "",
+      featured: initialData.featured || false
+    }
   });
 
-  // Update specialty options when category changes
-  useEffect(() => {
-    const category = form.getValues("category") as CreatorCategory;
-    setCurrentCategory(category);
-    
-    // Reset specialty to the first option in the new category
-    if (specialtyOptions.length > 0) {
-      form.setValue("specialty", specialtyOptions[0].value);
-    }
-  }, [form.watch("category")]);
-
-  useEffect(() => {
-    if (designer) {
-      form.reset({
-        full_name: designer.full_name,
-        email: designer.email || "",
-        specialty: designer.specialty,
-        category: designer.category,
-        bio: designer.bio || "",
-        location: designer.location || "",
-        portfolio_url: designer.portfolio_url || "",
-        image_url: designer.image_url || "",
-        featured: designer.featured,
-        social_media: designer.social_media || {
-          instagram: "",
-          facebook: "",
-          twitter: "",
-          website: "",
-        },
-        featured_project: designer.featured_project || {
-          title: "",
-          description: "",
-          image_url: "",
-          link: "",
-        },
-        achievements: designer.achievements || [],
-        showcase_images: designer.showcase_images || [],
-      });
-      
-      setCurrentCategory(designer.category);
-    } else {
-      form.reset({
-        full_name: "",
-        email: "",
-        specialty: 'apparel' as DesignerSpecialty,
-        category: "fashion_designer",
-        bio: "",
-        location: "",
-        portfolio_url: "",
-        image_url: "",
-        featured: false,
-        social_media: {
-          instagram: "",
-          facebook: "",
-          twitter: "",
-          website: "",
-        },
-        featured_project: {
-          title: "",
-          description: "",
-          image_url: "",
-          link: "",
-        },
-        achievements: [],
-        showcase_images: [],
-      });
-      
-      setCurrentCategory("fashion_designer");
-    }
-  }, [designer, form]);
-
-  const onSubmit = async (values: DesignerFormValues) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
+    
     try {
-      if (designer) {
+      const designerData = {
+        full_name: data.full_name,
+        email: data.email,
+        bio: data.bio,
+        specialty: getCategorySpecialty(data.category as CreatorCategory, data.specialty),
+        category: data.category,
+        portfolio_url: data.portfolio_url,
+        location: data.location,
+        social_media: {
+          instagram: data.instagram,
+          website: data.website,
+          twitter: data.twitter
+        },
+        image_url: data.image_url,
+        featured: data.featured,
+        updated_at: new Date().toISOString()
+      };
+
+      if (initialData?.id) {
+        // Update existing designer
         const { error } = await supabase
-          .from("designers")
-          .update({
-            full_name: values.full_name,
-            email: values.email || null,
-            specialty: values.specialty,
-            category: values.category,
-            bio: values.bio || null,
-            location: values.location || null,
-            portfolio_url: values.portfolio_url || null,
-            image_url: values.image_url || null,
-            featured: values.featured,
-            social_media: values.social_media || null,
-            featured_project: values.featured_project || null,
-            achievements: values.achievements || [],
-            showcase_images: values.showcase_images || [],
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", designer.id);
+          .from('designers')
+          .update(designerData)
+          .eq('id', initialData.id);
 
         if (error) throw error;
-
+        
         toast({
-          title: "Creative professional updated",
-          description: `${values.full_name} has been updated successfully.`,
+          title: "Designer updated",
+          description: `${data.full_name} has been updated successfully.`
         });
       } else {
+        // Create new designer
         const { error } = await supabase
-          .from("designers")
+          .from('designers')
           .insert({
-            full_name: values.full_name,
-            email: values.email || null,
-            specialty: values.specialty,
-            category: values.category,
-            bio: values.bio || null,
-            location: values.location || null,
-            portfolio_url: values.portfolio_url || null,
-            image_url: values.image_url || null,
-            featured: values.featured,
-            social_media: values.social_media || null,
-            featured_project: values.featured_project || null,
-            achievements: values.achievements || [],
-            showcase_images: values.showcase_images || [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            ...designerData,
+            created_at: new Date().toISOString()
           });
 
         if (error) throw error;
-
+        
         toast({
-          title: "Creative professional added",
-          description: `${values.full_name} has been added successfully.`,
+          title: "Designer created",
+          description: `${data.full_name} has been added to the platform.`
+        });
+        
+        // Reset form if not updating
+        form.reset({
+          full_name: "",
+          email: "",
+          bio: "",
+          category: "fashion_designer",
+          specialty: specialtyOptions[0].value,
+          portfolio_url: "",
+          location: "",
+          instagram: "",
+          website: "",
+          twitter: "",
+          image_url: "",
+          featured: false
         });
       }
-
-      setOpen(false);
+      
       if (onSuccess) onSuccess();
-    } catch (error: any) {
+      
+    } catch (error) {
+      console.error('Error saving designer:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -281,306 +168,259 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{designer ? "Edit Creative Professional" : "Add Creative Professional"}</DialogTitle>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Creator Category</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        setCurrentCategory(value as CreatorCategory);
-                      }}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {creatorCategories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Email address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="City, Country" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="specialty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Specialty</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select specialty" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {specialtyOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="featured"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>Featured Creative</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Basic Info */}
+        <div className="bg-white p-6 rounded-md shadow-sm border">
+          <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="full_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Full Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Email" type="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="mt-4">
             <FormField
               control={form.control}
               name="bio"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Bio</FormLabel>
+                  <FormLabel>Biography</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Creator biography"
-                      {...field}
-                      rows={4}
+                    <Textarea 
+                      placeholder="Tell us about this designer..."
+                      className="min-h-[120px]"
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="portfolio_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Portfolio URL</FormLabel>
+          </div>
+        </div>
+        
+        {/* Professional Info */}
+        <div className="bg-white p-6 rounded-md shadow-sm border">
+          <h2 className="text-lg font-semibold mb-4">Professional Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select 
+                    onValueChange={(value: string) => {
+                      field.onChange(value);
+                      setSelectedCategory(value as CreatorCategory);
+                      // Reset specialty when category changes
+                      const newOptions = getSpecialtyOptions(value as CreatorCategory);
+                      form.setValue('specialty', newOptions[0].value);
+                    }}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="image_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL</FormLabel>
+                    <SelectContent>
+                      <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
+                      <SelectItem value="interior_designer">Interior Designer</SelectItem>
+                      <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
+                      <SelectItem value="visual_artist">Visual Artist</SelectItem>
+                      <SelectItem value="photographer">Photographer</SelectItem>
+                      <SelectItem value="event_planner">Event Planner</SelectItem>
+                      <SelectItem value="model">Model</SelectItem>
+                      <SelectItem value="creative_director">Creative Director</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="specialty"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Specialty</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select specialty" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    <SelectContent>
+                      {specialtyOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="mt-4">
+            <FormField
+              control={form.control}
+              name="portfolio_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Portfolio URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://..." {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Link to the designer's portfolio website
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="mt-4">
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="City, Country" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+        
+        {/* Social Media */}
+        <div className="bg-white p-6 rounded-md shadow-sm border">
+          <h2 className="text-lg font-semibold mb-4">Social Media</h2>
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="instagram"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instagram</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="twitter"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Twitter/X</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+        
+        {/* Image & Featured Status */}
+        <div className="bg-white p-6 rounded-md shadow-sm border">
+          <h2 className="text-lg font-semibold mb-4">Image & Status</h2>
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="image_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Profile Image URL</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://..." {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL to the designer's profile image
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="featured"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Featured Designer</FormLabel>
+                    <FormDescription>
+                      Feature this designer on the homepage
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Social Media</h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="social_media.instagram"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Instagram</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Instagram username" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="social_media.facebook"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Facebook</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Facebook profile" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="social_media.twitter"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Twitter</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Twitter handle" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="social_media.website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Personal website" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">Featured Project</h3>
-              <div className="grid grid-cols-1 gap-4">
-                <FormField
-                  control={form.control}
-                  name="featured_project.title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Project title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="featured_project.description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Project description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? "Saving..."
-                  : designer
-                  ? "Update Professional"
-                  : "Create Professional"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        <div className="flex justify-end gap-4">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : initialData?.id ? "Update Designer" : "Create Designer"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
 

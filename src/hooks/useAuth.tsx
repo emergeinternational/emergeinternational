@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Setting up auth state listener");
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log("Auth state change event:", event);
         
         setSession(session);
@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           console.log("User authenticated:", session.user.email);
+          // Use setTimeout to avoid deadlocks with supabase auth
           setTimeout(() => {
             fetchUserRole(session.user.id);
           }, 0);
@@ -162,7 +163,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           console.log("User is already authenticated", session.user.email);
-          await fetchUserRole(session.user.id);
+          // Use setTimeout to avoid deadlocks with supabase auth
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+          }, 0);
         } else {
           console.log("No authenticated user found during initialization");
         }
@@ -214,30 +218,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           console.log("Creating profile for new user:", data.user.id);
           let retries = 0;
-          const maxRetries = 5;
+          const maxRetries = 3;
           let profileCreated = false;
           
-          // Retry profile creation a few times with increasing delays to handle potential race conditions
+          // First attempt
+          profileCreated = await ensureUserProfile(data.user.id, email);
+          
+          // Retry with exponential backoff if needed
           while (retries < maxRetries && !profileCreated) {
-            try {
-              profileCreated = await ensureUserProfile(data.user.id, email);
-              if (!profileCreated) {
-                retries++;
-                console.warn(`Profile creation attempt ${retries} failed, retrying...`);
-                // Exponential backoff: 300ms, 600ms, 1.2s, 2.4s, 4.8s
-                await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, retries - 1)));
-              }
-            } catch (e) {
-              console.error(`Error in profile creation attempt ${retries}:`, e);
-              retries++;
-              // Exponential backoff
-              await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, retries - 1)));
-            }
+            retries++;
+            console.warn(`Profile creation attempt ${retries} failed, retrying...`);
+            // Exponential backoff: 500ms, 1000ms, 2000ms
+            await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retries - 1)));
+            profileCreated = await ensureUserProfile(data.user.id, email);
           }
 
           if (!profileCreated) {
             console.error("Failed to create user profile after multiple attempts");
-            // Even if profile creation failed, the user account was created
+            // Continue since the auth user was created even if profile creation failed
           }
         } catch (profileError) {
           console.error("Exception ensuring user profile during signup:", profileError);
