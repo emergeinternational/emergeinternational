@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+
+import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { OTPVerification } from "./OTPVerification";
+import { useToast } from "@/hooks/use-toast";
 
 interface LoginSignupFormProps {
   isLogin: boolean;
@@ -11,141 +10,142 @@ interface LoginSignupFormProps {
   onToggleMode: () => void;
 }
 
-export const LoginSignupForm = ({
+export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
   isLogin,
-  isSubmitting,
+  isSubmitting: parentIsSubmitting,
   onForgotPassword,
   onToggleMode,
-}: LoginSignupFormProps) => {
+}) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showOTPDialog, setShowOTPDialog] = useState(false);
-  const { toast } = useToast();
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const validateForm = () => {
     if (!email.trim()) {
       toast({
         title: "Email is required",
         description: "Please enter your email address.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    if (!password.trim()) {
+    if (!password) {
       toast({
         title: "Password is required",
         description: "Please enter your password.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    setIsProcessing(true);
+    if (!isLogin && password.length < 6) {
+      toast({
+        title: "Password is too short",
+        description: "Password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!isLogin && password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting || parentIsSubmitting) return;
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
 
     try {
       if (isLogin) {
         await signIn(email, password);
       } else {
-        // Implement exponential backoff for signup attempts
+        // Sign up with retry logic for database issues
+        let retryCount = 0;
+        const maxRetries = 3;
         let success = false;
-        let attempts = 0;
-        const maxAttempts = 5; // Increased attempts for more reliability
-        let delayMs = 500; // Start with 500ms delay
-        
-        while (!success && attempts < maxAttempts) {
-          attempts++;
+
+        while (!success && retryCount < maxRetries) {
           try {
             await signUp(email, password);
             success = true;
+          } catch (error: any) {
+            console.error(`Signup attempt ${retryCount + 1} failed:`, error);
             
-            toast({
-              title: "Account created",
-              description: "Please check your email to confirm your account.",
-            });
-            
-            break;
-          } catch (retryError) {
-            console.log(`Signup attempt ${attempts} failed:`, retryError);
-            
-            // Detect database-related errors
-            if (retryError instanceof Error && 
-                (retryError.message.includes("database") || 
-                 retryError.message.includes("foreign key") ||
-                 retryError.message.includes("type") ||
-                 retryError.message.includes("violates"))) {
-              
-              // For database errors, longer delay with more randomness to avoid thundering herd
-              delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
-              
-              if (attempts < maxAttempts) {
-                console.log(`Database error, retrying in ${delayMs}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delayMs));
-              } else {
-                throw new Error("Registration service is temporarily unavailable. Please try again in a few minutes.");
+            // If it's a database error, retry
+            if (error.message && (
+                error.message.includes("database") || 
+                error.message.includes("Database") ||
+                error.message.includes("type") ||
+                error.message.includes("foreign key") ||
+                error.message.includes("constraint")
+              )) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                console.log(`Retrying signup (attempt ${retryCount + 1}/${maxRetries})...`);
+                // Wait a bit before retrying with exponential backoff
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
+                continue;
               }
-            } else {
-              // For non-database errors, just throw them as-is
-              throw retryError;
             }
+            
+            // If we've reached max retries or it's not a database error, throw
+            throw error;
           }
         }
+
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully!",
+        });
       }
     } catch (error) {
-      console.error("Authentication error:", error);
-      const errorMessage = error instanceof Error ? error.message : "An error occurred";
+      console.error("Auth error:", error);
       
-      if (errorMessage.toLowerCase().includes("database error") || 
-          errorMessage.toLowerCase().includes("violates foreign key")) {
-        toast({
-          title: "Registration issue",
-          description: "There was a problem with our database. Please try again in a few moments.",
-          variant: "destructive",
-        });
-      } else if (errorMessage.toLowerCase().includes("already registered") || 
-                errorMessage.toLowerCase().includes("already taken")) {
-        toast({
-          title: "Email already registered",
-          description: "This email is already in use. Please try logging in instead.",
-          variant: "destructive",
-        });
-      } else if (errorMessage.toLowerCase().includes("invalid login")) {
-        toast({
-          title: "Invalid login",
-          description: "Incorrect email or password. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Authentication error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+      let errorMessage = "An error occurred during authentication.";
+      
+      if (error instanceof Error) {
+        // Handle specific error cases
+        if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please check your email to confirm your account before logging in.";
+        } else if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Invalid email or password. Please try again.";
+        } else if (error.message.includes("database") || error.message.includes("Database")) {
+          errorMessage = "There was a problem with our database. Please try again in a few moments.";
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
+      toast({
+        title: isLogin ? "Login failed" : "Signup failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
-      setIsProcessing(false);
+      setIsSubmitting(false);
     }
   };
-
-  const handleOTPVerificationSuccess = () => {
-    setShowOTPDialog(false);
-    toast({
-      title: "Verification successful",
-      description: "You can now set a new password.",
-    });
-  };
-
-  const isInProgress = isSubmitting || isProcessing;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <label htmlFor="email" className="block text-gray-300 text-sm">
-          Email Address
+          Email
         </label>
         <input
           id="email"
@@ -153,8 +153,8 @@ export const LoginSignupForm = ({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="emerge-input"
-          placeholder="your@email.com"
-          disabled={isInProgress}
+          placeholder="Enter your email"
+          disabled={isSubmitting || parentIsSubmitting}
         />
       </div>
 
@@ -168,64 +168,65 @@ export const LoginSignupForm = ({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="emerge-input"
-          placeholder="••••••••"
-          disabled={isInProgress}
+          placeholder="Enter your password"
+          disabled={isSubmitting || parentIsSubmitting}
         />
       </div>
 
-      {isLogin && (
-        <div className="flex justify-between items-center text-sm">
-          <button 
-            type="button"
-            onClick={onForgotPassword}
-            className="text-emerge-gold hover:underline"
-            disabled={isInProgress}
-          >
-            Reset via Email
-          </button>
-          
-          <Dialog open={showOTPDialog} onOpenChange={setShowOTPDialog}>
-            <DialogTrigger asChild>
-              <button 
-                type="button"
-                className="text-emerge-gold hover:underline"
-                disabled={isInProgress}
-              >
-                Reset via OTP
-              </button>
-            </DialogTrigger>
-            <DialogContent className="bg-emerge-darkBg border border-emerge-gold/50">
-              <DialogHeader>
-                <DialogTitle className="text-white">Reset Password with OTP</DialogTitle>
-              </DialogHeader>
-              <OTPVerification
-                email={email}
-                isSubmitting={isInProgress}
-                onVerificationSuccess={handleOTPVerificationSuccess}
-              />
-            </DialogContent>
-          </Dialog>
+      {!isLogin && (
+        <div className="space-y-2">
+          <label htmlFor="confirmPassword" className="block text-gray-300 text-sm">
+            Confirm Password
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="emerge-input"
+            placeholder="Confirm your password"
+            disabled={isSubmitting || parentIsSubmitting}
+          />
         </div>
       )}
 
-      <button 
-        type="submit" 
+      <div className="flex justify-end">
+        {isLogin && (
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-emerge-gold hover:text-emerge-darkGold text-sm"
+            disabled={isSubmitting || parentIsSubmitting}
+          >
+            Forgot Password?
+          </button>
+        )}
+      </div>
+
+      <button
+        type="submit"
         className="emerge-button-primary w-full"
-        disabled={isInProgress}
+        disabled={isSubmitting || parentIsSubmitting}
       >
-        {isInProgress ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+        {isSubmitting || parentIsSubmitting
+          ? isLogin
+            ? "Logging In..."
+            : "Creating Account..."
+          : isLogin
+          ? "Log In"
+          : "Create Account"}
       </button>
 
-      <div className="mt-8 text-center">
-        <button 
+      <div className="text-center">
+        <button
           type="button"
-          onClick={onToggleMode} 
-          className="text-emerge-gold hover:underline"
-          disabled={isInProgress}
+          onClick={onToggleMode}
+          className="text-emerge-gold hover:text-emerge-darkGold"
+          disabled={isSubmitting || parentIsSubmitting}
         >
-          {isLogin 
-            ? "Don't have an account? Sign Up" 
-            : "Already have an account? Sign In"}
+          {isLogin
+            ? "Don't have an account? Sign Up"
+            : "Already have an account? Log In"}
         </button>
       </div>
     </form>

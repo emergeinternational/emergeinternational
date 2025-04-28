@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return hasRequiredRole;
     }
 
-    const hasRequiredRole = userRole === userRole;
+    const hasRequiredRole = userRole === requiredRole;
     console.log(`hasRole check (single): user has role ${userRole}, needs ${requiredRole} = ${hasRequiredRole}`);
     return hasRequiredRole;
   };
