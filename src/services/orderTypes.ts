@@ -14,11 +14,14 @@ export interface CustomerInfo {
   phone_number?: string;
 }
 
+export type OrderStatus = 'pending' | 'processing' | 'completed' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'abandoned';
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+
 export interface Order {
   id: string;
   user_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'shipped' | 'delivered' | 'cancelled' | 'refunded' | 'abandoned';
-  payment_status?: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: OrderStatus;
+  payment_status?: PaymentStatus;
   payment_method?: string;
   total_amount: number;
   shipping_address_id?: string;

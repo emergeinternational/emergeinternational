@@ -1,6 +1,6 @@
 
 export type CourseCategory = 'model' | 'designer' | 'photographer' | 'videographer' | 'musical_artist' | 'fine_artist' | 'event_planner';
-export type CourseLevel = 'beginner' | 'intermediate' | 'advanced' | 'all_levels';
+export type CourseLevel = 'beginner' | 'intermediate' | 'advanced' | 'all_levels' | 'expert';
 export type CourseHostingType = 'hosted' | 'external' | 'embedded';
 
 export interface Course {
@@ -17,13 +17,14 @@ export interface Course {
   price?: number;
   created_at?: string;
   updated_at?: string;
-  // Adding these properties to fix errors in Education and CourseDetail pages
+  // Additional properties for Education and CourseDetail pages
   source_url?: string;
   link?: string;
   image?: string;
   content_type?: string;
   duration?: string;
   career_interests?: string[];
+  category_id?: string; // For backwards compatibility
 }
 
 export interface ScrapedCourse {
@@ -48,7 +49,14 @@ export interface ScrapedCourse {
   duplicate_of?: string;
 }
 
-// Adding CourseProgress interface that's missing
+// Helper function to generate a course hash identifier
+export const generateCourseHash = (course: Partial<ScrapedCourse>): string => {
+  const titleHash = course.title ? course.title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const sourceHash = course.scraper_source ? course.scraper_source.toLowerCase() : '';
+  return `${titleHash}-${sourceHash}`;
+};
+
+// CourseProgress interface
 export interface CourseProgress {
   id: string;
   user_id: string;
@@ -71,6 +79,7 @@ export const sanitizeCourseData = (course: any): Course => {
     external_link: course.external_link?.trim(),
     image_url: course.image_url?.trim(),
     video_embed_url: course.video_embed_url?.trim(),
+    is_published: course.is_published === undefined ? false : course.is_published,
   };
 };
 
@@ -79,5 +88,20 @@ export const sanitizeCourseProgress = (progress: any): CourseProgress => {
     ...progress,
     progress: Number(progress.progress) || 0,
     status: progress.status || 'started'
+  };
+};
+
+// Add sanitizeScrapedCourse which is referenced in courseScraperCore.ts
+export const sanitizeScrapedCourse = (course: any): ScrapedCourse => {
+  return {
+    ...course,
+    title: course.title?.trim() || "",
+    summary: course.summary?.trim(),
+    external_link: course.external_link?.trim(),
+    image_url: course.image_url?.trim(),
+    video_embed_url: course.video_embed_url?.trim(),
+    hash_identifier: course.hash_identifier || generateCourseHash(course),
+    is_reviewed: course.is_reviewed === undefined ? false : course.is_reviewed,
+    is_approved: course.is_approved === undefined ? false : course.is_approved,
   };
 };

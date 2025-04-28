@@ -35,4 +35,5 @@ export interface DonationPageSettings {
   created_at?: string;
   updated_at?: string;
   updated_by?: string;
+  featured_member?: string; // Add the missing property
 }

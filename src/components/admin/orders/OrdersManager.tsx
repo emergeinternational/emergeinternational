@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,7 @@ import OrdersSummary from "./OrdersSummary";
 import OrderFilters from "./OrderFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
+import { Order, OrderStatus, PaymentStatus } from "@/services/orderTypes";
 
 // Define order status options
 export const ORDER_STATUSES = [
@@ -35,36 +37,6 @@ export interface OrderFiltersState {
     to: Date | undefined;
   };
   searchQuery: string;
-}
-
-// Define interfaces for order data
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  created_at?: string;
-}
-
-export interface OrderUser {
-  full_name?: string;
-  email?: string;
-  phone_number?: string;
-}
-
-export interface Order {
-  id: string;
-  user_id: string;
-  status: string;
-  payment_status?: string;
-  payment_method?: string;
-  total_amount: number;
-  shipping_address_id?: string;
-  created_at?: string;
-  updated_at?: string;
-  user?: OrderUser;
-  order_items?: OrderItem[];
 }
 
 const OrdersManager = () => {
@@ -195,7 +167,7 @@ const OrdersManager = () => {
   }
 
   // Handle order status updates
-  async function handleOrderStatusUpdate(orderId: string, status: string) {
+  async function handleOrderStatusUpdate(orderId: string, status: OrderStatus) {
     try {
       const { error } = await supabase
         .from("orders")

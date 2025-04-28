@@ -1,7 +1,6 @@
 
 import { sanitizeScrapedCourse } from "./courseScraperHelpers";
-import { submitScrapedCourse } from "../courseScraperService";
-import { ScrapedCourse } from "../courseTypes";
+import { ScrapedCourse, CourseLevel } from "../courseTypes";
 import { supabase } from "@/integrations/supabase/client";
 
 // Function to process course data and submit it for approval
@@ -16,15 +15,7 @@ export const processCourseData = async (courseData: any) => {
     const sanitizedCourse = sanitizeScrapedCourse(courseData);
 
     // Submit the scraped course for approval
-    const submissionResult = await submitScrapedCourse({
-      ...sanitizedCourse,
-      title: sanitizedCourse.title || 'Untitled',
-      category: sanitizedCourse.category || 'designer',
-      external_link: sanitizedCourse.external_link || '',
-      hosting_type: sanitizedCourse.hosting_type || 'external',
-      scraper_source: sanitizedCourse.scraper_source || 'unknown',
-      hash_identifier: sanitizedCourse.hash_identifier || 'default-hash'
-    } as any);
+    const submissionResult = await submitScrapedCourse(sanitizedCourse);
 
     if (submissionResult) {
       console.log(`Course "${courseData.title}" submitted successfully with ID: ${submissionResult}`);
@@ -40,7 +31,35 @@ export const processCourseData = async (courseData: any) => {
   }
 };
 
-// Export the missing functions for the useScrapedCourses hook
+// Function to submit a scraped course to the database
+export const submitScrapedCourse = async (course: ScrapedCourse): Promise<string | null> => {
+  try {
+    // Make sure hash_identifier is set
+    const courseWithHash = {
+      ...course,
+      hash_identifier: course.hash_identifier
+    };
+
+    // Insert the course into the database
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .insert([courseWithHash])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error submitting scraped course:", error);
+      return null;
+    }
+
+    return data?.id || null;
+  } catch (error) {
+    console.error("Error in submitScrapedCourse:", error);
+    return null;
+  }
+};
+
+// Export the functions for the useScrapedCourses hook
 export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
   try {
     const { data, error } = await supabase
@@ -157,8 +176,7 @@ export const getDuplicateStats = async () => {
     // Fetch stats from the database
     const { data: totalScraped, error: totalError } = await supabase
       .from('scraped_courses')
-      .select('id')
-      .count();
+      .select('id');
 
     const { data: duplicates, error: dupError } = await supabase
       .from('scraped_courses')
@@ -169,6 +187,9 @@ export const getDuplicateStats = async () => {
       throw totalError || dupError;
     }
 
+    const totalCount = totalScraped?.length || 0;
+    const duplicatesCount = duplicates?.length || 0;
+
     const sourceCount: Record<string, number> = {};
     duplicates?.forEach((item: any) => {
       const source = item.scraper_source;
@@ -176,8 +197,8 @@ export const getDuplicateStats = async () => {
     });
 
     return {
-      totalScraped: totalScraped?.[0]?.count || 0,
-      duplicatesDetected: duplicates?.length || 0,
+      totalScraped: totalCount,
+      duplicatesDetected: duplicatesCount,
       duplicatesBySource: sourceCount
     };
   } catch (error) {
