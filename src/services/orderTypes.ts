@@ -36,5 +36,5 @@ export interface Order {
   updated_at?: string;
   user?: CustomerInfo;
   order_items?: OrderItem[];
-  shipping_addresses?: ShippingAddress;
+  shipping_addresses?: ShippingAddress | null;
 }

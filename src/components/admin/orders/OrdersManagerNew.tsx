@@ -59,53 +59,57 @@ const OrdersManagerNew = () => {
   } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      // First, fetch the orders
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("orders")
-        .select("*")
-        .order('created_at', { ascending: false });
-
-      if (ordersError) {
-        throw ordersError;
-      }
-
-      // For each order, fetch the related items, user info, and shipping address
-      const ordersWithDetails = await Promise.all(ordersData.map(async (order) => {
-        // Fetch order items
-        const { data: orderItems } = await supabase
-          .from("order_items")
+      try {
+        // First, fetch the orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from("orders")
           .select("*")
-          .eq("order_id", order.id);
-        
-        // Fetch user info
-        const { data: userInfo } = await supabase
-          .from("profiles")
-          .select("full_name, email, phone_number")
-          .eq("id", order.user_id)
-          .single();
-        
-        // Fetch shipping address if exists
-        let shippingAddress = null;
-        if (order.shipping_address_id) {
-          const { data: addressData } = await supabase
-            .from("shipping_addresses")
+          .order('created_at', { ascending: false });
+
+        if (ordersError) throw ordersError;
+        if (!ordersData) return [];
+
+        // For each order, fetch the related items, user info, and shipping address
+        const ordersWithDetails = await Promise.all(ordersData.map(async (order) => {
+          // Fetch order items
+          const { data: orderItems } = await supabase
+            .from("order_items")
             .select("*")
-            .eq("id", order.shipping_address_id)
+            .eq("order_id", order.id);
+          
+          // Fetch user info
+          const { data: userInfo } = await supabase
+            .from("profiles")
+            .select("full_name, email, phone_number")
+            .eq("id", order.user_id)
             .single();
           
-          shippingAddress = addressData;
-        }
+          // Fetch shipping address if exists
+          let shippingAddress = null;
+          if (order.shipping_address_id) {
+            const { data: addressData } = await supabase
+              .from("shipping_addresses")
+              .select("*")
+              .eq("id", order.shipping_address_id)
+              .single();
+            
+            shippingAddress = addressData;
+          }
+          
+          // Assemble the complete order object
+          return {
+            ...order,
+            order_items: orderItems || [],
+            user: userInfo || {},
+            shipping_addresses: shippingAddress
+          };
+        }));
         
-        // Assemble the complete order object
-        return {
-          ...order,
-          order_items: orderItems || [],
-          user: userInfo || {},
-          shipping_addresses: shippingAddress
-        };
-      }));
-      
-      return ordersWithDetails as Order[];
+        return ordersWithDetails as Order[];
+      } catch (fetchError) {
+        console.error("Error fetching orders:", fetchError);
+        throw fetchError;
+      }
     },
   });
 
