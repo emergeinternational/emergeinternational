@@ -39,6 +39,32 @@ export interface OrderFiltersState {
   searchQuery: string;
 }
 
+// Define types for the query response
+interface OrderQueryResponse {
+  id: string;
+  user_id: string;
+  status: string;
+  payment_status?: string;
+  payment_method?: string;
+  total_amount: number;
+  shipping_address_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  user?: {
+    full_name?: string;
+    email?: string;
+    phone_number?: string;
+  };
+  order_items?: Array<{
+    id: string;
+    order_id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    created_at?: string;
+  }>;
+}
+
 const OrdersManager = () => {
   const { toast } = useToast();
   const [filters, setFilters] = useState<OrderFiltersState>({
@@ -161,7 +187,7 @@ const OrdersManager = () => {
       
       // Refetch orders to update the list
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating order:", error);
       toast({
         title: "Update failed",

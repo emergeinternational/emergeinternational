@@ -1,23 +1,16 @@
 
-export interface DonationPageSettings {
+export interface Donation {
   id: string;
-  hero_title: string;
-  hero_description?: string;
-  hero_image_url?: string;
-  payment_methods?: string[];
-  currency_options?: string[];
-  suggested_amounts?: number[];
-  min_donation_amount?: number;
-  max_donation_amount?: number;
-  thank_you_message?: string;
-  is_active?: boolean;
-  featured_member?: {
-    name: string;
-    role: string;
-    image_url: string;
-    description: string;
-  };
-  created_at?: string;
+  amount: number;
+  currency: string;
+  payment_status: string;
+  payment_method?: string;
+  message?: string;
+  certificate_url?: string;
+  payment_proof_url?: string;
+  user_id: string;
+  donor_id?: string;
   updated_at?: string;
-  updated_by?: string;
+  certificate_issued?: boolean;
+  created_at?: string;
 }

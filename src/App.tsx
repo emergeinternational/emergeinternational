@@ -62,119 +62,115 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  // Create a new QueryClient for each rendering of App
-  // This helps prevent potential issues with stale React contexts
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <AuthProvider>
-            <CartProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  {/* Home routes - make sure Landing is the default route */}
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/home" element={<Home />} />
-                  
-                  {/* Public routes */}
-                  <Route path="/education" element={<Education />} />
-                  <Route path="/education/course/:id" element={<CourseDetail />} />
-                  <Route path="/workshops" element={<Workshops />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/terms" element={<Terms />} />
-                  <Route path="/privacy" element={<Privacy />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/test-auth" element={<TestAuthPage />} />
-                  <Route path="/talent-registration" element={<TalentRegistration />} />
-                  <Route path="/submit" element={<MediaSubmission />} />
-                  <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                  <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/shop/product/:id" element={<ProductDetail />} />
-                  <Route path="/events" element={<Events />} />
-                  <Route path="/event-payment/:eventId" element={<EventPayment />} />
-                  <Route path="/payment" element={<Payment />} />
-                  
-                  {/* Protected routes */}
-                  <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
-                  <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
-                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                  <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
-                  <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
-                  
-                  {/* Admin routes */}
-                  <Route path="/admin" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
-                      <Dashboard />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/users" element={
-                    <RoleBasedRoute allowedRoles={['admin']}>
-                      <Users />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/talents" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <TalentsPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/events" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <EventsPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/products" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <ProductsPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/designers" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <DesignersPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/donations" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <DonationsManagementPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/orders" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <OrdersPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/settings" element={
-                    <RoleBasedRoute allowedRoles={['admin']}>
-                      <Settings />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/courses" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <CoursesPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/premium-courses" element={
-                    <RoleBasedRoute allowedRoles={['admin', 'editor']}>
-                      <PremiumCoursesPage />
-                    </RoleBasedRoute>
-                  } />
-                  <Route path="/admin/premium-enrollments" element={
-                    <RoleBasedRoute allowedRoles={['admin']}>
-                      <PremiumEnrollmentsPage />
-                    </RoleBasedRoute>
-                  } />
-                  
-                  {/* Fallback route */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </TooltipProvider>
-            </CartProvider>
-          </AuthProvider>
-        </Router>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
+                {/* Home routes - make sure Landing is the default route */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/home" element={<Home />} />
+                
+                {/* Public routes */}
+                <Route path="/education" element={<Education />} />
+                <Route path="/education/course/:id" element={<CourseDetail />} />
+                <Route path="/workshops" element={<Workshops />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/test-auth" element={<TestAuthPage />} />
+                <Route path="/talent-registration" element={<TalentRegistration />} />
+                <Route path="/submit" element={<MediaSubmission />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/email-login" element={<PublicRoute><EmailLogin /></PublicRoute>} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/shop/product/:id" element={<ProductDetail />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/event-payment/:eventId" element={<EventPayment />} />
+                <Route path="/payment" element={<Payment />} />
+                
+                {/* Protected routes */}
+                <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
+                <Route path="/donations" element={<PrivateRoute><Donations /></PrivateRoute>} />
+                <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+                <Route path="/certificates" element={<PrivateRoute><Certificates /></PrivateRoute>} />
+                <Route path="/my-premium-courses" element={<PrivateRoute><MyPremiumCourses /></PrivateRoute>} />
+                
+                {/* Admin routes */}
+                <Route path="/admin" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor', 'viewer']}>
+                    <Dashboard />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <Users />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/talents" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <TalentsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/events" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <EventsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/products" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <ProductsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/designers" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <DesignersPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/donations" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <DonationsManagementPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/orders" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <OrdersPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/settings" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <Settings />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/courses" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <CoursesPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/premium-courses" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <PremiumCoursesPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/premium-enrollments" element={
+                  <RoleBasedRoute allowedRoles={['admin']}>
+                    <PremiumEnrollmentsPage />
+                  </RoleBasedRoute>
+                } />
+                
+                {/* Fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </TooltipProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
   );
 };
 
