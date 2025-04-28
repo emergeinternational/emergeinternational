@@ -1,0 +1,86 @@
+
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { 
+  syncTalentData, 
+  getTalentSyncLogs,
+  ExternalTalentData,
+  transformTalentData,
+  insertTalentToDB,
+  checkTalentExists,
+  updateTalentInDB
+} from "@/services/talentSyncService";
+import { Talent } from "@/types/talentTypes";
+
+/**
+ * Hook for managing talent synchronization operations
+ */
+export function useTalentSync() {
+  const queryClient = useQueryClient();
+  
+  // Query to fetch sync logs
+  const syncLogsQuery = useQuery({
+    queryKey: ['talent-sync-logs'],
+    queryFn: () => getTalentSyncLogs(),
+  });
+  
+  // Mutation to run talent sync operation
+  const syncMutation = useMutation({
+    mutationFn: syncTalentData,
+    onSuccess: () => {
+      // Invalidate and refetch queries related to talent data
+      queryClient.invalidateQueries({ queryKey: ['talent-data'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-sync-logs'] });
+    },
+  });
+  
+  // Mutation to add a single talent
+  const addTalentMutation = useMutation({
+    mutationFn: async (externalData: ExternalTalentData) => {
+      // Transform external data to our format
+      const transformedTalent = transformTalentData(externalData);
+      
+      // Check if talent already exists
+      const { exists, talent } = await checkTalentExists(externalData.email);
+      
+      if (exists && talent) {
+        // Update existing talent
+        await updateTalentInDB(talent.id, transformedTalent);
+        return { ...talent, ...transformedTalent };
+      } else {
+        // Insert new talent
+        return await insertTalentToDB(transformedTalent);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['talent-data'] });
+    },
+  });
+  
+  // Function to manually trigger sync
+  const runSync = useCallback(() => {
+    return syncMutation.mutateAsync();
+  }, [syncMutation]);
+  
+  // Function to add a single talent
+  const addOrUpdateTalent = useCallback((data: ExternalTalentData) => {
+    return addTalentMutation.mutateAsync(data);
+  }, [addTalentMutation]);
+  
+  return {
+    // Sync operations
+    runSync,
+    addOrUpdateTalent,
+    isSyncing: syncMutation.isPending,
+    isAdding: addTalentMutation.isPending,
+    
+    // Sync results
+    syncResult: syncMutation.data,
+    syncError: syncMutation.error,
+    
+    // Sync logs
+    syncLogs: syncLogsQuery.data || [],
+    isLogsLoading: syncLogsQuery.isLoading,
+    refetchLogs: syncLogsQuery.refetch,
+  };
+}

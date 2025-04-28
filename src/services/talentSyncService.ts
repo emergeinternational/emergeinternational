@@ -1,403 +1,308 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { TalentApplication } from "@/types/talentTypes";
+import { Talent, TalentCategory, TalentLevel } from "@/types/talentTypes";
 
 /**
- * Maps talent category values to valid database values
+ * Interface for external talent data source
  */
-const mapCategoryToValidType = (category: string | null): string => {
-  if (!category) return 'other';
-  
-  // Map to lowercase for consistency
-  const lowerCategory = category.toLowerCase();
-  
-  // Basic mapping to ensure compatibility with constraints
-  if (lowerCategory.includes('model')) return 'model';
-  if (lowerCategory.includes('performer') || 
-      lowerCategory.includes('singer') || 
-      lowerCategory.includes('dancer') || 
-      lowerCategory.includes('actor')) return 'performer';
-  if (lowerCategory.includes('design')) return 'designer';
-  
-  // Default fallback - ensure this value is allowed by constraints
-  return 'other';
-};
-
-/**
- * Syncs data from emerge_submissions to talent_applications
- * This function moves records that exist in emerge_submissions but not in talent_applications
- */
-export async function syncEmergeSubmissions(): Promise<{ 
-  success: boolean;
-  transferredCount: number;
-  errorMessage?: string 
-}> {
-  try {
-    console.log("Starting sync from emerge_submissions to talent_applications");
-    
-    // Get all records from emerge_submissions
-    const { data: emergeSubmissions, error: fetchError } = await supabase
-      .from('emerge_submissions')
-      .select('*');
-    
-    if (fetchError) {
-      console.error("Error fetching emerge submissions:", fetchError);
-      return { success: false, transferredCount: 0, errorMessage: fetchError.message };
-    }
-    
-    // Get existing emails in talent_applications to avoid duplicates
-    const { data: existingApplications, error: existingError } = await supabase
-      .from('talent_applications')
-      .select('email');
-    
-    if (existingError) {
-      console.error("Error fetching existing applications:", existingError);
-      return { success: false, transferredCount: 0, errorMessage: existingError.message };
-    }
-    
-    const existingEmails = new Set(existingApplications?.map(app => app.email) || []);
-    
-    // Filter out submissions that already exist in applications
-    const newSubmissions = emergeSubmissions?.filter(
-      submission => !existingEmails.has(submission.email)
-    ) || [];
-    
-    if (newSubmissions.length === 0) {
-      console.log("No new submissions to sync");
-      return { success: true, transferredCount: 0 };
-    }
-    
-    // Format data for talent_applications table
-    const applicationData = newSubmissions.map(submission => ({
-      full_name: submission.full_name,
-      email: submission.email,
-      phone: submission.phone_number,
-      age: submission.age,
-      status: 'pending',
-      social_media: {
-        instagram: submission.instagram,
-        telegram: submission.telegram,
-        tiktok: submission.tiktok
-      },
-      notes: submission.talent_description,
-      category_type: mapCategoryToValidType(submission.category),
-      gender: submission.gender,
-      portfolio_url: submission.portfolio_url,
-      measurements: submission.measurements,
-      created_at: submission.created_at,
-      sync_status: 'synced'
-    }));
-    
-    // Insert into talent_applications
-    const { error: insertError } = await supabase
-      .from('talent_applications')
-      .insert(applicationData);
-    
-    if (insertError) {
-      console.error("Error inserting synced applications:", insertError);
-      return { success: false, transferredCount: 0, errorMessage: insertError.message };
-    }
-    
-    // Update sync status for these records
-    const submissionIds = newSubmissions.map(submission => submission.id);
-    const { error: updateError } = await supabase
-      .from('emerge_submissions')
-      .update({ sync_status: 'synced' })
-      .in('id', submissionIds);
-    
-    if (updateError) {
-      console.error("Error updating sync status:", updateError);
-      // Non-critical error, proceed anyway
-    }
-    
-    console.log(`Successfully synced ${applicationData.length} records`);
-    return { success: true, transferredCount: applicationData.length };
-  } catch (error) {
-    console.error("Error in syncEmergeSubmissions:", error);
-    return { 
-      success: false, 
-      transferredCount: 0, 
-      errorMessage: error instanceof Error ? error.message : "Unknown error" 
-    };
-  }
+export interface ExternalTalentData {
+  full_name: string;
+  email: string;
+  category_type?: string;
+  level_info?: string;
+  bio?: string;
+  portfolio_url?: string;
+  social_media?: {
+    instagram?: string;
+    telegram?: string;
+    tiktok?: string;
+    other?: string[];
+  };
+  profile_image_url?: string;
 }
 
 /**
- * Initiates a forced sync via the Edge Function
- * This is more powerful than the client-side sync as it uses admin privileges
+ * Maps external category types to our standardized TalentCategory enum values
  */
-export async function forceSyncTalentData(): Promise<{
-  success: boolean;
-  syncedCount?: number;
-  message?: string;
-  error?: string;
-}> {
+export function mapExternalCategoryToEnum(categoryType: string | undefined): TalentCategory {
+  if (!categoryType) return 'model'; // Default category
+  
+  const lowerCategory = categoryType.toLowerCase();
+  
+  if (lowerCategory.includes('model')) return 'model';
+  if (lowerCategory.includes('design')) return 'designer';
+  if (lowerCategory.includes('photo')) return 'photographer';
+  if (lowerCategory.includes('act')) return 'actor';
+  if (lowerCategory.includes('music') || lowerCategory.includes('sing')) return 'musical_artist';
+  if (lowerCategory.includes('art') || lowerCategory.includes('paint')) return 'fine_artist';
+  if (lowerCategory.includes('event') || lowerCategory.includes('plan')) return 'event_planner';
+  
+  return 'model'; // Default to model if no match found
+}
+
+/**
+ * Maps external level info to our standardized TalentLevel enum values
+ */
+export function mapExternalLevelToEnum(levelInfo: string | undefined): TalentLevel {
+  if (!levelInfo) return 'beginner'; // Default level
+  
+  const lowerLevel = levelInfo.toLowerCase();
+  
+  if (lowerLevel.includes('expert') || lowerLevel.includes('advance')) return 'expert';
+  if (lowerLevel.includes('intermediate') || lowerLevel.includes('mid')) return 'intermediate';
+  
+  return 'beginner'; // Default to beginner if no match found
+}
+
+/**
+ * Validates a talent record before insertion
+ */
+export function isValidTalent(talent: Partial<Talent>): boolean {
+  return !!(
+    talent.full_name &&
+    talent.email &&
+    talent.category &&
+    talent.level
+  );
+}
+
+/**
+ * Transforms external talent data into our database format
+ */
+export function transformTalentData(externalData: ExternalTalentData): Partial<Talent> {
+  return {
+    full_name: externalData.full_name,
+    email: externalData.email,
+    category: mapExternalCategoryToEnum(externalData.category_type),
+    level: mapExternalLevelToEnum(externalData.level_info),
+    portfolio_url: externalData.portfolio_url,
+    social_media_links: externalData.social_media,
+    profile_image_url: externalData.profile_image_url,
+  };
+}
+
+/**
+ * Inserts a talent record into the database
+ */
+export async function insertTalentToDB(talent: Partial<Talent>): Promise<Talent> {
   try {
-    const { data, error } = await supabase.functions.invoke('education-automation', {
-      body: { 
-        operation: 'talent-sync',
-        forceSync: true 
-      }
-    });
+    const { data, error } = await supabase
+      .from('talent')
+      .insert([talent])
+      .select();
 
     if (error) {
-      console.error("Error in force sync:", error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error("Error inserting talent:", error);
+      throw error;
     }
 
-    if (data.operations?.talentSync) {
-      return {
-        success: data.operations.talentSync.success,
-        syncedCount: data.operations.talentSync.syncedCount || 0,
-        message: data.operations.talentSync.message || `Successfully synced ${data.operations.talentSync.syncedCount || 0} records`
-      };
+    if (!data || data.length === 0) {
+      throw new Error("No data returned after insertion");
     }
 
-    return {
-      success: true,
-      syncedCount: 0,
-      message: "No sync operation was performed"
-    };
+    console.log("Talent inserted successfully:", data[0]);
+    return data[0] as Talent;
   } catch (error) {
-    console.error("Error in forceSyncTalentData:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred during force sync" 
-    };
+    console.error("Error in insertTalentToDB:", error);
+    throw error;
   }
 }
 
 /**
- * Gets summary counts of registrations in both tables
+ * Updates an existing talent record in the database
  */
-export async function getTalentRegistrationCounts(): Promise<{
-  talentApplications: number;
-  emergeSubmissions: number;
-  error?: string;
-}> {
+export async function updateTalentInDB(id: string, talent: Partial<Talent>): Promise<void> {
+  const { error } = await supabase
+    .from('talent')
+    .update(talent)
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error updating talent:", error);
+    throw error;
+  }
+
+  console.log("Talent updated successfully");
+}
+
+/**
+ * Checks if a talent with the given email already exists in the database
+ */
+export async function checkTalentExists(email: string): Promise<{ exists: boolean, talent?: Talent }> {
   try {
-    const { count: talentCount, error: talentError } = await supabase
-      .from('talent_applications')
-      .select('*', { count: 'exact', head: true });
-      
-    const { count: emergeCount, error: emergeError } = await supabase
-      .from('emerge_submissions')
-      .select('*', { count: 'exact', head: true });
-      
-    if (talentError || emergeError) {
-      throw new Error(talentError?.message || emergeError?.message);
+    const { data, error } = await supabase
+      .from('talent')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking talent existence:", error);
+      throw error;
     }
-    
+
     return {
-      talentApplications: talentCount || 0,
-      emergeSubmissions: emergeCount || 0
+      exists: !!data,
+      talent: data as Talent
     };
   } catch (error) {
-    console.error("Error getting registration counts:", error);
-    return {
-      talentApplications: 0,
-      emergeSubmissions: 0,
-      error: error instanceof Error ? error.message : "Unknown error"
-    };
+    console.error("Error in checkTalentExists:", error);
+    throw error;
   }
 }
 
 /**
- * Performs a one-time comprehensive migration of all records from emerge_submissions to talent_applications
- * with careful handling of duplicates and data integrity
+ * Gets sample external talent data for testing
+ * In a real application, this would connect to an API or other data source
  */
-export async function performFullTalentDataMigration(): Promise<{
+export async function getSampleExternalTalentData(): Promise<ExternalTalentData[]> {
+  // This is mock data for testing purposes
+  return [
+    {
+      full_name: "Jane Smith",
+      email: "jane.smith@example.com",
+      category_type: "model",
+      level_info: "intermediate",
+      bio: "Experienced fashion model with 5 years in the industry",
+      portfolio_url: "https://portfolio.example.com/janesmith",
+      social_media: {
+        instagram: "janesmith_model",
+        telegram: "@janesmith",
+      },
+      profile_image_url: "https://example.com/images/jane-profile.jpg"
+    },
+    {
+      full_name: "John Doe",
+      email: "john.doe@example.com",
+      category_type: "photographer",
+      level_info: "expert",
+      bio: "Award-winning photographer specializing in fashion and portraits",
+      portfolio_url: "https://portfolio.example.com/johndoe",
+      social_media: {
+        instagram: "johndoe_photo",
+        tiktok: "@johndoephoto",
+      },
+      profile_image_url: "https://example.com/images/john-profile.jpg"
+    }
+  ];
+}
+
+/**
+ * Main function to synchronize talent data
+ * This function fetches external talent data and syncs it with the database
+ */
+export async function syncTalentData(): Promise<{ 
   success: boolean;
-  migratedCount: number;
-  skippedCount: number;
-  errorCount: number;
-  errors: string[];
+  processed: number;
+  inserted: number;
+  updated: number;
+  errors: number;
+  errorDetails?: string[];
 }> {
-  console.log("Starting full talent data migration process");
+  console.log("Starting talent data synchronization...");
+  
+  const results = {
+    success: false,
+    processed: 0,
+    inserted: 0,
+    updated: 0,
+    errors: 0,
+    errorDetails: [] as string[]
+  };
   
   try {
-    // 1. Fetch all records from emerge_submissions
-    const { data: emergeSubmissions, error: fetchError } = await supabase
-      .from('emerge_submissions')
-      .select('*')
-      .order('created_at', { ascending: true });
+    // In a real application, you would get data from an API or other source
+    // For this example, we're using sample data
+    const externalTalentData = await getSampleExternalTalentData();
+    results.processed = externalTalentData.length;
     
-    if (fetchError) {
-      console.error("Error fetching emerge submissions:", fetchError);
-      return {
-        success: false,
-        migratedCount: 0,
-        skippedCount: 0,
-        errorCount: 1,
-        errors: [fetchError.message]
-      };
-    }
+    console.log(`Fetched ${externalTalentData.length} talent records from external source`);
     
-    if (!emergeSubmissions || emergeSubmissions.length === 0) {
-      console.log("No records found in emerge_submissions table");
-      return {
-        success: true,
-        migratedCount: 0,
-        skippedCount: 0,
-        errorCount: 0,
-        errors: []
-      };
-    }
-    
-    // 2. Fetch all existing records from talent_applications to check for duplicates
-    const { data: existingApplications, error: existingError } = await supabase
-      .from('talent_applications')
-      .select('email, phone');
-    
-    if (existingError) {
-      console.error("Error fetching existing applications:", existingError);
-      return {
-        success: false,
-        migratedCount: 0,
-        skippedCount: 0,
-        errorCount: 1,
-        errors: [existingError.message]
-      };
-    }
-    
-    // 3. Create lookup sets for quick duplicate checking
-    const existingEmails = new Set(existingApplications?.map(app => app.email?.toLowerCase()) || []);
-    const existingPhones = new Set(existingApplications?.map(app => app.phone) || []);
-    
-    // 4. Filter and prepare records for migration
-    const recordsToMigrate = [];
-    const skippedRecords = [];
-    const errors = [];
-    
-    for (const submission of emergeSubmissions) {
-      // Skip if email already exists in talent_applications
-      if (existingEmails.has(submission.email?.toLowerCase())) {
-        console.log(`Skipping record with duplicate email: ${submission.email}`);
-        skippedRecords.push(submission);
-        continue;
-      }
-      
-      // Skip if phone exists and is not null/empty
-      if (submission.phone_number && existingPhones.has(submission.phone_number)) {
-        console.log(`Skipping record with duplicate phone: ${submission.phone_number}`);
-        skippedRecords.push(submission);
-        continue;
-      }
-      
-      // Prepare record for migration with proper field mapping
+    for (const externalRecord of externalTalentData) {
       try {
-        recordsToMigrate.push({
-          full_name: submission.full_name || 'Unknown',
-          email: submission.email,
-          phone: submission.phone_number,
-          age: typeof submission.age === 'number' ? submission.age : null,
-          status: 'pending',
-          social_media: {
-            instagram: submission.instagram || null,
-            telegram: submission.telegram || null,
-            tiktok: submission.tiktok || null
-          },
-          notes: submission.talent_description || null,
-          category_type: mapCategoryToValidType(submission.category),
-          gender: submission.gender || null,
-          portfolio_url: submission.portfolio_url || null,
-          measurements: submission.measurements || null,
-          created_at: submission.created_at || new Date().toISOString(),
-          sync_status: 'synced'
-        });
+        // Transform external data to our format
+        const transformedTalent = transformTalentData(externalRecord);
         
-        // Add migrated email to existing sets to avoid duplicate migrations in the same batch
-        existingEmails.add(submission.email?.toLowerCase());
-        if (submission.phone_number) {
-          existingPhones.add(submission.phone_number);
+        // Validate the transformed data
+        if (!isValidTalent(transformedTalent)) {
+          throw new Error(`Invalid talent data for ${externalRecord.email}: Missing required fields`);
         }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('Unknown error during record preparation');
-        console.error(`Error preparing record ${submission.id}:`, error);
-        errors.push(`Error preparing record ${submission.id}: ${error.message}`);
-      }
-    }
-    
-    // 5. Migrate records in batches to avoid request size limits
-    const BATCH_SIZE = 50;
-    let migratedCount = 0;
-    let errorCount = errors.length;
-    
-    for (let i = 0; i < recordsToMigrate.length; i += BATCH_SIZE) {
-      const batch = recordsToMigrate.slice(i, i + BATCH_SIZE);
-      
-      if (batch.length === 0) continue;
-      
-      try {
-        console.log(`Migrating batch of ${batch.length} records (${i + 1} to ${i + batch.length})`);
-        const { error: insertError } = await supabase
-          .from('talent_applications')
-          .insert(batch);
         
-        if (insertError) {
-          console.error(`Error inserting batch (${i + 1} to ${i + batch.length}):`, insertError);
-          errors.push(`Batch insertion error (records ${i + 1} to ${i + batch.length}): ${insertError.message}`);
-          errorCount++;
+        // Check if talent already exists
+        const { exists, talent } = await checkTalentExists(externalRecord.email);
+        
+        if (exists && talent) {
+          // Update existing talent record
+          await updateTalentInDB(talent.id, transformedTalent);
+          results.updated++;
+          console.log(`Updated existing talent: ${externalRecord.email}`);
         } else {
-          migratedCount += batch.length;
-          console.log(`Successfully migrated batch of ${batch.length} records`);
-          
-          // Update sync_status for the successfully migrated records
-          const submissionEmails = batch.map(record => record.email);
-          await supabase
-            .from('emerge_submissions')
-            .update({ sync_status: 'synced' })
-            .in('email', submissionEmails);
+          // Insert new talent record
+          await insertTalentToDB(transformedTalent);
+          results.inserted++;
+          console.log(`Inserted new talent: ${externalRecord.email}`);
         }
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('Unknown error');
-        console.error(`Error processing batch (${i + 1} to ${i + batch.length}):`, error);
-        errors.push(`Batch processing error (records ${i + 1} to ${i + batch.length}): ${error.message}`);
-        errorCount++;
+      } catch (error) {
+        results.errors++;
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        results.errorDetails.push(`Error processing ${externalRecord.email}: ${errorMessage}`);
+        console.error(`Error processing talent record for ${externalRecord.email}:`, error);
       }
-      
-      // Small delay between batches to prevent rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // 6. Return comprehensive report
-    const success = errorCount === 0;
-    console.log(`Migration completed with: ${migratedCount} migrated, ${skippedRecords.length} skipped, ${errorCount} errors`);
+    results.success = results.errors === 0;
+    console.log("Talent synchronization completed", results);
     
-    return {
-      success,
-      migratedCount,
-      skippedCount: skippedRecords.length,
-      errorCount,
-      errors
-    };
+    // Log the synchronization activity
+    await supabase
+      .from('automation_logs')
+      .insert([{
+        function_name: 'talent_sync',
+        executed_at: new Date().toISOString(),
+        results: {
+          success: results.success,
+          processed: results.processed,
+          inserted: results.inserted,
+          updated: results.updated,
+          errors: results.errors,
+          errorDetails: results.errorDetails
+        }
+      }]);
+    
+    return results;
   } catch (error) {
-    console.error("Critical error during talent data migration:", error);
-    return {
-      success: false,
-      migratedCount: 0,
-      skippedCount: 0,
-      errorCount: 1,
-      errors: [error instanceof Error ? error.message : "Unknown critical error during migration"]
-    };
+    console.error("Critical error during talent synchronization:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    results.errorDetails.push(`Critical error: ${errorMessage}`);
+    
+    // Log the synchronization failure
+    await supabase
+      .from('automation_logs')
+      .insert([{
+        function_name: 'talent_sync',
+        executed_at: new Date().toISOString(),
+        results: {
+          success: false,
+          error: errorMessage
+        }
+      }]);
+    
+    return results;
   }
 }
 
 /**
- * Gets the recent synchronization logs
+ * Get the latest synchronization logs
  */
-export async function getSyncLogs(limit: number = 10): Promise<any[]> {
+export async function getTalentSyncLogs(limit: number = 5): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from('automation_logs')
       .select('*')
-      .eq('function_name', 'sync_emerge_submission_to_talent')
+      .eq('function_name', 'talent_sync')
       .order('executed_at', { ascending: false })
       .limit(limit);
-    
+      
     if (error) {
       console.error("Error fetching sync logs:", error);
       return [];
@@ -405,50 +310,7 @@ export async function getSyncLogs(limit: number = 10): Promise<any[]> {
     
     return data || [];
   } catch (error) {
-    console.error("Error in getSyncLogs:", error);
+    console.error("Error in getTalentSyncLogs:", error);
     return [];
-  }
-}
-
-/**
- * Gets sync status overview using the talent_sync_status view
- */
-export async function getSyncStatusSummary(): Promise<{
-  totalSubmissions: number;
-  syncedCount: number;
-  pendingCount: number;
-  syncPercentage: number;
-  error?: string;
-}> {
-  try {
-    // Use the talent_sync_status view to get sync status
-    const { data, error } = await supabase
-      .from('talent_sync_status')
-      .select('*');
-    
-    if (error) {
-      throw new Error(`Error fetching sync status: ${error.message}`);
-    }
-    
-    const totalSubmissions = data?.length || 0;
-    const syncedCount = data?.filter(item => item.exists_in_talent_applications).length || 0;
-    const pendingCount = totalSubmissions - syncedCount;
-    const syncPercentage = totalSubmissions > 0 ? (syncedCount / totalSubmissions) * 100 : 0;
-    
-    return {
-      totalSubmissions,
-      syncedCount,
-      pendingCount,
-      syncPercentage: Math.round(syncPercentage * 10) / 10 // Round to 1 decimal place
-    };
-  } catch (error) {
-    console.error("Error in getSyncStatusSummary:", error);
-    return {
-      totalSubmissions: 0,
-      syncedCount: 0,
-      pendingCount: 0,
-      syncPercentage: 0,
-      error: error instanceof Error ? error.message : "Unknown error"
-    };
   }
 }
