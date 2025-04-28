@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Designer } from "@/services/designerTypes";
+import { Designer, DesignerCategory } from "@/services/designerTypes";
 
 interface DesignerFormProps {
   open: boolean;
@@ -76,9 +76,15 @@ const DesignerForm = ({ open, setOpen, designer }: DesignerFormProps) => {
         return;
       }
 
-      // Convert social_media to a plain object for Supabase
+      // Prepare data with required fields
       const dataToSend = {
-        ...formData,
+        full_name: formData.full_name,
+        specialty: formData.specialty as DesignerCategory,
+        email: formData.email || null,
+        bio: formData.bio || null,
+        portfolio_url: formData.portfolio_url || null,
+        image_url: formData.image_url || null,
+        featured: formData.featured || false,
         social_media: formData.social_media ? { ...formData.social_media } : null
       };
 

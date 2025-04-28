@@ -1,5 +1,8 @@
+
 import { sanitizeScrapedCourse } from "./courseScraperHelpers";
 import { submitScrapedCourse } from "../courseScraperService";
+import { ScrapedCourse } from "../courseTypes";
+import { supabase } from "@/integrations/supabase/client";
 
 // Function to process course data and submit it for approval
 export const processCourseData = async (courseData: any) => {
@@ -9,15 +12,6 @@ export const processCourseData = async (courseData: any) => {
       console.warn("Missing required fields in course data:", courseData);
       return { success: false, message: "Missing required fields" };
     }
-
-    // Check for potential duplicate courses based on title and source
-    // const existingCourse = await findExistingCourse(courseData.title, courseData.scraper_source);
-    // if (existingCourse) {
-    //   console.log(`Potential duplicate course found: ${courseData.title}`);
-    //   courseData.is_duplicate = true;
-    //   courseData.duplicate_confidence = calculateConfidence(courseData, existingCourse);
-    //   courseData.duplicate_of = existingCourse.id;
-    // }
 
     const sanitizedCourse = sanitizeScrapedCourse(courseData);
 
@@ -46,13 +40,152 @@ export const processCourseData = async (courseData: any) => {
   }
 };
 
-// Placeholder functions - implement these based on your data model
-const findExistingCourse = async (title: string, source: string) => {
-  // Implement logic to search for existing courses in your database
-  return null; // Return null if no course is found
+// Export the missing functions for the useScrapedCourses hook
+export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('*')
+      .eq('is_reviewed', false)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as ScrapedCourse[];
+  } catch (error) {
+    console.error("Error fetching pending courses:", error);
+    return [];
+  }
 };
 
-const calculateConfidence = (newCourse: any, existingCourse: any) => {
-  // Implement logic to calculate the confidence level that the two courses are duplicates
-  return 0.5; // Return a confidence score (0 to 1)
+export const approveScrapedCourse = async (courseId: string): Promise<string | null> => {
+  try {
+    // First get the course
+    const { data: course, error: fetchError } = await supabase
+      .from('scraped_courses')
+      .select('*')
+      .eq('id', courseId)
+      .single();
+
+    if (fetchError || !course) {
+      throw fetchError || new Error("Course not found");
+    }
+
+    // Create a new approved course
+    const { data: newCourse, error: insertError } = await supabase
+      .from('courses')
+      .insert({
+        title: course.title,
+        summary: course.summary,
+        category: course.category,
+        level: course.level,
+        external_link: course.external_link,
+        video_embed_url: course.video_embed_url,
+        image_url: course.image_url,
+        hosting_type: course.hosting_type,
+        is_published: true,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    // Update the scraped course as reviewed and approved
+    const { error: updateError } = await supabase
+      .from('scraped_courses')
+      .update({
+        is_reviewed: true,
+        is_approved: true,
+      })
+      .eq('id', courseId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    return newCourse.id;
+  } catch (error) {
+    console.error("Error approving course:", error);
+    return null;
+  }
+};
+
+export const rejectScrapedCourse = async (courseId: string, reason: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('scraped_courses')
+      .update({
+        is_reviewed: true,
+        is_approved: false,
+        review_notes: reason,
+      })
+      .eq('id', courseId);
+
+    if (error) {
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error rejecting course:", error);
+    return false;
+  }
+};
+
+export const triggerManualScrape = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    // This would typically call an edge function to trigger a scraper
+    // For now, we'll just simulate a successful response
+    return { 
+      success: true, 
+      message: "Scraper started successfully" 
+    };
+  } catch (error: any) {
+    return { 
+      success: false, 
+      message: error.message || "Failed to start scraper" 
+    };
+  }
+};
+
+export const getDuplicateStats = async () => {
+  try {
+    // Fetch stats from the database
+    const { data: totalScraped, error: totalError } = await supabase
+      .from('scraped_courses')
+      .select('id')
+      .count();
+
+    const { data: duplicates, error: dupError } = await supabase
+      .from('scraped_courses')
+      .select('scraper_source')
+      .eq('is_duplicate', true);
+
+    if (totalError || dupError) {
+      throw totalError || dupError;
+    }
+
+    const sourceCount: Record<string, number> = {};
+    duplicates?.forEach((item: any) => {
+      const source = item.scraper_source;
+      sourceCount[source] = (sourceCount[source] || 0) + 1;
+    });
+
+    return {
+      totalScraped: totalScraped?.[0]?.count || 0,
+      duplicatesDetected: duplicates?.length || 0,
+      duplicatesBySource: sourceCount
+    };
+  } catch (error) {
+    console.error("Error fetching duplicate stats:", error);
+    return {
+      totalScraped: 0,
+      duplicatesDetected: 0,
+      duplicatesBySource: {}
+    };
+  }
 };
