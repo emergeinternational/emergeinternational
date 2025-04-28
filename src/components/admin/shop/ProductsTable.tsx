@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -23,46 +22,27 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Eye } from "lucide-react";
+import { Product } from "@/services/productTypes";
 
 interface ProductsTableProps {
-  products: any[];
+  products: Product[];
   isLoading: boolean;
-  onEdit: (product: any) => void;
+  onEdit: (product: Product) => void;
+  onDelete: (productId: string) => void;
   onRefresh: () => void;
 }
 
-const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTableProps) => {
+const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: ProductsTableProps) => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<any>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!productToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productToDelete.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Product deleted",
-        description: `${productToDelete.title} has been successfully deleted.`,
-      });
-
-      onRefresh();
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: `Failed to delete product: ${err.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteDialogOpen(false);
-      setProductToDelete(null);
-    }
+    
+    onDelete(productToDelete.id);
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
   };
 
   if (isLoading) {
@@ -91,8 +71,9 @@ const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTable
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
-              <TableHead>In Stock</TableHead>
+              <TableHead>Stock Status</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Sales</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,12 +105,22 @@ const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTable
                 </TableCell>
                 <TableCell>
                   {product.price ? (
-                    <>${parseFloat(product.price).toFixed(2)}</>
+                    <>${parseFloat(product.price.toString()).toFixed(2)}</>
                   ) : (
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell>{product.in_stock ? "Yes" : "No"}</TableCell>
+                <TableCell>
+                  {product.in_stock ? (
+                    <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
+                      In Stock
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-100">
+                      Out of Stock
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge 
                     variant={product.is_published ? "default" : "outline"}
@@ -137,6 +128,9 @@ const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTable
                   >
                     {product.is_published ? "Published" : "Draft"}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {product.sales_count || 0}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button
@@ -178,7 +172,7 @@ const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTable
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDelete}
+              onClick={handleConfirmDelete}
               className="bg-red-500 hover:bg-red-600"
             >
               Delete

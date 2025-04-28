@@ -5,17 +5,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Search } from "lucide-react";
+import { PlusCircle, Search, Filter } from "lucide-react";
 import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
-
-type ProductCategory = "accessories" | "footwear" | "new_arrivals" | "clothing" | "all";
+import { Product, ProductCategory } from "@/services/productTypes";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 const ProductsManager = () => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory>("all");
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | "all">("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [priceFilter, setPriceFilter] = useState<{min?: number, max?: number}>({});
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch all products
   const { data: products, isLoading, error, refetch } = useQuery({
@@ -27,14 +37,39 @@ const ProductsManager = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return data as Product[] || [];
     },
   });
 
   // Handle product edit
-  const handleEditProduct = (product: any) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setIsFormOpen(true);
+  };
+
+  // Handle product deletion
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Product deleted",
+        description: "The product has been successfully deleted.",
+      });
+      
+      refetch();
+    } catch (err: any) {
+      toast({
+        title: "Error deleting product",
+        description: err.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   // Filter products based on search query and selected category
@@ -47,7 +82,11 @@ const ProductsManager = () => {
       selectedCategory === "all" || 
       product.category === selectedCategory;
     
-    return matchesSearch && matchesCategory;
+    const matchesPrice = 
+      (!priceFilter.min || product.price >= priceFilter.min) &&
+      (!priceFilter.max || product.price <= priceFilter.max);
+    
+    return matchesSearch && matchesCategory && matchesPrice;
   });
 
   // Handle form close and refresh data
@@ -72,17 +111,29 @@ const ProductsManager = () => {
 
   return (
     <div>
-      {/* Search and Filter Bar */}
-      <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-        <div className="relative w-full md:w-1/3">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-          <Input
-            placeholder="Search products..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {/* Search, Filter and Add Button */}
+      <div className="flex flex-col lg:flex-row justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3 w-full lg:w-2/3">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Input
+              placeholder="Search products by name or description..."
+              className="pl-10 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:w-auto"
+          >
+            <Filter className="mr-2" size={18} />
+            Filters
+          </Button>
         </div>
+        
         <Button 
           onClick={() => {
             setEditingProduct(null);
@@ -95,8 +146,80 @@ const ProductsManager = () => {
         </Button>
       </div>
 
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="mb-6 p-4 border rounded-lg bg-gray-50 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <Select 
+              value={selectedCategory} 
+              onValueChange={(value) => setSelectedCategory(value as ProductCategory | "all")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="new_arrivals">New Arrivals</SelectItem>
+                <SelectItem value="clothing">Clothing</SelectItem>
+                <SelectItem value="footwear">Footwear</SelectItem>
+                <SelectItem value="accessories">Accessories</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Min Price
+            </label>
+            <Input
+              type="number"
+              placeholder="0"
+              min={0}
+              value={priceFilter.min || ""}
+              onChange={(e) => setPriceFilter({
+                ...priceFilter, 
+                min: e.target.value ? parseInt(e.target.value) : undefined
+              })}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Max Price
+            </label>
+            <Input
+              type="number"
+              placeholder="No limit"
+              min={0}
+              value={priceFilter.max || ""}
+              onChange={(e) => setPriceFilter({
+                ...priceFilter, 
+                max: e.target.value ? parseInt(e.target.value) : undefined
+              })}
+            />
+          </div>
+          
+          <div className="md:col-span-3 flex justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setPriceFilter({});
+              }}
+              className="mr-2"
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Category Tabs */}
-      <Tabs defaultValue="all" onValueChange={(value) => setSelectedCategory(value as ProductCategory)} className="mb-6">
+      <Tabs defaultValue="all" onValueChange={(value) => setSelectedCategory(value as ProductCategory | "all")} className="mb-6">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="all">All Products</TabsTrigger>
           <TabsTrigger value="new_arrivals">New Arrivals</TabsTrigger>
@@ -109,6 +232,7 @@ const ProductsManager = () => {
             products={filteredProducts || []} 
             isLoading={isLoading} 
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             onRefresh={refetch} 
           />
         </TabsContent>
@@ -117,6 +241,7 @@ const ProductsManager = () => {
             products={filteredProducts || []} 
             isLoading={isLoading} 
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             onRefresh={refetch} 
           />
         </TabsContent>
@@ -125,6 +250,7 @@ const ProductsManager = () => {
             products={filteredProducts || []} 
             isLoading={isLoading} 
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             onRefresh={refetch} 
           />
         </TabsContent>
@@ -133,6 +259,7 @@ const ProductsManager = () => {
             products={filteredProducts || []} 
             isLoading={isLoading} 
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             onRefresh={refetch} 
           />
         </TabsContent>
@@ -141,6 +268,7 @@ const ProductsManager = () => {
             products={filteredProducts || []} 
             isLoading={isLoading} 
             onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
             onRefresh={refetch} 
           />
         </TabsContent>

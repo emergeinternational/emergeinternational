@@ -27,4 +27,31 @@ export interface Product {
   variations?: ProductVariation[];
   sales_count?: number;
   revenue?: number;
+  stock_quantity?: number;
+  sku?: string;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  shipping_info?: {
+    free_shipping: boolean;
+    shipping_cost: number;
+    estimated_delivery_days: number;
+  };
+  designer_id?: string;
+}
+
+export interface ProductFilter {
+  category?: ProductCategory | "all";
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+  searchQuery?: string;
+}
+
+export interface ProductSortOption {
+  field: keyof Product | "popularity";
+  direction: "asc" | "desc";
 }
