@@ -1000,6 +1000,8 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string | null
           description: string | null
+          designer_id: string | null
+          dimensions: Json | null
           id: string
           image_url: string | null
           in_stock: boolean
@@ -1007,14 +1009,20 @@ export type Database = {
           price: number
           revenue: number | null
           sales_count: number | null
+          shipping_info: Json | null
+          sku: string | null
+          stock_quantity: number | null
           title: string
           updated_at: string | null
           variations: Json[] | null
+          weight: number | null
         }
         Insert: {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string | null
           description?: string | null
+          designer_id?: string | null
+          dimensions?: Json | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
@@ -1022,14 +1030,20 @@ export type Database = {
           price?: number
           revenue?: number | null
           sales_count?: number | null
+          shipping_info?: Json | null
+          sku?: string | null
+          stock_quantity?: number | null
           title: string
           updated_at?: string | null
           variations?: Json[] | null
+          weight?: number | null
         }
         Update: {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string | null
           description?: string | null
+          designer_id?: string | null
+          dimensions?: Json | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
@@ -1037,11 +1051,23 @@ export type Database = {
           price?: number
           revenue?: number | null
           sales_count?: number | null
+          shipping_info?: Json | null
+          sku?: string | null
+          stock_quantity?: number | null
           title?: string
           updated_at?: string | null
           variations?: Json[] | null
+          weight?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "designers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

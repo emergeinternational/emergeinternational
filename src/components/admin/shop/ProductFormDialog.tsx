@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -243,24 +242,28 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
         dimensions: weight ? dimensions : null,
         shipping_info: {
           free_shipping: shippingInfo.freeShipping,
-          shipping_cost: shippingInfo.shippingCost,
+          shippingCost: shippingInfo.shippingCost,
           estimated_delivery_days: shippingInfo.estimatedDeliveryDays
         },
-        designer_id: designerId || null,
+        designer_id: designerId === "none" ? null : designerId,
         updated_at: new Date().toISOString(),
       };
 
-      if (isMockProduct && product?.id && onMockSave) {
-        onMockSave({
-          ...product,
-          ...productData,
-        });
+      if (isMockProduct && product?.id) {
+        const { error } = await supabase
+          .from('products')
+          .insert([{
+            ...productData,
+            created_at: new Date().toISOString(),
+          }]);
+
+        if (error) throw error;
         
         toast({
-          title: "Mock product updated",
-          description: `${title} has been updated in the UI (not saved to database).`,
+          title: "Mock product converted",
+          description: `${title} has been converted to a real product in the database.`,
         });
-      } else if (product?.id) {
+      } else if (product?.id && !isMockProduct) {
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -307,14 +310,14 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
         <DialogHeader>
           <DialogTitle>
             {isMockProduct 
-              ? `Edit Mock Product: ${product?.title}`
+              ? `Convert Mock Product: ${product?.title}`
               : product 
                 ? `Edit Product: ${product.title}` 
                 : "Add New Product"
             }
             {isMockProduct && (
               <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                Mock Product
+                Mock Product - Will be converted to real product
               </span>
             )}
           </DialogTitle>
@@ -701,7 +704,7 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
                     Saving...
                   </>
                 ) : (
-                  <>{isMockProduct ? "Update Mock Product" : product ? "Update Product" : "Create Product"}</>
+                  <>{isMockProduct ? "Convert to Real Product" : product ? "Update Product" : "Create Product"}</>
                 )}
               </Button>
             </div>
