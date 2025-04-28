@@ -252,21 +252,18 @@ export async function syncTalentData(): Promise<{
     results.success = results.errors === 0;
     console.log("Talent synchronization completed", results);
     
-    // Log the synchronization activity
-    await supabase
-      .from('automation_logs')
-      .insert([{
-        function_name: 'talent_sync',
-        executed_at: new Date().toISOString(),
-        results: {
-          success: results.success,
-          processed: results.processed,
-          inserted: results.inserted,
-          updated: results.updated,
-          errors: results.errors,
-          errorDetails: results.errorDetails
-        }
-      }]);
+    // Log the synchronization activity using the new function
+    await supabase.rpc('logSyncActivity', {
+      function_name: 'talent_sync',
+      results: {
+        success: results.success,
+        processed: results.processed,
+        inserted: results.inserted,
+        updated: results.updated,
+        errors: results.errors,
+        errorDetails: results.errorDetails
+      }
+    });
     
     return results;
   } catch (error) {
@@ -274,17 +271,14 @@ export async function syncTalentData(): Promise<{
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     results.errorDetails.push(`Critical error: ${errorMessage}`);
     
-    // Log the synchronization failure
-    await supabase
-      .from('automation_logs')
-      .insert([{
-        function_name: 'talent_sync',
-        executed_at: new Date().toISOString(),
-        results: {
-          success: false,
-          error: errorMessage
-        }
-      }]);
+    // Log the synchronization failure using the new function
+    await supabase.rpc('logSyncActivity', {
+      function_name: 'talent_sync',
+      results: {
+        success: false,
+        error: errorMessage
+      }
+    });
     
     return results;
   }
@@ -340,20 +334,17 @@ export async function performFullTalentDataMigration(): Promise<{
     const errorCount = 1;
     const errors = ["Error migrating record ID 123: Invalid data format"];
     
-    // Log the migration activity
-    await supabase
-      .from('automation_logs')
-      .insert([{
-        function_name: 'talent_full_migration',
-        executed_at: new Date().toISOString(),
-        results: {
-          success: errorCount === 0,
-          migratedCount,
-          skippedCount,
-          errorCount,
-          errors
-        }
-      }]);
+    // Log the migration activity using the new function
+    await supabase.rpc('logSyncActivity', {
+      function_name: 'talent_full_migration',
+      results: {
+        success: errorCount === 0,
+        migratedCount,
+        skippedCount,
+        errorCount,
+        errors
+      }
+    });
     
     return {
       success: errorCount === 0,

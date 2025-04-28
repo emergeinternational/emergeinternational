@@ -1585,6 +1585,10 @@ export type Database = {
         }
         Returns: string
       }
+      logsyncactivity: {
+        Args: { function_name: string; results: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       career_path:

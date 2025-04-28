@@ -8,7 +8,9 @@ import {
   transformTalentData,
   insertTalentToDB,
   checkTalentExists,
-  updateTalentInDB
+  updateTalentInDB,
+  getSyncStatusSummary,
+  getTalentRegistrationCounts
 } from "@/services/talentSyncService";
 import { Talent } from "@/types/talentTypes";
 
@@ -24,6 +26,18 @@ export function useTalentSync() {
     queryFn: () => getTalentSyncLogs(),
   });
   
+  // Query to fetch sync status
+  const syncStatusQuery = useQuery({
+    queryKey: ['talent-sync-status'],
+    queryFn: getSyncStatusSummary,
+  });
+  
+  // Query to fetch registration counts
+  const registrationCountsQuery = useQuery({
+    queryKey: ['talent-registration-counts'],
+    queryFn: getTalentRegistrationCounts,
+  });
+  
   // Mutation to run talent sync operation
   const syncMutation = useMutation({
     mutationFn: syncTalentData,
@@ -31,6 +45,8 @@ export function useTalentSync() {
       // Invalidate and refetch queries related to talent data
       queryClient.invalidateQueries({ queryKey: ['talent-data'] });
       queryClient.invalidateQueries({ queryKey: ['talent-sync-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-sync-status'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-registration-counts'] });
     },
   });
   
@@ -54,6 +70,8 @@ export function useTalentSync() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['talent-data'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-sync-status'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-registration-counts'] });
     },
   });
   
@@ -82,5 +100,13 @@ export function useTalentSync() {
     syncLogs: syncLogsQuery.data || [],
     isLogsLoading: syncLogsQuery.isLoading,
     refetchLogs: syncLogsQuery.refetch,
+    
+    // Sync status
+    syncStatus: syncStatusQuery.data,
+    isStatusLoading: syncStatusQuery.isLoading,
+    
+    // Registration counts
+    registrationCounts: registrationCountsQuery.data,
+    isCountsLoading: registrationCountsQuery.isLoading,
   };
 }
