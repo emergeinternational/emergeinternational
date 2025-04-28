@@ -16,15 +16,6 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
   const location = useLocation();
   const { toast } = useToast();
 
-  useEffect(() => {
-    console.log("Navigation auth state:", {
-      isAuthenticated: !!user,
-      userRole,
-      userEmail: user?.email,
-      isAdminLink: hasRole('admin')
-    });
-  }, [user, userRole, hasRole]);
-
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Events", href: "/events" },
@@ -83,34 +74,18 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
             </Link>
           )}
           
-          {user && userRole === 'admin' && (
-            <>
-              <Link
-                to="/admin"
-                onClick={handleAdminClick}
-                className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium flex items-center"
-                data-testid="admin-dashboard-link"
-              >
-                <Settings size={16} className="mr-1" />
-                Admin Dashboard
-              </Link>
-              <Link
-                to="/admin/premium-enrollments"
-                onClick={handleAdminClick}
-                className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium"
-              >
-                Premium Enrollments
-              </Link>
-              <Link
-                to="/certificates"
-                className="hover:text-emerge-gold transition-colors font-medium"
-              >
-                Certificates
-              </Link>
-            </>
+          {user && hasRole(['admin', 'editor']) && (
+            <Link
+              to="/admin"
+              className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium flex items-center"
+              data-testid="admin-dashboard-link"
+            >
+              <Settings size={16} className="mr-1" />
+              Admin Panel
+            </Link>
           )}
           
-          {user && userRole !== 'admin' && (
+          {user && (
             <Link
               to="/certificates"
               className="hover:text-emerge-gold transition-colors font-medium"
@@ -154,40 +129,20 @@ const Navigation = ({ variant = "light" }: NavigationProps) => {
               </Link>
             )}
             
-            {user && userRole === 'admin' && (
-              <>
-                <Link
-                  to="/admin"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    handleAdminClick();
-                  }}
-                  className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
-                >
-                  <Settings size={16} className="mr-2" />
-                  Admin Dashboard
-                </Link>
-                <Link
-                  to="/admin/premium-enrollments"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    handleAdminClick();
-                  }}
-                  className="py-2 border-b border-gray-700 text-emerge-gold"
-                >
-                  Premium Enrollments
-                </Link>
-                <Link
-                  to="/certificates"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="py-2 border-b border-gray-700 hover:text-emerge-gold"
-                >
-                  Certificates
-                </Link>
-              </>
+            {user && hasRole(['admin', 'editor']) && (
+              <Link
+                to="/admin"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                }}
+                className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
+              >
+                <Settings size={16} className="mr-2" />
+                Admin Panel
+              </Link>
             )}
             
-            {user && userRole !== 'admin' && (
+            {user && (
               <Link
                 to="/certificates"
                 onClick={() => setIsMenuOpen(false)}
