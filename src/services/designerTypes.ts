@@ -80,7 +80,7 @@ export interface Designer {
 }
 
 // Helper function to get specialty options based on category
-export const getSpecialtyOptions = (category: CreatorCategory): { value: DesignerSpecialty; label: string }[] => {
+export const getSpecialtyOptions = (category: CreatorCategory): { value: string; label: string }[] => {
   switch (category) {
     case 'fashion_designer':
       return [
@@ -89,14 +89,14 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'footwear', label: 'Footwear' },
         { value: 'jewelry', label: 'Jewelry' },
         { value: 'other', label: 'Other' }
-      ] as { value: FashionDesignerSpecialty; label: string }[];
+      ];
     case 'interior_designer':
       return [
         { value: 'residential', label: 'Residential' },
         { value: 'commercial', label: 'Commercial' },
         { value: 'hospitality', label: 'Hospitality' },
         { value: 'other', label: 'Other' }
-      ] as { value: InteriorDesignerSpecialty; label: string }[];
+      ];
     case 'graphic_designer':
       return [
         { value: 'branding', label: 'Branding' },
@@ -104,7 +104,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'print', label: 'Print' },
         { value: 'illustration', label: 'Illustration' },
         { value: 'other', label: 'Other' }
-      ] as { value: GraphicDesignerSpecialty; label: string }[];
+      ];
     case 'visual_artist':
       return [
         { value: 'painting', label: 'Painting' },
@@ -112,7 +112,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'digital_art', label: 'Digital Art' },
         { value: 'mixed_media', label: 'Mixed Media' },
         { value: 'other', label: 'Other' }
-      ] as { value: VisualArtistSpecialty; label: string }[];
+      ];
     case 'photographer':
       return [
         { value: 'portrait', label: 'Portrait' },
@@ -120,7 +120,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'event', label: 'Event' },
         { value: 'commercial', label: 'Commercial' },
         { value: 'other', label: 'Other' }
-      ] as { value: PhotographerSpecialty; label: string }[];
+      ];
     case 'event_planner':
       return [
         { value: 'weddings', label: 'Weddings' },
@@ -128,7 +128,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'social', label: 'Social Events' },
         { value: 'non_profit', label: 'Non-Profit Events' },
         { value: 'other', label: 'Other' }
-      ] as { value: EventPlannerSpecialty; label: string }[];
+      ];
     case 'model':
       return [
         { value: 'runway', label: 'Runway' },
@@ -136,7 +136,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'editorial', label: 'Editorial' },
         { value: 'fitness', label: 'Fitness' },
         { value: 'other', label: 'Other' }
-      ] as { value: ModelSpecialty; label: string }[];
+      ];
     case 'creative_director':
       return [
         { value: 'fashion', label: 'Fashion' },
@@ -144,7 +144,7 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
         { value: 'brand', label: 'Brand Development' },
         { value: 'art_direction', label: 'Art Direction' },
         { value: 'other', label: 'Other' }
-      ] as { value: CreativeDirectorSpecialty; label: string }[];
+      ];
     default:
       return [{ value: 'other', label: 'Other' }];
   }
@@ -152,24 +152,6 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: Designe
 
 // Helper function to get the appropriate specialty type based on category
 export const getCategorySpecialty = (category: CreatorCategory, specialty: string): DesignerSpecialty => {
-  switch (category) {
-    case 'fashion_designer':
-      return specialty as FashionDesignerSpecialty;
-    case 'interior_designer':
-      return specialty as InteriorDesignerSpecialty;
-    case 'graphic_designer':
-      return specialty as GraphicDesignerSpecialty;
-    case 'visual_artist':
-      return specialty as VisualArtistSpecialty;
-    case 'photographer':
-      return specialty as PhotographerSpecialty;
-    case 'event_planner':
-      return specialty as EventPlannerSpecialty;
-    case 'model':
-      return specialty as ModelSpecialty;
-    case 'creative_director':
-      return specialty as CreativeDirectorSpecialty;
-    default:
-      return 'other';
-  }
+  // Simply return the specialty as the appropriate type since our union type will handle this
+  return specialty as DesignerSpecialty;
 };

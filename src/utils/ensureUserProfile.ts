@@ -33,7 +33,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     console.log("Creating new profile for user:", userId);
     
-    // Create minimal profile without any role field to avoid type issues
+    // Create minimal profile
     const { error } = await supabase
       .from('profiles')
       .insert({ 
@@ -45,16 +45,17 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
     if (error) {
       console.error("Error creating user profile:", error);
       
-      if (error.message.includes('violates foreign key constraint')) {
+      if (error.message.includes('foreign key constraint')) {
         // Wait briefly and retry once in case of race condition with auth.users creation
         console.log("Foreign key constraint violation, retrying after delay...");
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { error: retryError } = await supabase
           .from('profiles')
           .insert({ 
             id: userId,
-            email: email
+            email: email,
+            updated_at: new Date().toISOString()
           });
           
         if (retryError) {
@@ -89,9 +90,21 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
           });
           
         if (roleError) {
-          console.error("Could not set user role, but profile was created:", roleError);
+          // If there's an error with the user_role, it might be due to the app_role enum
+          // In this case, we try to update the profile with a role instead
+          console.error("Could not set user role in user_roles table:", roleError);
+          const { error: profileRoleError } = await supabase
+            .from('profiles')
+            .update({ role: 'user' })
+            .eq('id', userId);
+            
+          if (profileRoleError) {
+            console.error("Could not set role in profile either:", profileRoleError);
+          } else {
+            console.log("Set role in profile table as backup");
+          }
         } else {
-          console.log("User role set successfully");
+          console.log("User role set successfully in user_roles table");
         }
       } else {
         console.log("User role already exists");
