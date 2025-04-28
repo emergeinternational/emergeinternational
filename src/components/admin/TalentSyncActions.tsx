@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCcw, AlertCircle, Check } from "lucide-react";
@@ -12,7 +11,6 @@ import { useTalentSync } from "@/hooks/useTalentSync";
 export function TalentSyncActions() {
   const [showResult, setShowResult] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const { 
     runForceSync, 
