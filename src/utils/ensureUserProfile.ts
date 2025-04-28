@@ -33,7 +33,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     console.log("Creating new profile for user:", userId);
     
-    // Create minimal profile with role included directly in profiles table
+    // Create minimal profile with role directly in the profiles table
     const { error } = await supabase
       .from('profiles')
       .insert({ 

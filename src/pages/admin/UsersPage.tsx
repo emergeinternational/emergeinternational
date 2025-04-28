@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import UserManagement from "../../components/admin/UserManagement";
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ensureUserProfile } from "@/utils/ensureUserProfile";
 
 const userSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -75,7 +77,7 @@ const UsersPage = () => {
       
       setSystemStatus({
         usersCount: count,
-        adminEmail: profilesData[0]?.email || 'reddshawn@yahoo.com',
+        adminEmail: profilesData[0]?.email || 'admin@example.com',
         lastRefresh: new Date().toISOString(),
         status: 'ready'
       });
@@ -110,6 +112,7 @@ const UsersPage = () => {
     try {
       setIsSubmitting(true);
       
+      // Create the user in Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: values.email,
         password: values.password,
@@ -121,39 +124,39 @@ const UsersPage = () => {
       }
       
       if (authData?.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            full_name: values.fullName,
-            email: values.email
-          })
-          .eq('id', authData.user.id);
+        try {
+          // Create profile for the user with proper role
+          await ensureUserProfile(authData.user.id, values.email);
           
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
-        
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: values.role
+          // Update the profile with full name and role
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ 
+              full_name: values.fullName,
+              email: values.email,
+              role: values.role
+            })
+            .eq('id', authData.user.id);
+            
+          if (profileError) {
+            console.error("Error updating profile:", profileError);
+            throw profileError;
+          }
+          
+          toast({
+            title: "User created successfully",
+            description: `${values.fullName} (${values.email}) has been added as a ${values.role}`,
+            variant: "default"
           });
           
-        if (roleError) {
-          console.error("Error setting user role:", roleError);
+          form.reset();
+          setOpenAddUserDialog(false);
+          
+          handleRefreshUserData();
+        } catch (profileError) {
+          console.error("Error setting up user profile:", profileError);
+          throw profileError;
         }
-        
-        toast({
-          title: "User created successfully",
-          description: `${values.fullName} (${values.email}) has been added as a ${values.role}`,
-          variant: "default"
-        });
-        
-        form.reset();
-        setOpenAddUserDialog(false);
-        
-        handleRefreshUserData();
       }
     } catch (error) {
       console.error("Error in handleAddUser:", error);
@@ -228,7 +231,7 @@ const UsersPage = () => {
             <div className="mt-2 text-sm grid grid-cols-3 gap-4">
               <div>
                 <p className="text-gray-500">Admin Account</p>
-                <p className="font-medium">{systemStatus.adminEmail || 'reddshawn@yahoo.com'}</p>
+                <p className="font-medium">{systemStatus.adminEmail || 'admin@example.com'}</p>
               </div>
               <div>
                 <p className="text-gray-500">Total Users</p>
@@ -258,7 +261,7 @@ const UsersPage = () => {
         )}
         
         <div className="bg-white p-6 rounded shadow">
-          <UserManagement users={[]} key={lastUpdated?.getTime()} />
+          <UserManagement key={lastUpdated?.getTime()} />
         </div>
       </div>
       

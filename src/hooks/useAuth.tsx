@@ -1,3 +1,4 @@
+
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -187,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       
-      // If signup was successful, ensure a profile exists
+      // If signup was successful and we have user data, ensure a profile exists
       if (data && data.user) {
         try {
           console.log("Creating profile for new user:", data.user.id);
@@ -195,40 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Wait a moment for auth to fully process
           await new Promise(resolve => setTimeout(resolve, 1000));
           
-          // Improved profile creation with exponential backoff
-          let profileCreated = false;
-          let attempts = 0;
-          const maxAttempts = 5; // Increased from 3
-          let delayMs = 1000; // Start with 1 second
+          // Create user profile with exponential backoff
+          await ensureUserProfile(data.user.id, email);
           
-          while (!profileCreated && attempts < maxAttempts) {
-            attempts++;
-            try {
-              profileCreated = await ensureUserProfile(data.user.id, email);
-              if (profileCreated) {
-                console.log(`Profile created successfully on attempt ${attempts}`);
-                break;
-              } else {
-                console.log(`Profile creation attempt ${attempts} failed, retrying...`);
-                // Exponential backoff with jitter
-                delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
-                await new Promise(resolve => setTimeout(resolve, delayMs)); 
-              }
-            } catch (attemptError) {
-              console.error(`Error on profile creation attempt ${attempts}:`, attemptError);
-              // Exponential backoff with jitter
-              delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
-              await new Promise(resolve => setTimeout(resolve, delayMs));
-            }
-          }
-          
-          if (!profileCreated) {
-            console.error("Failed to create user profile after multiple attempts");
-            // Continue since the auth user was created even if profile creation failed
-          }
         } catch (profileError) {
           console.error("Exception ensuring user profile during signup:", profileError);
-          // Continue since the auth user was created even if profile creation failed
+          // We continue since the auth user was created even if profile creation failed
+          // The profile can be created later when the user signs in
         }
       }
     } catch (error) {

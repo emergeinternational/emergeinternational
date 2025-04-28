@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, UserPlus, PenLine, ShieldAlert, Shield, User } from 'lucide-react';
+import { Trash2, ShieldAlert, Shield, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import UserFilters from './UserFilters';
+import { UserFilterState } from './UserFilters';
 
 type User = {
   id: string;
@@ -20,14 +20,11 @@ type User = {
   last_sign_in_at: string | null;
 };
 
-type UserRole = {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-};
+interface UserManagementProps {
+  users?: User[];
+}
 
-const UserManagement = ({ users: initialUsers = [] }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [] }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,6 +140,14 @@ const UserManagement = ({ users: initialUsers = [] }) => {
     setIsEditDialogOpen(true);
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+  };
+
+  const handleRoleChange = (value: string) => {
+    setRole(value === 'all' ? null : value);
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       !searchQuery || 
@@ -159,7 +164,7 @@ const UserManagement = ({ users: initialUsers = [] }) => {
       case 'admin':
         return <Badge className="bg-red-500"><ShieldAlert className="h-3 w-3 mr-1" />Admin</Badge>;
       case 'editor':
-        return <Badge className="bg-amber-500"><PenLine className="h-3 w-3 mr-1" />Editor</Badge>;
+        return <Badge className="bg-amber-500"><Shield className="h-3 w-3 mr-1" />Editor</Badge>;
       case 'viewer':
         return <Badge className="bg-blue-500"><Shield className="h-3 w-3 mr-1" />Viewer</Badge>;
       default:
@@ -167,14 +172,37 @@ const UserManagement = ({ users: initialUsers = [] }) => {
     }
   };
 
+  // Simple filter components for this component
+  const FilterBar = () => (
+    <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex-1 min-w-[200px]">
+        <Input
+          placeholder="Search users..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="w-full"
+        />
+      </div>
+      <div className="w-[150px]">
+        <Select value={role || 'all'} onValueChange={handleRoleChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="editor">Editor</SelectItem>
+            <SelectItem value="viewer">Viewer</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <UserFilters 
-        onSearchChange={setSearchQuery}
-        onRoleChange={setRole}
-        searchQuery={searchQuery}
-        role={role}
-      />
+      <FilterBar />
       
       <div className="border rounded-lg overflow-hidden">
         <Table>
