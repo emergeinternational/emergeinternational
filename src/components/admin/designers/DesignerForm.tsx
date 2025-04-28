@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Designer, CreatorCategory } from "@/services/designerTypes";
@@ -70,10 +71,10 @@ const designerFormSchema = z.object({
     website: z.string().optional().or(z.literal("")),
   }).optional(),
   featured_project: z.object({
-    title: z.string(),
-    description: z.string().optional(),
-    image_url: z.string().optional(),
-    link: z.string().optional(),
+    title: z.string().optional().or(z.literal("")),
+    description: z.string().optional().or(z.literal("")),
+    image_url: z.string().optional().or(z.literal("")),
+    link: z.string().optional().or(z.literal("")),
   }).optional(),
   achievements: z.array(z.string()).optional(),
   showcase_images: z.array(z.string()).optional(),
@@ -187,21 +188,21 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         if (error) throw error;
 
         toast({
-          title: "Designer updated",
+          title: "Creator updated",
           description: `${values.full_name} has been updated successfully.`,
         });
       } else {
-        const { error } = await supabase.from("designers").insert([
-          {
+        const { error } = await supabase
+          .from("designers")
+          .insert({
             ...values,
             created_at: new Date().toISOString(),
-          },
-        ]);
+          });
 
         if (error) throw error;
 
         toast({
-          title: "Designer created",
+          title: "Creator added",
           description: `${values.full_name} has been added successfully.`,
         });
       }
@@ -223,7 +224,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{designer ? "Edit Creator" : "Add Creator"}</DialogTitle>
+          <DialogTitle>{designer ? "Edit Creative Professional" : "Add Creative Professional"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -324,7 +325,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <FormLabel>Featured Designer</FormLabel>
+                      <FormLabel>Featured Creator</FormLabel>
                     </div>
                     <FormControl>
                       <Switch
@@ -345,7 +346,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                   <FormLabel>Bio</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Designer biography"
+                      placeholder="Creator biography"
                       {...field}
                       rows={4}
                     />
@@ -496,8 +497,8 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
                 {isSubmitting
                   ? "Saving..."
                   : designer
-                  ? "Update Designer"
-                  : "Create Designer"}
+                  ? "Update Creator"
+                  : "Create Creator"}
               </Button>
             </DialogFooter>
           </form>

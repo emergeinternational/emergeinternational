@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Designer, DesignerCategory } from "@/services/designerTypes";
+import type { Designer, CreatorCategory } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<DesignerCategory>("apparel");
+  const [specialty, setSpecialty] = useState<CreatorCategory>("apparel");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -229,7 +229,7 @@ const DesignerFormDialog = ({
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
                   value={specialty}
-                  onValueChange={(value) => setSpecialty(value as DesignerCategory)}
+                  onValueChange={(value) => setSpecialty(value as CreatorCategory)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select specialty" />

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,7 @@ const DesignersManager = () => {
   const [selectedDesigner, setSelectedDesigner] = useState<Designer | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: designers, isLoading, error } = useQuery({
+  const { data: designers, isLoading, error, refetch } = useQuery({
     queryKey: ['designers'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -52,18 +53,16 @@ const DesignersManager = () => {
 
       if (error) throw error;
 
-      // Optimistically update the cache
-      // queryClient.setQueryData(['designers'], (old: Designer[] | undefined) => {
-      //   return old?.filter((designer) => designer.id !== id);
-      // });
-
       toast({
-        title: "Designer deleted",
-        description: "The designer has been successfully deleted.",
+        title: "Creator deleted",
+        description: "The creative professional has been successfully deleted.",
       });
+      
+      // Refresh the data
+      refetch();
     } catch (error: any) {
       toast({
-        title: "Error deleting designer",
+        title: "Error deleting creative professional",
         description: error.message,
         variant: "destructive",
       });
@@ -73,11 +72,11 @@ const DesignersManager = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Designers</h2>
+        <h2 className="text-xl font-semibold">Creative Professionals</h2>
         <div className="flex items-center space-x-4">
           <input
             type="search"
-            placeholder="Search designers..."
+            placeholder="Search creators..."
             className="border rounded-md px-3 py-2 w-64"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -86,20 +85,21 @@ const DesignersManager = () => {
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             onClick={handleCreate}
           >
-            Add Designer
+            Add Creative Professional
           </button>
         </div>
       </div>
 
       {isLoading ? (
-        <p>Loading designers...</p>
+        <p>Loading creative professionals...</p>
       ) : error ? (
-        <p className="text-red-500">Error: {error.message}</p>
+        <p className="text-red-500">Error: {(error as Error).message}</p>
       ) : (
         <DesignersTable
           designers={filteredDesigners}
+          isLoading={false}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onRefresh={refetch}
         />
       )}
 
@@ -108,6 +108,7 @@ const DesignersManager = () => {
           open={isFormOpen}
           setOpen={setIsFormOpen}
           designer={selectedDesigner}
+          onSuccess={() => refetch()}
         />
       )}
     </div>

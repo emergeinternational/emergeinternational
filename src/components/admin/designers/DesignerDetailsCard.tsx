@@ -12,6 +12,20 @@ interface DesignerDetailsCardProps {
 }
 
 const DesignerDetailsCard = ({ designer, onEdit, onClose }: DesignerDetailsCardProps) => {
+  const getCategoryLabel = (category: string): string => {
+    const categories: Record<string, string> = {
+      fashion_designer: "Fashion Designer",
+      interior_designer: "Interior Designer",
+      graphic_designer: "Graphic Designer",
+      visual_artist: "Visual Artist",
+      photographer: "Photographer",
+      event_planner: "Event Planner",
+      model: "Model",
+      creative_director: "Creative Director",
+    };
+    return categories[category] || category;
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2 relative">
@@ -43,8 +57,9 @@ const DesignerDetailsCard = ({ designer, onEdit, onClose }: DesignerDetailsCardP
             <p className="text-sm text-gray-500 mt-1">
               {designer.email}
             </p>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <Badge className="capitalize">{designer.specialty}</Badge>
+              <Badge variant="outline">{getCategoryLabel(designer.category)}</Badge>
             </div>
           </div>
         </div>
@@ -98,7 +113,7 @@ const DesignerDetailsCard = ({ designer, onEdit, onClose }: DesignerDetailsCardP
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Sales Statistics</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Statistics</h3>
             <div className="space-y-1">
               <p className="text-sm">
                 <span className="font-medium">Products: </span>
@@ -115,12 +130,35 @@ const DesignerDetailsCard = ({ designer, onEdit, onClose }: DesignerDetailsCardP
             </div>
           </div>
         </div>
+
+        {designer.featured_project?.title && (
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Featured Project</h3>
+            <div className="border rounded-md p-3">
+              <h4 className="font-medium">{designer.featured_project.title}</h4>
+              {designer.featured_project.description && (
+                <p className="text-sm mt-1">{designer.featured_project.description}</p>
+              )}
+              {designer.featured_project.link && (
+                <a 
+                  href={designer.featured_project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-2"
+                >
+                  <ExternalLink size={14} />
+                  View Project
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="flex justify-end">
         <Button variant="outline" onClick={onEdit} className="flex items-center gap-2">
           <Edit size={16} />
-          Edit Designer
+          Edit Creative Professional
         </Button>
       </CardFooter>
     </Card>
