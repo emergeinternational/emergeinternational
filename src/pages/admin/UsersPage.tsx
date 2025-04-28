@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import UserManagement from "../../components/admin/UserManagement";
-import { AdminUsersTable } from "@/components/admin/users/AdminUsersTable";
 import { Button } from "@/components/ui/button";
-import { UserPlus, RefreshCw, Shield } from "lucide-react";
+import { UserPlus, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,8 +12,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ensureUserProfile } from "@/utils/ensureUserProfile";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const userSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -32,7 +28,6 @@ const UsersPage = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("all-users");
   const [systemStatus, setSystemStatus] = useState<{
     usersCount: number | null;
     adminEmail: string | null;
@@ -80,7 +75,7 @@ const UsersPage = () => {
       
       setSystemStatus({
         usersCount: count,
-        adminEmail: profilesData[0]?.email || 'admin@example.com',
+        adminEmail: profilesData[0]?.email || 'reddshawn@yahoo.com',
         lastRefresh: new Date().toISOString(),
         status: 'ready'
       });
@@ -115,7 +110,6 @@ const UsersPage = () => {
     try {
       setIsSubmitting(true);
       
-      // Create the user in Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: values.email,
         password: values.password,
@@ -127,39 +121,39 @@ const UsersPage = () => {
       }
       
       if (authData?.user) {
-        try {
-          // Create profile for the user with proper role
-          await ensureUserProfile(authData.user.id, values.email);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            full_name: values.fullName,
+            email: values.email
+          })
+          .eq('id', authData.user.id);
           
-          // Update the profile with full name and role
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ 
-              full_name: values.fullName,
-              email: values.email,
-              role: values.role
-            })
-            .eq('id', authData.user.id);
-            
-          if (profileError) {
-            console.error("Error updating profile:", profileError);
-            throw profileError;
-          }
-          
-          toast({
-            title: "User created successfully",
-            description: `${values.fullName} (${values.email}) has been added as a ${values.role}`,
-            variant: "default"
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+        
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            role: values.role
           });
           
-          form.reset();
-          setOpenAddUserDialog(false);
-          
-          handleRefreshUserData();
-        } catch (profileError) {
-          console.error("Error setting up user profile:", profileError);
-          throw profileError;
+        if (roleError) {
+          console.error("Error setting user role:", roleError);
         }
+        
+        toast({
+          title: "User created successfully",
+          description: `${values.fullName} (${values.email}) has been added as a ${values.role}`,
+          variant: "default"
+        });
+        
+        form.reset();
+        setOpenAddUserDialog(false);
+        
+        handleRefreshUserData();
       }
     } catch (error) {
       console.error("Error in handleAddUser:", error);
@@ -234,7 +228,7 @@ const UsersPage = () => {
             <div className="mt-2 text-sm grid grid-cols-3 gap-4">
               <div>
                 <p className="text-gray-500">Admin Account</p>
-                <p className="font-medium">{systemStatus.adminEmail || 'admin@example.com'}</p>
+                <p className="font-medium">{systemStatus.adminEmail || 'reddshawn@yahoo.com'}</p>
               </div>
               <div>
                 <p className="text-gray-500">Total Users</p>
@@ -263,23 +257,9 @@ const UsersPage = () => {
           </div>
         )}
         
-        <Tabs defaultValue="all-users" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all-users">All Users</TabsTrigger>
-            <TabsTrigger value="admin-users" className="flex items-center">
-              <Shield className="h-4 w-4 mr-1" />
-              Admin Users
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="all-users" className="bg-white p-6 rounded shadow">
-            <UserManagement key={lastUpdated?.getTime()} />
-          </TabsContent>
-          
-          <TabsContent value="admin-users" className="bg-white p-6 rounded shadow">
-            <AdminUsersTable />
-          </TabsContent>
-        </Tabs>
+        <div className="bg-white p-6 rounded shadow">
+          <UserManagement users={[]} key={lastUpdated?.getTime()} />
+        </div>
       </div>
       
       <Dialog open={openAddUserDialog} onOpenChange={setOpenAddUserDialog}>

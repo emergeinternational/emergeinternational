@@ -2,19 +2,15 @@
 import AdminLayout from "../../layouts/AdminLayout";
 import DesignersManager from "../../components/admin/designers/DesignersManager";
 import { Toaster } from "@/components/ui/toaster";
-import { usePageTitle } from "@/utils/usePageTitle";
 
-const CreativeProfessionalsPage = () => {
-  // Use the hook-based approach for page title
-  usePageTitle();
-  
+const DesignersPage = () => {
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Creative Professionals</h1>
+          <h1 className="text-2xl font-semibold">Designers Management</h1>
           <p className="text-sm text-gray-500">
-            Manage creative professionals including designers, artists, photographers, and more
+            Manage designer profiles and their associated products
           </p>
         </div>
         
@@ -27,4 +23,4 @@ const CreativeProfessionalsPage = () => {
   );
 };
 
-export default CreativeProfessionalsPage;
+export default DesignersPage;

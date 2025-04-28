@@ -1,7 +1,9 @@
-
-import React, { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { OTPVerification } from "./OTPVerification";
 
 interface LoginSignupFormProps {
   isLogin: boolean;
@@ -10,144 +12,79 @@ interface LoginSignupFormProps {
   onToggleMode: () => void;
 }
 
-export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
+export const LoginSignupForm = ({
   isLogin,
-  isSubmitting: parentIsSubmitting,
+  isSubmitting,
   onForgotPassword,
   onToggleMode,
-}) => {
+}: LoginSignupFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
   const { toast } = useToast();
+  const { signIn } = useAuth();
 
-  const validateForm = () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!email.trim()) {
       toast({
         title: "Email is required",
         description: "Please enter your email address.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
 
-    if (!password) {
+    if (!password.trim()) {
       toast({
         title: "Password is required",
         description: "Please enter your password.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
-
-    if (!isLogin && password.length < 6) {
-      toast({
-        title: "Password is too short",
-        description: "Password must be at least 6 characters.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    if (!isLogin && password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
-        variant: "destructive",
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting || parentIsSubmitting) return;
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
 
     try {
       if (isLogin) {
         await signIn(email, password);
       } else {
-        // Sign up with retry logic for database issues
-        let retryCount = 0;
-        const maxRetries = 3;
-        let success = false;
-
-        while (!success && retryCount < maxRetries) {
-          try {
-            await signUp(email, password);
-            success = true;
-          } catch (error: any) {
-            console.error(`Signup attempt ${retryCount + 1} failed:`, error);
-            
-            // If it's a database error, retry
-            if (error.message && (
-                error.message.includes("database") || 
-                error.message.includes("Database") ||
-                error.message.includes("column") || 
-                error.message.includes("role") ||
-                error.message.includes("does not exist") ||
-                error.message.includes("foreign key") ||
-                error.message.includes("constraint")
-              )) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                console.log(`Retrying signup (attempt ${retryCount + 1}/${maxRetries})...`);
-                // Wait a bit before retrying with exponential backoff
-                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
-                continue;
-              }
-            }
-            
-            // If we've reached max retries or it's not a database error, throw
-            throw error;
+        const { error } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/profile`
           }
-        }
-
+        });
+        if (error) throw error;
+        
         toast({
           title: "Account created",
-          description: "Your account has been created successfully!",
+          description: "Please check your email to confirm your account.",
         });
       }
     } catch (error) {
-      console.error("Auth error:", error);
-      
-      let errorMessage = "An error occurred during authentication.";
-      
-      if (error instanceof Error) {
-        // Handle specific error cases
-        if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Please check your email to confirm your account before logging in.";
-        } else if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "Invalid email or password. Please try again.";
-        } else if (error.message.includes("database") || error.message.includes("Database") || error.message.includes("column") || error.message.includes("role")) {
-          errorMessage = "There was a problem with our database. Please try again in a few moments.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       toast({
-        title: isLogin ? "Login failed" : "Signup failed",
-        description: errorMessage,
+        title: "Authentication error",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
+  };
+
+  const handleOTPVerificationSuccess = () => {
+    setShowOTPDialog(false);
+    toast({
+      title: "Verification successful",
+      description: "You can now set a new password.",
+    });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <label htmlFor="email" className="block text-gray-300 text-sm">
-          Email
+          Email Address
         </label>
         <input
           id="email"
@@ -155,8 +92,8 @@ export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="emerge-input"
-          placeholder="Enter your email"
-          disabled={isSubmitting || parentIsSubmitting}
+          placeholder="your@email.com"
+          disabled={isSubmitting}
         />
       </div>
 
@@ -170,69 +107,64 @@ export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="emerge-input"
-          placeholder="Enter your password"
-          disabled={isSubmitting || parentIsSubmitting}
+          placeholder="••••••••"
+          disabled={isSubmitting}
         />
       </div>
 
-      {!isLogin && (
-        <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="block text-gray-300 text-sm">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="emerge-input"
-            placeholder="Confirm your password"
-            disabled={isSubmitting || parentIsSubmitting}
-          />
+      {isLogin && (
+        <div className="flex justify-between items-center text-sm">
+          <button 
+            type="button"
+            onClick={onForgotPassword}
+            className="text-emerge-gold hover:underline"
+          >
+            Reset via Email
+          </button>
+          
+          <Dialog open={showOTPDialog} onOpenChange={setShowOTPDialog}>
+            <DialogTrigger asChild>
+              <button 
+                type="button"
+                className="text-emerge-gold hover:underline"
+              >
+                Reset via OTP
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-emerge-darkBg border border-emerge-gold/50">
+              <DialogHeader>
+                <DialogTitle className="text-white">Reset Password with OTP</DialogTitle>
+              </DialogHeader>
+              <OTPVerification
+                email={email}
+                isSubmitting={isSubmitting}
+                onVerificationSuccess={handleOTPVerificationSuccess}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
-      <div className="flex justify-end">
-        {isLogin && (
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            className="text-emerge-gold hover:text-emerge-darkGold text-sm"
-            disabled={isSubmitting || parentIsSubmitting}
-          >
-            Forgot Password?
-          </button>
-        )}
-      </div>
-
-      <button
-        type="submit"
+      <button 
+        type="submit" 
         className="emerge-button-primary w-full"
-        disabled={isSubmitting || parentIsSubmitting}
+        disabled={isSubmitting}
       >
-        {isSubmitting || parentIsSubmitting
-          ? isLogin
-            ? "Logging In..."
-            : "Creating Account..."
-          : isLogin
-          ? "Log In"
-          : "Create Account"}
+        {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
       </button>
 
-      <div className="text-center">
-        <button
+      <div className="mt-8 text-center">
+        <button 
           type="button"
-          onClick={onToggleMode}
-          className="text-emerge-gold hover:text-emerge-darkGold"
-          disabled={isSubmitting || parentIsSubmitting}
+          onClick={onToggleMode} 
+          className="text-emerge-gold hover:underline"
+          disabled={isSubmitting}
         >
-          {isLogin
-            ? "Don't have an account? Sign Up"
-            : "Already have an account? Log In"}
+          {isLogin 
+            ? "Don't have an account? Sign Up" 
+            : "Already have an account? Sign In"}
         </button>
       </div>
     </form>
   );
 };
-
-export default LoginSignupForm;

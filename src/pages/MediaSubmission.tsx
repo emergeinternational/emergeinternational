@@ -31,7 +31,6 @@ const mediaFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   age: z.string().min(1, "Age is required"),
-  gender: z.enum(["Male", "Female", "Non-Binary", "Prefer not to say"]),
   category: z.enum(["Top Model", "Top Performer", "Top Dancer", "Fashion Designer"]),
   description: z.string().min(10, "Please provide a description").max(500, "Description must not exceed 500 characters"),
   instagramHandle: z.string().optional(),
@@ -43,43 +42,45 @@ type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 const MediaSubmission = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
   const form = useForm<MediaFormData>({
     resolver: zodResolver(mediaFormSchema),
     defaultValues: {
       category: undefined,
-      gender: undefined,
     },
   });
 
   const onSubmit = async (data: MediaFormData) => {
     try {
-      setIsSubmitting(true);
-      
-      // This data will be automatically synced to talent_applications by the database trigger
-      const emergeData = {
+      const submissionData = {
         full_name: data.fullName,
         email: data.email,
-        phone_number: data.phoneNumber,
+        phone: data.phoneNumber,
         age: parseInt(data.age, 10),
-        gender: data.gender,
-        category: data.category,
-        talent_description: data.description,
-        instagram: data.instagramHandle || null,
-        tiktok: data.tiktokHandle || null,
-        telegram: null
+        category_type: data.category,
+        notes: data.description,
+        social_media: {
+          instagram: data.instagramHandle || null,
+          tiktok: data.tiktokHandle || null
+        },
+        status: "pending" as TalentStatus // explicitly typed as TalentStatus
       };
       
-      // Insert into emerge_submissions - the trigger will handle syncing to talent_applications
+      console.log("Submitting entry:", submissionData);
+      
       const { error } = await supabase
-        .from('emerge_submissions')
-        .insert(emergeData);
+        .from('talent_applications')
+        .insert(submissionData);
       
       if (error) {
         console.error("Database insertion error:", error);
-        throw new Error(`Failed to save your submission: ${error.message}`);
+        toast({
+          title: "Submission Error",
+          description: `Failed to save your submission: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
       }
       
       toast({
@@ -96,8 +97,6 @@ const MediaSubmission = () => {
         description: error instanceof Error ? error.message : "Failed to process your submission",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -210,21 +209,21 @@ const MediaSubmission = () => {
 
                     <FormField
                       control={form.control}
-                      name="gender"
+                      name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Gender</FormLabel>
+                          <FormLabel className="text-white">Select Your Category</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                                <SelectValue placeholder="Select gender" />
+                                <SelectValue placeholder="Select a category" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                              <SelectItem value="Male">Male</SelectItem>
-                              <SelectItem value="Female">Female</SelectItem>
-                              <SelectItem value="Non-Binary">Non-Binary</SelectItem>
-                              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                              <SelectItem value="Top Model">Top Model</SelectItem>
+                              <SelectItem value="Top Performer">Top Performer</SelectItem>
+                              <SelectItem value="Top Dancer">Top Dancer</SelectItem>
+                              <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -232,30 +231,6 @@ const MediaSubmission = () => {
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-white">Select Your Category</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                              <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                            <SelectItem value="Top Model">Top Model</SelectItem>
-                            <SelectItem value="Top Performer">Top Performer</SelectItem>
-                            <SelectItem value="Top Dancer">Top Dancer</SelectItem>
-                            <SelectItem value="Fashion Designer">Fashion Designer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -308,9 +283,8 @@ const MediaSubmission = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-emerge-gold hover:bg-yellow-500 text-black font-medium"
-                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Submitting..." : "Submit Entry"}
+                    Submit Entry
                   </Button>
                 </form>
               </Form>

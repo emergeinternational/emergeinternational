@@ -1,4 +1,3 @@
-
 // This file re-exports functionality from the refactored service files
 // to maintain backward compatibility with existing imports
 export { 
@@ -39,7 +38,7 @@ export {
   createVerifiedCourse
 } from './scraping/courseScraperHelpers';
 
-export type { Course, CourseProgress } from './courseTypes';
+export type { Course, CourseProgress, Category, Review } from './courseTypes';
 
 // Also export certificate-related types and functions
 export {

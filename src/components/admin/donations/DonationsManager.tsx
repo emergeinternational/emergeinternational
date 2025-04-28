@@ -2,20 +2,19 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Donation } from "@/services/donationTypes";
-import DonationsTable from "./DonationsTable";
-import DonationStats from "./DonationStats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import DonorsTable from "./DonorsTable";
-import DonationPageConfig from "./DonationPageConfig";
 import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
+import DonationsTable from "./DonationsTable";
+import DonorsTable from "./DonorsTable";
+import DonationStats from "./DonationStats";
 
 const DonationsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string>("donations");
 
+  // Fetch all donations
   const {
     data: donations,
     isLoading: donationsLoading,
@@ -26,24 +25,18 @@ const DonationsManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("donations")
-        .select(`
-          *,
-          donor:donors (
-            full_name,
-            email,
-            phone
-          )
-        `)
+        .select("*, profiles(full_name, email, phone_number)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Donation[];
+      return data || [];
     },
   });
 
+  // Filter donations based on search query
   const filteredDonations = donations?.filter((donation) => {
-    const donorName = donation.donor?.full_name?.toLowerCase() || "";
-    const donorEmail = donation.donor?.email?.toLowerCase() || "";
+    const donorName = donation.profiles?.full_name?.toLowerCase() || "";
+    const donorEmail = donation.profiles?.email?.toLowerCase() || "";
     const searchLower = searchQuery.toLowerCase();
     
     return (
@@ -55,9 +48,10 @@ const DonationsManager = () => {
     );
   });
 
+  // Group donations by donor for the donors tab
   const donors = donations
     ? donations.reduce((acc: any[], donation: any) => {
-        if (!donation.donor) return acc;
+        if (!donation.profiles) return acc;
         
         const existingDonorIndex = acc.findIndex(
           (donor) => donor.user_id === donation.user_id
@@ -73,9 +67,9 @@ const DonationsManager = () => {
         } else {
           acc.push({
             user_id: donation.user_id,
-            full_name: donation.donor.full_name,
-            email: donation.donor.email,
-            phone_number: donation.donor.phone,
+            full_name: donation.profiles.full_name,
+            email: donation.profiles.email,
+            phone_number: donation.profiles.phone_number,
             total_amount: donation.amount,
             donation_count: 1,
             last_donation_date: donation.created_at,
@@ -86,6 +80,7 @@ const DonationsManager = () => {
       }, [])
     : [];
 
+  // Filter donors based on search query
   const filteredDonors = donors?.filter((donor) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -95,10 +90,11 @@ const DonationsManager = () => {
     );
   });
 
+  // Calculate stats
   const calculateStats = () => {
     if (!donations) return { total: 0, average: 0, count: 0 };
     
-    const completedDonations = donations.filter(d => ['completed', 'approved'].includes(d.payment_status));
+    const completedDonations = donations.filter(d => d.payment_status === "completed");
     const total = completedDonations.reduce((sum, d) => sum + Number(d.amount), 0);
     const count = completedDonations.length;
     const average = count > 0 ? total / count : 0;
@@ -121,24 +117,32 @@ const DonationsManager = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="donations" className="w-full">
+      {/* Donation Stats */}
+      <DonationStats stats={donationStats} />
+      
+      {/* Search and Filter */}
+      <div className="relative w-full md:w-1/3">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+        <Input
+          placeholder={`Search ${activeTab}...`}
+          className="pl-10"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+      
+      {/* Tabs */}
+      <Tabs 
+        defaultValue="donations" 
+        onValueChange={(value) => setActiveTab(value)}
+        className="w-full"
+      >
         <TabsList className="mb-4">
           <TabsTrigger value="donations">Donations</TabsTrigger>
           <TabsTrigger value="donors">Donors</TabsTrigger>
-          <TabsTrigger value="settings">Page Settings</TabsTrigger>
         </TabsList>
         
         <TabsContent value="donations">
-          <DonationStats stats={donationStats} />
-          <div className="relative w-full md:w-1/3">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <Input
-              placeholder={`Search ${activeTab}...`}
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
           <DonationsTable 
             donations={filteredDonations || []}
             isLoading={donationsLoading}
@@ -151,10 +155,6 @@ const DonationsManager = () => {
             donors={filteredDonors || []}
             isLoading={donationsLoading}
           />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <DonationPageConfig />
         </TabsContent>
       </Tabs>
     </div>

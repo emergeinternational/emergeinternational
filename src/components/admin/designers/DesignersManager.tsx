@@ -1,170 +1,104 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, DesignerSpecialty } from "@/types/designerTypes";
-import { DesignerForm } from "./DesignerForm"; 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Search } from "lucide-react";
 import DesignersTable from "./DesignersTable";
-import { useToast } from "@/hooks/use-toast";
+import DesignerFormDialog from "./DesignerFormDialog";
 
 const DesignersManager = () => {
-  const { toast } = useToast();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedDesigner, setSelectedDesigner] = useState<Partial<Designer> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingDesigner, setEditingDesigner] = useState<any>(null);
 
+  // Fetch all designers
   const { data: designers, isLoading, error, refetch } = useQuery({
-    queryKey: ['designers'],
+    queryKey: ["admin-designers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('designers')
-        .select('*');
+        .from("designers")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
-      return data as unknown as Designer[];
+      return data || [];
     },
   });
 
-  const filteredDesigners = designers?.filter(designer => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      designer.full_name.toLowerCase().includes(query) ||
-      designer.email?.toLowerCase().includes(query) ||
-      designer.specialty.toString().toLowerCase().includes(query) ||
-      designer.category.toLowerCase().includes(query) ||
-      designer.location?.toLowerCase().includes(query)
-    );
-  }) ?? [];
-
-  const handleCreate = () => {
-    setSelectedDesigner(null);
+  // Handle designer edit
+  const handleEditDesigner = (designer: any) => {
+    setEditingDesigner(designer);
     setIsFormOpen(true);
   };
 
-  const handleEdit = (designer: Designer) => {
-    setSelectedDesigner({
-      ...designer,
-      // Ensure specialty is handled correctly
-      specialty: designer.specialty as DesignerSpecialty
-    });
-    setIsFormOpen(true);
-  };
+  // Filter designers based on search query
+  const filteredDesigners = designers?.filter((designer) =>
+    designer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    designer.specialty?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    designer.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('designers')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Creative professional deleted",
-        description: "The creative professional has been successfully deleted.",
-      });
-      
-      // Refresh the data
+  // Handle form close and refresh data
+  const handleFormClose = (refresh: boolean) => {
+    setIsFormOpen(false);
+    setEditingDesigner(null);
+    if (refresh) {
       refetch();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting creative professional",
-        description: error.message,
-        variant: "destructive",
-      });
     }
   };
 
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-500">Error loading designers: {error.message}</p>
+        <Button onClick={() => refetch()} className="mt-4">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Creative Professionals</h2>
-        <div className="flex items-center space-x-4">
-          <input
-            type="search"
-            placeholder="Search professionals..."
-            className="border rounded-md px-3 py-2 w-64"
+    <div>
+      {/* Search and Add Button Bar */}
+      <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
+        <div className="relative w-full md:w-1/3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            placeholder="Search designers..."
+            className="pl-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            onClick={handleCreate}
-          >
-            Add Creative Professional
-          </button>
         </div>
+        <Button 
+          onClick={() => {
+            setEditingDesigner(null);
+            setIsFormOpen(true);
+          }} 
+          className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+        >
+          <PlusCircle className="mr-2" size={18} />
+          Add New Designer
+        </Button>
       </div>
 
-      {isLoading ? (
-        <p>Loading creative professionals...</p>
-      ) : error ? (
-        <p className="text-red-500">Error: {(error as Error).message}</p>
-      ) : (
-        <DesignersTable
-          designers={filteredDesigners}
-          isLoading={false}
-          onEdit={handleEdit}
-          onRefresh={refetch}
-        />
-      )}
+      {/* Designers Table */}
+      <DesignersTable 
+        designers={filteredDesigners || []} 
+        isLoading={isLoading} 
+        onEdit={handleEditDesigner}
+        onRefresh={refetch}
+      />
 
-      {isFormOpen && (
-        <DesignerForm
-          initialData={selectedDesigner}
-          onSubmit={async (formData) => {
-            try {
-              if (selectedDesigner?.id) {
-                // Update existing designer
-                const { error } = await supabase
-                  .from('designers')
-                  .update({
-                    ...formData,
-                    updated_at: new Date().toISOString()
-                  } as any)
-                  .eq('id', selectedDesigner.id);
-                
-                if (error) throw error;
-                
-                toast({
-                  title: "Designer updated",
-                  description: "The designer has been successfully updated.",
-                });
-              } else {
-                // Create new designer
-                const { error } = await supabase
-                  .from('designers')
-                  .insert([{
-                    ...formData,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  }] as any);
-                
-                if (error) throw error;
-                
-                toast({
-                  title: "Designer created",
-                  description: "The designer has been successfully created.",
-                });
-              }
-              
-              // Close form and refresh data
-              setIsFormOpen(false);
-              refetch();
-            } catch (error: any) {
-              toast({
-                title: "Error saving designer",
-                description: error.message,
-                variant: "destructive",
-              });
-            }
-          }}
-          onSuccess={() => {
-            refetch();
-            setIsFormOpen(false);
-          }}
-        />
-      )}
+      {/* Designer Form Dialog */}
+      <DesignerFormDialog 
+        open={isFormOpen}
+        designer={editingDesigner}
+        onClose={handleFormClose}
+      />
     </div>
   );
 };

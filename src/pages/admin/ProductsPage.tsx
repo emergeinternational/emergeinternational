@@ -1,5 +1,4 @@
 
-import React from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import ProductsManager from "../../components/admin/shop/ProductsManager";
 import { Toaster } from "@/components/ui/toaster";

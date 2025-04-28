@@ -25,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { TalentFormData, TalentStatus } from "@/types/talentTypes";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -49,19 +48,10 @@ const talentFormSchema = z.object({
     .max(300, "Description must not exceed 300 characters"),
   availability: z.string().optional(),
   consent: z.boolean().refine((val) => val === true, "You must agree to be contacted"),
-  measurements: z.object({
-    height: z.string().optional(),
-    weight: z.string().optional(),
-    chest: z.string().optional(),
-    bust: z.string().optional(),
-    waist: z.string().optional(),
-    hips: z.string().optional(),
-    shoulders: z.string().optional(),
-    inseam: z.string().optional(),
-  }).optional(),
-  dressSize: z.string().optional(),
-  shoeSize: z.string().optional(),
 });
+
+type TalentFormData = z.infer<typeof talentFormSchema>;
+type TalentStatus = 'pending' | 'approved' | 'rejected' | 'on_hold';
 
 interface TalentRegistrationFormProps {
   onSubmitSuccess: () => void;
@@ -74,7 +64,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
   const [portfolioFile, setPortfolioFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
-  
   const form = useForm<TalentFormData>({
     resolver: zodResolver(talentFormSchema),
     defaultValues: {
@@ -84,10 +73,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
       category: undefined,
     },
   });
-
-  const category = form.watch("category");
-  const gender = form.watch("gender");
-  const showModelMeasurements = category === "Model" && gender;
 
   const validateFiles = (files: FileList | null, type: "photo" | "video" | "portfolio") => {
     if (!files || files.length === 0) return true;
@@ -246,14 +231,14 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
           }
         } catch (error) {
           console.error(`Error uploading file ${file.name}:`, error);
-          throw new Error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : "Unknown error"}`);
+          throw new Error(`Failed to upload ${file.name}: ${error.message || "Unknown error"}`);
         }
       }
       
       return uploadResults;
     } catch (error) {
       console.error(`Error uploading ${type} files:`, error);
-      throw new Error(`Failed to upload ${type} files: ${error instanceof Error ? error.message : "Unknown error"}`);
+      throw new Error(`Failed to upload ${type} files: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -319,7 +304,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         console.error("Error uploading photos:", uploadError);
         toast({
           title: "Upload Error",
-          description: "Failed to upload photos: " + (uploadError instanceof Error ? uploadError.message : "Please try again with smaller files."),
+          description: "Failed to upload photos: " + (uploadError.message || "Please try again with smaller files."),
           variant: "destructive",
         });
         setUploadingFiles(false);
@@ -342,7 +327,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
           toast({
             title: "Warning",
             description: "Could not upload video, but continuing with submission. " + 
-              (uploadError instanceof Error ? uploadError.message : "Please try again later."),
+              (uploadError.message || "Please try again later."),
           });
           // Continue with submission even if video upload fails
         }
@@ -364,7 +349,7 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
           toast({
             title: "Warning",
             description: "Could not upload portfolio file, but continuing with submission. " + 
-              (uploadError instanceof Error ? uploadError.message : "Please try again later."),
+              (uploadError.message || "Please try again later."),
           });
           // Continue with submission even if portfolio upload fails, using URL if provided
         }
@@ -375,7 +360,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         telegram: data.telegramHandle || null,
       };
 
-      // Prepare submission data
       const submissionData = {
         full_name: data.fullName,
         email: data.email,
@@ -389,14 +373,11 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
         social_media: socialMedia,
         status: 'pending' as TalentStatus,
         skills: [data.category],
-        notes: data.talentDescription,
-        gender: data.gender,
-        measurements: showModelMeasurements ? data.measurements : null,
+        notes: data.talentDescription
       };
 
       console.log("Submitting talent application:", submissionData);
 
-      // Insert data into talent_applications table
       const { data: insertedData, error } = await supabase
         .from('talent_applications')
         .insert(submissionData)
@@ -687,131 +668,6 @@ const TalentRegistrationForm = ({ onSubmitSuccess }: TalentRegistrationFormProps
               </FormItem>
             )}
           />
-
-          {showModelMeasurements && (
-            <div className="space-y-4 border p-4 rounded-lg">
-              <h3 className="font-medium">Model Measurements</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <FormField
-                  control={form.control}
-                  name="measurements.height"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Height (cm)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="175" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="measurements.weight"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Weight (kg)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="65" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {gender === "Female" && (
-                  <FormField
-                    control={form.control}
-                    name="measurements.bust"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bust (cm)</FormLabel>
-                        <FormControl>
-                          <Input type="text" placeholder="90" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {gender === "Male" && (
-                  <FormField
-                    control={form.control}
-                    name="measurements.chest"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chest (cm)</FormLabel>
-                        <FormControl>
-                          <Input type="text" placeholder="100" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="measurements.waist"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Waist (cm)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="75" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="measurements.hips"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hips (cm)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="90" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {gender === "Male" && (
-                  <FormField
-                    control={form.control}
-                    name="measurements.shoulders"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Shoulders (cm)</FormLabel>
-                        <FormControl>
-                          <Input type="text" placeholder="45" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="measurements.inseam"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Inseam (cm)</FormLabel>
-                      <FormControl>
-                        <Input type="text" placeholder="80" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          )}
 
           <div className="space-y-4">
             <div>

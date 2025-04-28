@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import {
@@ -36,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Donation } from "@/services/donationTypes";
 
 interface DonationsTableProps {
   donations: any[];
@@ -50,10 +50,10 @@ const DonationsTable = ({
   onRefresh,
 }: DonationsTableProps) => {
   const { toast } = useToast();
-  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
+  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [donationToRefund, setDonationToRefund] = useState<Donation | null>(null);
+  const [donationToRefund, setDonationToRefund] = useState<any | null>(null);
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
 
   const handleViewDetails = (donation: any) => {

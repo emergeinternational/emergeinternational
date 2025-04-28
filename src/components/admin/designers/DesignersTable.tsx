@@ -76,14 +76,14 @@ const DesignersTable = ({
       if (error) throw error;
 
       toast({
-        title: "Creative professional deleted",
+        title: "Designer deleted",
         description: `${designerToDelete.full_name} has been removed successfully.`,
       });
       onRefresh();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete creative professional",
+        description: error.message || "Failed to delete designer",
         variant: "destructive",
       });
     } finally {
@@ -95,7 +95,7 @@ const DesignersTable = ({
   if (isLoading) {
     return (
       <div className="text-center py-10">
-        <p>Loading creative professionals...</p>
+        <p>Loading designers...</p>
       </div>
     );
   }
@@ -103,7 +103,7 @@ const DesignersTable = ({
   if (designers.length === 0) {
     return (
       <div className="text-center py-10 border rounded-lg">
-        <p className="text-gray-500">No creative professionals found</p>
+        <p className="text-gray-500">No designers found</p>
       </div>
     );
   }
@@ -117,30 +117,16 @@ const DesignersTable = ({
     }
   };
 
-  const getCategoryLabel = (category: string): string => {
-    const categories: Record<string, string> = {
-      fashion_designer: "Fashion Designer",
-      interior_designer: "Interior Designer",
-      graphic_designer: "Graphic Designer",
-      visual_artist: "Visual Artist",
-      photographer: "Photographer",
-      event_planner: "Event Planner",
-      model: "Model",
-      creative_director: "Creative Director",
-    };
-    return categories[category] || category;
-  };
-
   return (
     <>
       <div className="rounded-md border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead>Designer Name</TableHead>
               <TableHead>Specialty</TableHead>
               <TableHead>Featured</TableHead>
+              <TableHead>Products</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -160,7 +146,6 @@ const DesignersTable = ({
                   )}
                   {designer.full_name}
                 </TableCell>
-                <TableCell>{getCategoryLabel(designer.category)}</TableCell>
                 <TableCell className="capitalize">{designer.specialty}</TableCell>
                 <TableCell>
                   {designer.featured ? (
@@ -170,6 +155,9 @@ const DesignersTable = ({
                   ) : (
                     <Badge variant="outline">Standard</Badge>
                   )}
+                </TableCell>
+                <TableCell>
+                  {designer.products?.length || 0} products
                 </TableCell>
                 <TableCell>{formatDate(designer.created_at)}</TableCell>
                 <TableCell className="text-right">

@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -21,32 +22,47 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Globe } from "lucide-react";
-import { Product } from "@/services/productTypes";
+import { Edit, Trash2, Eye } from "lucide-react";
 
 interface ProductsTableProps {
-  products: Product[];
+  products: any[];
   isLoading: boolean;
-  onEdit: (product: Product) => void;
-  onDelete: (productId: string) => void;
+  onEdit: (product: any) => void;
   onRefresh: () => void;
 }
 
-const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: ProductsTableProps) => {
+const ProductsTable = ({ products, isLoading, onEdit, onRefresh }: ProductsTableProps) => {
   const { toast } = useToast();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<any>(null);
 
-  const handleConfirmDelete = () => {
+  const handleDelete = async () => {
     if (!productToDelete) return;
-    
-    onDelete(productToDelete.id);
-    setDeleteDialogOpen(false);
-    setProductToDelete(null);
-  };
 
-  const isMockProduct = (product: Product) => {
-    return product.id.startsWith('mock-');
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Product deleted",
+        description: `${productToDelete.title} has been successfully deleted.`,
+      });
+
+      onRefresh();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: `Failed to delete product: ${err.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -75,16 +91,15 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
               <TableHead>Product</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
-              <TableHead>Stock Status</TableHead>
+              <TableHead>In Stock</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Sales</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.id} className="cursor-pointer hover:bg-gray-50">
-                <TableCell className="font-medium" onClick={() => onEdit(product)}>
+              <TableRow key={product.id}>
+                <TableCell className="font-medium">
                   <div className="flex items-center space-x-3">
                     {product.image_url ? (
                       <div className="h-10 w-10 bg-gray-100 rounded-md overflow-hidden">
@@ -95,49 +110,33 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                         />
                       </div>
                     ) : (
-                      <div className="h-10 w-10 bg-gray-100 rounded-md" />
+                      <div className="h-10 w-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                        <Eye size={16} />
+                      </div>
                     )}
-                    <div>
-                      <div className="truncate max-w-[200px]">{product.title}</div>
-                      {isMockProduct(product) && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] mt-1">
-                          Mock Product
-                        </Badge>
-                      )}
-                    </div>
+                    <span className="truncate max-w-[200px]">{product.title}</span>
                   </div>
                 </TableCell>
-                <TableCell onClick={() => onEdit(product)}>
+                <TableCell>
                   <span className="capitalize">
                     {product.category?.replace(/_/g, " ") || "Uncategorized"}
                   </span>
                 </TableCell>
-                <TableCell onClick={() => onEdit(product)}>
+                <TableCell>
                   {product.price ? (
-                    <>${parseFloat(product.price.toString()).toFixed(2)}</>
+                    <>${parseFloat(product.price).toFixed(2)}</>
                   ) : (
                     "N/A"
                   )}
                 </TableCell>
-                <TableCell onClick={() => onEdit(product)}>
-                  <Badge variant="outline" className={
-                    product.in_stock 
-                      ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                      : "bg-red-100 text-red-800 hover:bg-red-100"
-                  }>
-                    {product.in_stock ? "In Stock" : "Out of Stock"}
-                  </Badge>
-                </TableCell>
-                <TableCell onClick={() => onEdit(product)}>
+                <TableCell>{product.in_stock ? "Yes" : "No"}</TableCell>
+                <TableCell>
                   <Badge 
                     variant={product.is_published ? "default" : "outline"}
                     className={product.is_published ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}
                   >
                     {product.is_published ? "Published" : "Draft"}
                   </Badge>
-                </TableCell>
-                <TableCell onClick={() => onEdit(product)}>
-                  {product.sales_count || 0}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button
@@ -146,8 +145,7 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                     onClick={() => onEdit(product)}
                     title="Edit product"
                   >
-                    <Edit size={16} className="mr-1" />
-                    Edit
+                    <Edit size={16} />
                   </Button>
                   <Button
                     variant="outline"
@@ -159,8 +157,7 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
                       setDeleteDialogOpen(true);
                     }}
                   >
-                    <Trash2 size={16} className="mr-1" />
-                    Delete
+                    <Trash2 size={16} />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -174,17 +171,14 @@ const ProductsTable = ({ products, isLoading, onEdit, onDelete, onRefresh }: Pro
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              {productToDelete?.id.startsWith('mock-') ? (
-                <>This will remove the mock product "{productToDelete?.title}" from the UI.</>
-              ) : (
-                <>This action will permanently delete the product "{productToDelete?.title}". This action cannot be undone.</>
-              )}
+              This action will permanently delete the product "
+              {productToDelete?.title}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleConfirmDelete}
+              onClick={handleDelete}
               className="bg-red-500 hover:bg-red-600"
             >
               Delete

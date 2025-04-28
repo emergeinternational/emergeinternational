@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
 import { logScraperActivity } from "./courseScraperHelpers";
@@ -231,7 +230,7 @@ export const getScrapedCoursesBySource = async (source: string): Promise<Scraped
       return [];
     }
     
-    return data || [];
+    return (data || []).map(course => sanitizeScrapedCourse(course));
   } catch (error) {
     console.error("Error in getScrapedCoursesBySource:", error);
     return [];

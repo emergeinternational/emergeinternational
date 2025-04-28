@@ -1,10 +1,16 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import AdminLayout from "@/layouts/AdminLayout";
 
-// Redirect to the new OrdersPage component
 const Orders = () => {
-  return <Navigate to="/admin/orders" replace />;
+  return (
+    <AdminLayout>
+      <div className="container mx-auto py-6">
+        <h1 className="text-2xl font-bold mb-6">Orders Management</h1>
+        {/* Orders content will go here */}
+      </div>
+    </AdminLayout>
+  );
 };
 
 export default Orders;
