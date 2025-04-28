@@ -8,6 +8,7 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
   const { toast } = useToast();
   
   useEffect(() => {
+    // Enable realtime subscription for the orders table
     const channel = supabase
       .channel('public:orders')
       .on('postgres_changes', 

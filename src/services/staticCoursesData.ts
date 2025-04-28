@@ -124,4 +124,9 @@ export const sampleCourses: Course[] = [
   },
 ];
 
+// Export the function to get static courses
+export const getStaticCourses = (): Course[] => {
+  return sampleCourses;
+};
+
 export default sampleCourses;

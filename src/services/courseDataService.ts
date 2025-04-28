@@ -1,4 +1,3 @@
-
 import { Course, CourseProgress } from "./courseTypes";
 import { getUserCourseProgress } from "./courseProgressService";
 import { getStaticCourses } from "./staticCoursesData";
