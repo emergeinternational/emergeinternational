@@ -238,10 +238,13 @@ export type Database = {
       }
       designers: {
         Row: {
+          achievements: string[] | null
           bio: string | null
+          category: Database["public"]["Enums"]["creator_category"]
           created_at: string | null
           email: string | null
           featured: boolean
+          featured_project: Json | null
           full_name: string
           id: string
           image_url: string | null
@@ -249,15 +252,19 @@ export type Database = {
           products: string[] | null
           revenue: number | null
           sales_count: number | null
+          showcase_images: string[] | null
           social_media: Json | null
           specialty: Database["public"]["Enums"]["designer_category"]
           updated_at: string | null
         }
         Insert: {
+          achievements?: string[] | null
           bio?: string | null
+          category?: Database["public"]["Enums"]["creator_category"]
           created_at?: string | null
           email?: string | null
           featured?: boolean
+          featured_project?: Json | null
           full_name: string
           id?: string
           image_url?: string | null
@@ -265,15 +272,19 @@ export type Database = {
           products?: string[] | null
           revenue?: number | null
           sales_count?: number | null
+          showcase_images?: string[] | null
           social_media?: Json | null
           specialty: Database["public"]["Enums"]["designer_category"]
           updated_at?: string | null
         }
         Update: {
+          achievements?: string[] | null
           bio?: string | null
+          category?: Database["public"]["Enums"]["creator_category"]
           created_at?: string | null
           email?: string | null
           featured?: boolean
+          featured_project?: Json | null
           full_name?: string
           id?: string
           image_url?: string | null
@@ -281,6 +292,7 @@ export type Database = {
           products?: string[] | null
           revenue?: number | null
           sales_count?: number | null
+          showcase_images?: string[] | null
           social_media?: Json | null
           specialty?: Database["public"]["Enums"]["designer_category"]
           updated_at?: string | null
@@ -1542,6 +1554,15 @@ export type Database = {
         | "event_planner"
       course_hosting_type: "hosted" | "embedded" | "external"
       course_level: "beginner" | "intermediate" | "expert"
+      creator_category:
+        | "fashion_designer"
+        | "interior_designer"
+        | "graphic_designer"
+        | "visual_artist"
+        | "photographer"
+        | "event_planner"
+        | "model"
+        | "creative_director"
       designer_category:
         | "apparel"
         | "accessories"
@@ -1689,6 +1710,16 @@ export const Constants = {
       ],
       course_hosting_type: ["hosted", "embedded", "external"],
       course_level: ["beginner", "intermediate", "expert"],
+      creator_category: [
+        "fashion_designer",
+        "interior_designer",
+        "graphic_designer",
+        "visual_artist",
+        "photographer",
+        "event_planner",
+        "model",
+        "creative_director",
+      ],
       designer_category: [
         "apparel",
         "accessories",

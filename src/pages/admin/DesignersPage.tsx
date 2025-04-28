@@ -8,9 +8,9 @@ const DesignersPage = () => {
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Designers Management</h1>
+          <h1 className="text-2xl font-semibold">Creative Professionals</h1>
           <p className="text-sm text-gray-500">
-            Manage designer profiles and their associated products
+            Manage creative professionals including designers, artists, photographers, and more
           </p>
         </div>
         
