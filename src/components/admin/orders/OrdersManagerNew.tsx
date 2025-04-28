@@ -50,7 +50,7 @@ const OrdersManagerNew = () => {
     });
   });
   
-  // Fetch orders with related data
+  // Fetch orders with related data - using separate queries to avoid relationship issues
   const { 
     data: orders = [], 
     isLoading, 
@@ -59,36 +59,53 @@ const OrdersManagerNew = () => {
   } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: async () => {
-      // Fetch orders with related items and user info
-      const { data, error } = await supabase
+      // First, fetch the orders
+      const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
-        .select(`
-          *,
-          order_items(*),
-          profiles:user_id(full_name, email, phone_number),
-          shipping_addresses:shipping_address_id(*)
-        `)
+        .select("*")
         .order('created_at', { ascending: false });
 
-      if (error) {
-        toast({
-          title: "Error fetching orders",
-          description: error.message,
-          variant: "destructive"
-        });
-        throw error;
+      if (ordersError) {
+        throw ordersError;
       }
-      
-      // Transform the data to match the Order interface
-      const transformedData = data.map((order: any) => {
+
+      // For each order, fetch the related items, user info, and shipping address
+      const ordersWithDetails = await Promise.all(ordersData.map(async (order) => {
+        // Fetch order items
+        const { data: orderItems } = await supabase
+          .from("order_items")
+          .select("*")
+          .eq("order_id", order.id);
+        
+        // Fetch user info
+        const { data: userInfo } = await supabase
+          .from("profiles")
+          .select("full_name, email, phone_number")
+          .eq("id", order.user_id)
+          .single();
+        
+        // Fetch shipping address if exists
+        let shippingAddress = null;
+        if (order.shipping_address_id) {
+          const { data: addressData } = await supabase
+            .from("shipping_addresses")
+            .select("*")
+            .eq("id", order.shipping_address_id)
+            .single();
+          
+          shippingAddress = addressData;
+        }
+        
+        // Assemble the complete order object
         return {
           ...order,
-          user: order.profiles || {},
-          shipping_addresses: order.shipping_addresses || null
+          order_items: orderItems || [],
+          user: userInfo || {},
+          shipping_addresses: shippingAddress
         };
-      });
+      }));
       
-      return transformedData as Order[];
+      return ordersWithDetails as Order[];
     },
   });
 
