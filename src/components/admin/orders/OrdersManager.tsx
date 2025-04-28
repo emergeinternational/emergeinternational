@@ -7,7 +7,7 @@ import OrdersSummary from "./OrdersSummary";
 import OrderFilters from "./OrderFilters";
 import { useToast } from "@/hooks/use-toast";
 import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
-import { Order, OrderStatus, PaymentStatus } from "@/services/orderTypes";
+import { Order, OrderStatus } from "@/services/orderTypes";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 

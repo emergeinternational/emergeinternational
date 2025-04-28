@@ -39,7 +39,7 @@ const OrderFilters = ({ filters, setFilters }: OrderFiltersProps) => {
         dateRange,
       });
     }
-  }, [dateRange]);
+  }, [dateRange, filters, setFilters]);
 
   const handleStatusChange = (value: string) => {
     setFilters({
