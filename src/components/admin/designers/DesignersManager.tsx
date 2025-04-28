@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 const DesignersManager = () => {
   const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedDesigner, setSelectedDesigner] = useState<Designer | null>(null);
+  const [selectedDesigner, setSelectedDesigner] = useState<Partial<Designer> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: designers, isLoading, error, refetch } = useQuery({
@@ -41,7 +42,11 @@ const DesignersManager = () => {
   };
 
   const handleEdit = (designer: Designer) => {
-    setSelectedDesigner(designer);
+    setSelectedDesigner({
+      ...designer,
+      // Convert specialty to string if it's not already
+      specialty: designer.specialty.toString()
+    });
     setIsFormOpen(true);
   };
 

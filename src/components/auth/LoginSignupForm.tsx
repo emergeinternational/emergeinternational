@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +20,7 @@ export const LoginSignupForm = ({
 }: LoginSignupFormProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showOTPDialog, setShowOTPDialog] = useState(false);
   const { toast } = useToast();
   const { signIn, signUp } = useAuth();
@@ -44,13 +46,17 @@ export const LoginSignupForm = ({
       return;
     }
 
+    setIsProcessing(true);
+
     try {
       if (isLogin) {
         await signIn(email, password);
       } else {
+        // Implement exponential backoff for signup attempts
         let success = false;
         let attempts = 0;
-        const maxAttempts = 3;
+        const maxAttempts = 5; // Increase from 3 to 5 for more retries
+        let delayMs = 500; // Start with 500ms delay
         
         while (!success && attempts < maxAttempts) {
           attempts++;
@@ -66,9 +72,25 @@ export const LoginSignupForm = ({
             break;
           } catch (retryError) {
             console.log(`Signup attempt ${attempts} failed:`, retryError);
-            if (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            
+            // Special handling for database errors
+            if (retryError instanceof Error && 
+                (retryError.message.includes("database") || 
+                 retryError.message.includes("foreign key") ||
+                 retryError.message.includes("type") ||
+                 retryError.message.includes("violates"))) {
+              
+              // For database errors, longer delay with more randomness to avoid thundering herd
+              delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
+              
+              if (attempts < maxAttempts) {
+                console.log(`Database error, retrying in ${delayMs}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+              } else {
+                throw new Error("Registration service is temporarily unavailable. Please try again in a few minutes.");
+              }
             } else {
+              // For non-database errors, just throw them as-is
               throw retryError;
             }
           }
@@ -105,6 +127,8 @@ export const LoginSignupForm = ({
           variant: "destructive",
         });
       }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -115,6 +139,8 @@ export const LoginSignupForm = ({
       description: "You can now set a new password.",
     });
   };
+
+  const isInProgress = isSubmitting || isProcessing;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -129,7 +155,7 @@ export const LoginSignupForm = ({
           onChange={(e) => setEmail(e.target.value)}
           className="emerge-input"
           placeholder="your@email.com"
-          disabled={isSubmitting}
+          disabled={isInProgress}
         />
       </div>
 
@@ -144,7 +170,7 @@ export const LoginSignupForm = ({
           onChange={(e) => setPassword(e.target.value)}
           className="emerge-input"
           placeholder="••••••••"
-          disabled={isSubmitting}
+          disabled={isInProgress}
         />
       </div>
 
@@ -154,6 +180,7 @@ export const LoginSignupForm = ({
             type="button"
             onClick={onForgotPassword}
             className="text-emerge-gold hover:underline"
+            disabled={isInProgress}
           >
             Reset via Email
           </button>
@@ -163,6 +190,7 @@ export const LoginSignupForm = ({
               <button 
                 type="button"
                 className="text-emerge-gold hover:underline"
+                disabled={isInProgress}
               >
                 Reset via OTP
               </button>
@@ -173,7 +201,7 @@ export const LoginSignupForm = ({
               </DialogHeader>
               <OTPVerification
                 email={email}
-                isSubmitting={isSubmitting}
+                isSubmitting={isInProgress}
                 onVerificationSuccess={handleOTPVerificationSuccess}
               />
             </DialogContent>
@@ -184,9 +212,9 @@ export const LoginSignupForm = ({
       <button 
         type="submit" 
         className="emerge-button-primary w-full"
-        disabled={isSubmitting}
+        disabled={isInProgress}
       >
-        {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+        {isInProgress ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
       </button>
 
       <div className="mt-8 text-center">
@@ -194,7 +222,7 @@ export const LoginSignupForm = ({
           type="button"
           onClick={onToggleMode} 
           className="text-emerge-gold hover:underline"
-          disabled={isSubmitting}
+          disabled={isInProgress}
         >
           {isLogin 
             ? "Don't have an account? Sign Up" 

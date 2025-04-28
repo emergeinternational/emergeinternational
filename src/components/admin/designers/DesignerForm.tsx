@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CreatorCategory, DesignerSpecialty, getSpecialtyOptions, getCategorySpecialty } from "@/services/designerTypes";
+import { CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
 
 interface DesignerFormProps {
   initialData?: {
@@ -19,7 +18,7 @@ interface DesignerFormProps {
     full_name?: string;
     email?: string;
     bio?: string;
-    specialty?: DesignerSpecialty;
+    specialty?: string;
     category?: CreatorCategory;
     portfolio_url?: string;
     location?: string;
@@ -170,7 +169,6 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Info */}
         <div className="bg-white p-6 rounded-md shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Basic Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,7 +220,6 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
           </div>
         </div>
         
-        {/* Professional Info */}
         <div className="bg-white p-6 rounded-md shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Professional Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -325,7 +322,6 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
           </div>
         </div>
         
-        {/* Social Media */}
         <div className="bg-white p-6 rounded-md shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Social Media</h2>
           <div className="space-y-4">
@@ -371,7 +367,6 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
           </div>
         </div>
         
-        {/* Image & Featured Status */}
         <div className="bg-white p-6 rounded-md shadow-sm border">
           <h2 className="text-lg font-semibold mb-4">Image & Status</h2>
           <div className="space-y-4">

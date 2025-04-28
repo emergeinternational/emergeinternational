@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, getCategorySpecialty, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, getSpecialtyOptions, CreatorCategory } from "@/services/designerTypes";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ const DesignerFormDialog = ({
           email: "",
           bio: "",
           category: "fashion_designer" as CreatorCategory,
-          specialty: "apparel" as DesignerSpecialty,
+          specialty: "apparel", // Changed to string to match database
           portfolio_url: "",
           location: "",
           social_media: {
@@ -83,19 +84,14 @@ const DesignerFormDialog = ({
     setFormData({
       ...formData,
       category,
-      specialty: specialtyOptions[0].value as DesignerSpecialty
+      specialty: specialtyOptions[0].value
     });
   };
 
   const handleSpecialtyChange = (value: string) => {
-    const specialty = getCategorySpecialty(
-      formData.category as CreatorCategory, 
-      value
-    );
-    
     setFormData({
       ...formData,
-      specialty
+      specialty: value // Store directly as string to match database
     });
   };
 
@@ -108,7 +104,7 @@ const DesignerFormDialog = ({
         full_name: formData.full_name!,
         email: formData.email,
         bio: formData.bio!,
-        specialty: formData.specialty as string,
+        specialty: formData.specialty as string, // Store as string
         category: formData.category!,
         portfolio_url: formData.portfolio_url,
         location: formData.location,

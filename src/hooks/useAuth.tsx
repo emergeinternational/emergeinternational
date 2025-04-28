@@ -219,11 +219,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("Creating profile for new user:", data.user.id);
           
           // Wait a moment for auth to fully process
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
+          // Improved profile creation with exponential backoff
           let profileCreated = false;
           let attempts = 0;
-          const maxAttempts = 3;
+          const maxAttempts = 5; // Increased from 3
+          let delayMs = 1000; // Start with 1 second
           
           while (!profileCreated && attempts < maxAttempts) {
             attempts++;
@@ -234,10 +236,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 break;
               } else {
                 console.log(`Profile creation attempt ${attempts} failed, retrying...`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+                // Exponential backoff with jitter
+                delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
+                await new Promise(resolve => setTimeout(resolve, delayMs)); 
               }
             } catch (attemptError) {
               console.error(`Error on profile creation attempt ${attempts}:`, attemptError);
+              // Exponential backoff with jitter
+              delayMs = Math.floor(delayMs * 1.5 + Math.random() * 500);
+              await new Promise(resolve => setTimeout(resolve, delayMs));
             }
           }
           
