@@ -1,8 +1,16 @@
 
-// Updated order types to use string-based status
+// Order related types for the application
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
-export type OrderStatus = string;
-export type PaymentStatus = string;
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_name: string;
+  unit_price: number;
+  quantity: number;
+  created_at?: string;
+}
 
 export interface ShippingAddress {
   id: string;
@@ -18,55 +26,50 @@ export interface ShippingAddress {
   updated_at?: string;
 }
 
-export interface OrderItem {
+export interface UserProfile {
   id: string;
-  order_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  created_at?: string;
-}
-
-export interface OrderCustomer {
-  id: string;
-  email?: string;
   full_name?: string;
+  email?: string;
+  phone_number?: string;
 }
 
 export interface Order {
   id: string;
   user_id: string;
+  total_amount: number;
   status: OrderStatus;
   payment_method?: string;
   shipping_address_id?: string;
-  total_amount: number;
   created_at?: string;
   updated_at?: string;
-  customer?: OrderCustomer;
+  
+  // Joined data
   shipping_address?: ShippingAddress;
-  items?: OrderItem[];
+  order_items?: OrderItem[];
+  profiles?: UserProfile;
 }
 
-export interface OrderFiltersState {
-  status: string | string[];
-  searchQuery: string;
-  paymentStatus: string | string[];
-  dateRange: {
-    from: Date | null;
-    to: Date | null;
-  };
-}
+// Order constants
+export const ORDER_STATUSES: OrderStatus[] = [
+  'pending',
+  'processing', 
+  'shipped', 
+  'delivered', 
+  'cancelled', 
+  'refunded'
+];
 
-export interface OrdersTableProps {
-  orders: Order[];
-  isLoading?: boolean;
-  onViewDetails?: (order: Order) => void;
-}
+export const PAYMENT_STATUSES: PaymentStatus[] = [
+  'pending',
+  'paid',
+  'failed',
+  'refunded'
+];
 
-export interface OrdersSummary {
-  total: number;
-  pending: number;
-  processing: number;
-  completed: number;
-  cancelled: number;
-}
+export const ORDER_PAYMENT_METHODS = [
+  'credit_card',
+  'bank_transfer',
+  'mobile_money',
+  'cash',
+  'other'
+];

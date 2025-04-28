@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, ShieldAlert, Shield, User } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UserRoleManager } from './UserRoleManager';
 import { UserFilterState } from './UserFilters';
 
 type User = {
@@ -30,9 +30,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
   const [searchQuery, setSearchQuery] = useState('');
   const [role, setRole] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [editRole, setEditRole] = useState<string>('user');
   const [confirmDelete, setConfirmDelete] = useState('');
 
   useEffect(() => {
@@ -102,42 +100,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
     }
   };
 
-  const handleUpdateRole = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      // Update the role in the profiles table directly
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ role: editRole })
-        .eq('id', selectedUser.id);
-
-      if (updateError) throw updateError;
-      
-      setUsers(users.map(user => 
-        user.id === selectedUser.id 
-          ? { ...user, role: editRole } 
-          : user
-      ));
-      
-      toast.success(`Updated ${selectedUser.email}'s role to ${editRole}`);
-      setIsEditDialogOpen(false);
-      setSelectedUser(null);
-    } catch (error) {
-      console.error('Error updating role:', error);
-      toast.error(`Failed to update role: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  const handleRoleUpdate = () => {
+    // Refresh user data after role update
+    fetchUsers();
   };
 
   const openDeleteDialog = (user: User) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
-  };
-
-  const openEditDialog = (user: User) => {
-    setSelectedUser(user);
-    setEditRole(user.role || 'user');
-    setIsEditDialogOpen(true);
   };
 
   const handleSearchChange = (value: string) => {
@@ -158,19 +128,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
     
     return matchesSearch && matchesRole;
   });
-
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge className="bg-red-500"><ShieldAlert className="h-3 w-3 mr-1" />Admin</Badge>;
-      case 'editor':
-        return <Badge className="bg-amber-500"><Shield className="h-3 w-3 mr-1" />Editor</Badge>;
-      case 'viewer':
-        return <Badge className="bg-blue-500"><Shield className="h-3 w-3 mr-1" />Viewer</Badge>;
-      default:
-        return <Badge className="bg-gray-500"><User className="h-3 w-3 mr-1" />User</Badge>;
-    }
-  };
 
   // Simple filter components for this component
   const FilterBar = () => (
@@ -238,7 +195,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
                     </div>
                   </TableCell>
                   <TableCell>
-                    {getRoleBadge(user.role)}
+                    <UserRoleManager 
+                      userId={user.id}
+                      userEmail={user.email}
+                      currentRole={user.role}
+                      onRoleUpdated={handleRoleUpdate}
+                    />
                   </TableCell>
                   <TableCell>
                     {user.created_at && new Date(user.created_at).toLocaleDateString()}
@@ -252,16 +214,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => openEditDialog(user)}
-                    >
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
                       onClick={() => openDeleteDialog(user)}
                       className="text-red-500 hover:text-red-700"
                     >
+                      <Trash2 className="h-4 w-4 mr-1" />
                       Delete
                     </Button>
                   </TableCell>
@@ -307,52 +263,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users: initialUsers = [
               disabled={confirmDelete !== 'delete'}
             >
               Delete User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Role Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User Role</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-500">
-              Update role for {selectedUser?.email}
-            </p>
-            <div>
-              <label htmlFor="role" className="text-sm font-medium">
-                User Role
-              </label>
-              <Select 
-                value={editRole} 
-                onValueChange={setEditRole}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="user">Regular User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleUpdateRole}
-            >
-              Update Role
             </Button>
           </DialogFooter>
         </DialogContent>

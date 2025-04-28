@@ -5,9 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { ensureUserProfile } from '@/utils/ensureUserProfile';
-
-// Use string-based type for roles
-type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
+import { UserRole } from '@/types/authTypes';
 
 type AuthContextType = {
   user: User | null;
@@ -35,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Fetching user role for:", userId);
       
-      // First try to find role in profiles table since role column was moved there
+      // Try to find role in profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
