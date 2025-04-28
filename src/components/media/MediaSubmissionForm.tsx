@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,6 +56,7 @@ const mediaFormSchema = z.object({
 });
 
 type MediaFormData = z.infer<typeof mediaFormSchema>;
+type TalentStatus = "pending" | "approved" | "rejected" | "on_hold";
 
 interface MediaSubmissionFormProps {
   onSubmitSuccess: () => void;
@@ -80,35 +82,56 @@ const MediaSubmissionForm = ({ onSubmitSuccess }: MediaSubmissionFormProps) => {
     try {
       setIsSubmitting(true);
       
-      const submissionData = {
+      // Common data structure for all tables
+      const commonData = {
         full_name: data.fullName,
         email: data.email,
-        phone_number: data.phoneNumber,
+        phone: data.phoneNumber,
         age: parseInt(data.age, 10),
-        category: data.category,
+        category_type: data.category,
         gender: data.gender,
-        instagram: data.instagram || null,
-        telegram: data.telegram || null,
-        talent_description: data.talentDescription,
+        notes: data.talentDescription,
         measurements: showModelMeasurements ? data.measurements : null,
         portfolio_url: data.category === "Designer" ? data.portfolioUrl : null,
-        tiktok: data.tiktok || null,
+        social_media: {
+          instagram: data.instagram || null,
+          telegram: data.telegram || null,
+          tiktok: data.tiktok || null
+        },
       };
       
-      console.log("Submitting entry:", submissionData);
-      
-      const { error } = await supabase
-        .from('emerge_submissions')
-        .insert(submissionData);
-      
-      if (error) {
-        console.error("Database insertion error:", error);
-        toast({
-          title: "Submission Error",
-          description: `Failed to save your submission: ${error.message}`,
-          variant: "destructive",
+      // Try to insert into talent_applications first
+      const { error: talentError } = await supabase
+        .from('talent_applications')
+        .insert({
+          ...commonData,
+          status: "pending" as TalentStatus
         });
-        return;
+      
+      if (talentError) {
+        console.error("Error inserting into talent_applications:", talentError);
+        // Fall back to emerge_submissions if talent_applications insert fails
+        const { error: emergeError } = await supabase
+          .from('emerge_submissions')
+          .insert({
+            full_name: data.fullName,
+            email: data.email,
+            phone_number: data.phoneNumber,
+            age: parseInt(data.age, 10),
+            category: data.category,
+            gender: data.gender,
+            instagram: data.instagram || null,
+            telegram: data.telegram || null,
+            talent_description: data.talentDescription,
+            measurements: showModelMeasurements ? data.measurements : null,
+            portfolio_url: data.category === "Designer" ? data.portfolioUrl : null,
+            tiktok: data.tiktok || null,
+          });
+        
+        if (emergeError) {
+          console.error("Database insertion error:", emergeError);
+          throw new Error(`Failed to save your submission: ${emergeError.message}`);
+        }
       }
       
       toast({

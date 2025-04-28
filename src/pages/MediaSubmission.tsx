@@ -53,7 +53,8 @@ const MediaSubmission = () => {
 
   const onSubmit = async (data: MediaFormData) => {
     try {
-      const submissionData = {
+      // Common data structure to send to both tables
+      const commonData = {
         full_name: data.fullName,
         email: data.email,
         phone: data.phoneNumber,
@@ -63,24 +64,28 @@ const MediaSubmission = () => {
         social_media: {
           instagram: data.instagramHandle || null,
           tiktok: data.tiktokHandle || null
-        },
-        status: "pending" as TalentStatus // explicitly typed as TalentStatus
+        }
       };
       
-      console.log("Submitting entry:", submissionData);
-      
-      const { error } = await supabase
+      // Insert into talent_applications
+      const { error: talentError } = await supabase
         .from('talent_applications')
-        .insert(submissionData);
-      
-      if (error) {
-        console.error("Database insertion error:", error);
-        toast({
-          title: "Submission Error",
-          description: `Failed to save your submission: ${error.message}`,
-          variant: "destructive",
+        .insert({
+          ...commonData,
+          status: "pending" as TalentStatus
         });
-        return;
+      
+      if (talentError) {
+        console.error("Error inserting into talent_applications:", talentError);
+        // Fall back to emerge_submissions if talent_applications insert fails
+        const { error: emergeError } = await supabase
+          .from('emerge_submissions')
+          .insert(commonData);
+        
+        if (emergeError) {
+          console.error("Database insertion error:", emergeError);
+          throw new Error(`Failed to save your submission: ${emergeError.message}`);
+        }
       }
       
       toast({

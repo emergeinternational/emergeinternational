@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ExternalLink, MapPin, Instagram } from "lucide-react";
+import { RefreshCw, ExternalLink, MapPin, Instagram, ArrowDownUp } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -28,13 +28,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { fetchTalentApplications, updateApplicationStatus } from "@/services/talentService";
+import { syncEmergeSubmissions, getTalentRegistrationCounts } from "@/services/talentSyncService";
 import { TalentApplication, TalentStatus } from "@/types/talentTypes";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -93,6 +96,43 @@ const TalentManagement = () => {
     }
   });
 
+  const syncMutation = useMutation({
+    mutationFn: syncEmergeSubmissions,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['talent-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['talent-registration-counts'] });
+      
+      if (data.success) {
+        toast({
+          title: "Sync completed",
+          description: `${data.transferredCount} new registrations imported successfully.`
+        });
+      } else {
+        toast({
+          title: "Sync partially completed",
+          description: data.errorMessage || "Unknown error occurred during sync",
+          variant: "destructive"
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Sync failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSyncRegistrations = async () => {
+    try {
+      setIsSyncing(true);
+      await syncMutation.mutateAsync();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const getStatusColor = (status: TalentStatus) => {
     switch (status) {
       case 'approved':
@@ -115,15 +155,26 @@ const TalentManagement = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Applications</h2>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={handleRefresh}
-          disabled={isLoading || isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
-          {isRefreshing ? "Refreshing..." : "Refresh"}
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleSyncRegistrations}
+            disabled={isLoading || isRefreshing || isSyncing}
+          >
+            <ArrowDownUp className={`h-4 w-4 mr-1 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Syncing..." : "Sync Registrations"}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing || isSyncing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing || isLoading ? "animate-spin" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4">
@@ -420,19 +471,33 @@ const TalentManagement = () => {
 };
 
 const TalentDatabaseStatus = () => {
-  const { data: applications, isLoading } = useQuery({
-    queryKey: ['talent-applications'],
-    queryFn: fetchTalentApplications,
-    enabled: false,
+  const { data: registrationCounts, isLoading } = useQuery({
+    queryKey: ['talent-registration-counts'],
+    queryFn: getTalentRegistrationCounts,
   });
+
+  const syncNeeded = !isLoading && registrationCounts && 
+    registrationCounts.emergeSubmissions > registrationCounts.talentApplications;
 
   return (
     <Card className="p-4 bg-gray-50 mt-6">
       <h3 className="font-medium mb-2">Talent Database Status</h3>
       <div className="space-y-2 text-sm">
-        <p>Talent applications count: {isLoading ? 'Loading...' : applications?.length || '0'}</p>
+        <p>Talent applications count: {isLoading ? 'Loading...' : registrationCounts?.talentApplications || '0'}</p>
+        <p>Emerge submissions count: {isLoading ? 'Loading...' : registrationCounts?.emergeSubmissions || '0'}</p>
         <p>Database connection: Active</p>
         <p>Last checked: {new Date().toLocaleString()}</p>
+        
+        {syncNeeded && (
+          <Alert className="mt-4 border-amber-300 bg-amber-50">
+            <AlertTitle>Data Sync Required</AlertTitle>
+            <AlertDescription>
+              There are {registrationCounts?.emergeSubmissions - registrationCounts?.talentApplications} submissions 
+              from the registration form that need to be synced to the talent management system. 
+              Click the "Sync Registrations" button above to import these submissions.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
     </Card>
   );
