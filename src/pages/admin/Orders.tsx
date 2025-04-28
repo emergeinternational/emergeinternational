@@ -2,7 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-// Redirect to the proper OrdersPage component
+// Redirect to the new OrdersPage component
 const Orders = () => {
   return <Navigate to="/admin/orders" replace />;
 };
