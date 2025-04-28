@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -312,7 +313,7 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
                 : "Add New Product"
             }
             {isMockProduct && (
-              <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+              <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                 Mock Product
               </span>
             )}
@@ -386,14 +387,14 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
                 <div>
                   <Label htmlFor="designer">Designer</Label>
                   <Select
-                    value={designerId}
+                    value={designerId || "none"}
                     onValueChange={setDesignerId}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select designer (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Designer</SelectItem>
+                      <SelectItem value="none">No Designer</SelectItem>
                       {designers.map(designer => (
                         <SelectItem key={designer.id} value={designer.id}>
                           {designer.full_name}

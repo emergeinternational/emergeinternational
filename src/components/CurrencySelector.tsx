@@ -18,7 +18,7 @@ export const CurrencySelector = () => {
 
   return (
     <Select 
-      value={selectedCurrency?.code} 
+      value={selectedCurrency?.code || "default"} 
       onValueChange={(currencyCode) => {
         const currency = currencies.find(c => c.code === currencyCode);
         if (currency) setSelectedCurrency(currency);
@@ -31,7 +31,7 @@ export const CurrencySelector = () => {
       </SelectTrigger>
       <SelectContent>
         {currencies.map(currency => (
-          <SelectItem key={currency.id} value={currency.code}>
+          <SelectItem key={currency.id} value={currency.code || "default"}>
             {currency.code} - {currency.symbol} {currency.name}
           </SelectItem>
         ))}
