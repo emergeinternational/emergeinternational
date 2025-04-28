@@ -79,7 +79,16 @@ const OrdersManagerNew = () => {
         throw error;
       }
       
-      return data as Order[];
+      // Transform the data to match the Order interface
+      const transformedData = data.map((order: any) => {
+        return {
+          ...order,
+          user: order.profiles || {},
+          shipping_addresses: order.shipping_addresses || null
+        };
+      });
+      
+      return transformedData as Order[];
     },
   });
 

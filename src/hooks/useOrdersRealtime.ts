@@ -10,7 +10,7 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
   useEffect(() => {
     // Set up Realtime subscription for orders
     const channel = supabase
-      .channel('public:orders')
+      .channel('orders-channel')
       .on('postgres_changes', 
         { 
           event: '*', 
@@ -18,6 +18,8 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
           table: 'orders' 
         }, 
         (payload) => {
+          console.log('Orders change detected:', payload);
+          
           // Handle different events
           if (payload.eventType === 'INSERT') {
             toast({
@@ -42,6 +44,7 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to orders changes!');
           setIsSubscribed(true);
         }
       });

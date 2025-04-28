@@ -212,24 +212,20 @@ const OrderDetailsViewNew = ({ order, onClose, onStatusUpdate }: OrderDetailsVie
             </CardContent>
           </Card>
 
-          {order.shipping_address_id && (
+          {order.shipping_address_id && order.shipping_addresses && (
             <Card>
               <CardHeader>
                 <CardTitle>Shipping Address</CardTitle>
               </CardHeader>
               <CardContent>
-                {order.shipping_addresses ? (
-                  <div className="space-y-1 text-sm">
-                    <p>{order.shipping_addresses.address_line1}</p>
-                    {order.shipping_addresses.address_line2 && <p>{order.shipping_addresses.address_line2}</p>}
-                    <p>
-                      {order.shipping_addresses.city}, {order.shipping_addresses.state} {order.shipping_addresses.postal_code}
-                    </p>
-                    <p>{order.shipping_addresses.country}</p>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Shipping address information not loaded</p>
-                )}
+                <div className="space-y-1 text-sm">
+                  <p>{order.shipping_addresses.address_line1}</p>
+                  {order.shipping_addresses.address_line2 && <p>{order.shipping_addresses.address_line2}</p>}
+                  <p>
+                    {order.shipping_addresses.city}, {order.shipping_addresses.state} {order.shipping_addresses.postal_code}
+                  </p>
+                  <p>{order.shipping_addresses.country}</p>
+                </div>
               </CardContent>
             </Card>
           )}

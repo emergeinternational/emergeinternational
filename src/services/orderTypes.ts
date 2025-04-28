@@ -14,6 +14,16 @@ export interface CustomerInfo {
   phone_number?: string;
 }
 
+export interface ShippingAddress {
+  id: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+}
+
 export interface Order {
   id: string;
   user_id: string;
@@ -26,4 +36,5 @@ export interface Order {
   updated_at?: string;
   user?: CustomerInfo;
   order_items?: OrderItem[];
+  shipping_addresses?: ShippingAddress;
 }
