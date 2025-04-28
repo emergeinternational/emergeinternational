@@ -1447,19 +1447,16 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -1549,10 +1546,6 @@ export type Database = {
           events: Json
         }[]
       }
-      has_role: {
-        Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
-        Returns: boolean
-      }
       log_user_action: {
         Args: {
           action_type: string
@@ -1563,7 +1556,6 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "editor" | "viewer" | "user"
       career_path:
         | "model"
         | "designer"
@@ -1602,6 +1594,7 @@ export type Database = {
       hosting_type: "hosted" | "embedded" | "external"
       product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
+      user_role_type: "admin" | "editor" | "viewer" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1717,7 +1710,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "editor", "viewer", "user"],
       career_path: [
         "model",
         "designer",
@@ -1760,6 +1752,7 @@ export const Constants = {
       hosting_type: ["hosted", "embedded", "external"],
       product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
+      user_role_type: ["admin", "editor", "viewer", "user"],
     },
   },
 } as const
