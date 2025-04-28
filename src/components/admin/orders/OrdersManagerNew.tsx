@@ -1,33 +1,28 @@
-
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import OrdersTableNew from "./OrdersTableNew";
-import OrdersSummaryNew from "./OrdersSummaryNew";
-import OrderFiltersNew from "./OrderFiltersNew";
-import OrderDetailsViewNew from "./OrderDetailsViewNew";
 import { useToast } from "@/hooks/use-toast";
-import { Order } from "@/services/orderTypes";
-import { useOrdersRealtime } from "@/hooks/useOrdersRealtime";
+import { supabase } from "@/integrations/supabase/client";
+import OrderFiltersNew from "./OrderFiltersNew";
+import OrdersTableNew from "./OrdersTableNew";
+import OrderDetailsViewNew from "./OrderDetailsViewNew";
+import type { Order } from "@/services/orderTypes";
 
-// Order status options
-export const ORDER_STATUSES = [
+export interface OrderStatus {
+  value: string;
+  label: string;
+}
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  { value: "all", label: "All Orders" },
   { value: "pending", label: "Pending" },
   { value: "processing", label: "Processing" },
+  { value: "completed", label: "Completed" },
   { value: "shipped", label: "Shipped" },
   { value: "delivered", label: "Delivered" },
-  { value: "cancelled", label: "Cancelled" }
-];
-
-// Payment status options
-export const PAYMENT_STATUSES = [
-  { value: "pending", label: "Pending" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
   { value: "refunded", label: "Refunded" }
 ];
 
-// Filter state interface
 export interface OrderFiltersState {
   status: string;
   searchQuery: string;
@@ -35,199 +30,125 @@ export interface OrderFiltersState {
 
 const OrdersManagerNew = () => {
   const { toast } = useToast();
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [filters, setFilters] = useState<OrderFiltersState>({
     status: "all",
-    searchQuery: ""
+    searchQuery: "",
   });
 
-  // Set up realtime updates
-  const { isSubscribed } = useOrdersRealtime(() => {
-    refetch();
-    toast({
-      title: "Orders Updated",
-      description: "The orders list has been refreshed with the latest data.",
-    });
-  });
-  
-  // Fetch orders with related data - using separate queries to avoid relationship issues
-  const { 
-    data: orders = [], 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: orders,
+    isLoading,
+    error,
+    refetch,
   } = useQuery({
-    queryKey: ["admin-orders"],
+    queryKey: ["orders", filters],
     queryFn: async () => {
-      try {
-        // First, fetch the orders
-        const { data: ordersData, error: ordersError } = await supabase
-          .from("orders")
-          .select("*")
-          .order('created_at', { ascending: false });
+      let query = supabase
+        .from("orders")
+        .select(
+          `
+          *,
+          user:profiles (
+            full_name,
+            email,
+            phone_number
+          ),
+          order_items (
+            *,
+            product_name
+          ),
+          shipping_addresses(*)
+        `
+        )
+        .order("created_at", { ascending: false });
 
-        if (ordersError) throw ordersError;
-        if (!ordersData) return [];
-
-        // For each order, fetch the related items, user info, and shipping address
-        const ordersWithDetails = await Promise.all(ordersData.map(async (order) => {
-          // Fetch order items
-          const { data: orderItems } = await supabase
-            .from("order_items")
-            .select("*")
-            .eq("order_id", order.id);
-          
-          // Fetch user info
-          const { data: userInfo } = await supabase
-            .from("profiles")
-            .select("full_name, email, phone_number")
-            .eq("id", order.user_id)
-            .single();
-          
-          // Fetch shipping address if exists
-          let shippingAddress = null;
-          if (order.shipping_address_id) {
-            const { data: addressData } = await supabase
-              .from("shipping_addresses")
-              .select("*")
-              .eq("id", order.shipping_address_id)
-              .single();
-            
-            shippingAddress = addressData;
-          }
-          
-          // Assemble the complete order object
-          return {
-            ...order,
-            order_items: orderItems || [],
-            user: userInfo || {},
-            shipping_addresses: shippingAddress
-          };
-        }));
-        
-        return ordersWithDetails as Order[];
-      } catch (fetchError) {
-        console.error("Error fetching orders:", fetchError);
-        throw fetchError;
+      if (filters.status !== "all") {
+        query = query.eq("status", filters.status);
       }
+
+      if (filters.searchQuery) {
+        const searchQuery = `%${filters.searchQuery}%`;
+        query = query.or(
+          `id.ilike.${searchQuery},user.full_name.ilike.${searchQuery},user.email.ilike.${searchQuery}`
+        );
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return data as Order[];
     },
   });
 
-  // Filter orders based on status and search
-  const filteredOrders = orders.filter((order) => {
-    // Status filter
-    const statusMatch = filters.status === "all" || order.status === filters.status;
-    
-    // Search filter for ID, customer name, or email
-    const searchMatch = !filters.searchQuery ? true : (
-      order.id.toLowerCase().includes(filters.searchQuery.toLowerCase()) || 
-      (order.user?.full_name && order.user.full_name.toLowerCase().includes(filters.searchQuery.toLowerCase())) ||
-      (order.user?.email && order.user.email.toLowerCase().includes(filters.searchQuery.toLowerCase()))
-    );
-    
-    return statusMatch && searchMatch;
-  });
-
-  // Calculate order statistics for summary
-  const orderStats = {
-    totalOrders: orders.length,
-    pendingOrders: orders.filter(order => order.status === "pending").length,
-    completedOrders: orders.filter(order => ["delivered", "completed"].includes(order.status)).length,
-    cancelledOrders: orders.filter(order => order.status === "cancelled").length,
-    totalRevenue: orders
-      .filter(order => ["delivered", "completed"].includes(order.status))
-      .reduce((sum, order) => sum + Number(order.total_amount || 0), 0)
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
   };
 
-  // Handle order selection for details view
-  const handleViewOrder = (orderId: string) => {
-    setSelectedOrderId(orderId);
-  };
-
-  // Close order details view
   const handleCloseDetails = () => {
-    setSelectedOrderId(null);
+    setIsDetailsOpen(false);
+    setSelectedOrder(null);
   };
 
-  // Update order status
-  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from("orders")
-        .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
-        })
+        .update({ status: newStatus })
         .eq("id", orderId);
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        console.error("Error updating order status:", error);
+        toast({
+          title: "Error updating status",
+          description: "Failed to update the order status.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
       toast({
-        title: "Order Updated",
-        description: `Order status changed to ${newStatus}`,
+        title: "Status updated",
+        description: "Order status updated successfully.",
       });
-      
-      refetch();
+      refetch(); // Refresh orders
       return true;
-    } catch (err: any) {
+    } catch (err) {
+      console.error("Unexpected error updating order status:", err);
       toast({
-        title: "Error updating order",
-        description: err.message,
-        variant: "destructive"
+        title: "Unexpected error",
+        description: "An unexpected error occurred while updating the status.",
+        variant: "destructive",
       });
-      console.error("Error updating order status:", err);
       return false;
     }
   };
 
-  // Get selected order
-  const selectedOrder = selectedOrderId 
-    ? orders.find(order => order.id === selectedOrderId)
-    : null;
-  
-  if (error) {
-    return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-md">
-        <h3 className="text-lg font-medium text-red-800">Error loading orders</h3>
-        <p className="mt-1 text-sm text-red-700">
-          {error instanceof Error ? error.message : "An unknown error occurred"}
-        </p>
-        <button 
-          onClick={() => refetch()} 
-          className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Order Summary Stats */}
-      <OrdersSummaryNew summary={orderStats} />
-      
-      {/* Filters and Search */}
-      <OrderFiltersNew 
-        filters={filters} 
-        setFilters={setFilters}
+      <OrderFiltersNew filters={filters} setFilters={setFilters} />
+      <OrdersTableNew
+        orders={orders || []}
+        isLoading={isLoading}
+        onViewDetails={handleViewDetails}
       />
-      
-      {/* Order Details or Order List */}
-      {selectedOrder ? (
-        <OrderDetailsViewNew 
-          order={selectedOrder} 
-          onClose={handleCloseDetails} 
-          onStatusUpdate={handleUpdateStatus}
-        />
-      ) : (
-        <OrdersTableNew 
-          orders={filteredOrders} 
-          isLoading={isLoading} 
-          onStatusUpdate={handleUpdateStatus}
-          onViewOrder={handleViewOrder}
-          onRefresh={refetch}
-        />
+      {isDetailsOpen && selectedOrder && (
+        <div className="fixed inset-0 z-50 overflow-auto bg-black/50">
+          <div className="relative m-4 md:m-12 lg:m-20 bg-white rounded-lg shadow-lg">
+            <div className="p-6">
+              <OrderDetailsViewNew
+                order={selectedOrder}
+                onClose={handleCloseDetails}
+                onStatusUpdate={handleStatusUpdate}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

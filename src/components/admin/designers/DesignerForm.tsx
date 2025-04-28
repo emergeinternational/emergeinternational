@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -44,11 +45,23 @@ const creatorCategories: { value: CreatorCategory; label: string }[] = [
   { value: "creative_director", label: "Creative Director" },
 ];
 
+// Define a type-safe specialty schema that uses a generic based on category
+const specialtySchema = z.union([
+  z.enum(['apparel', 'accessories', 'footwear', 'jewelry', 'other']),
+  z.enum(['residential', 'commercial', 'hospitality', 'other']),
+  z.enum(['branding', 'digital', 'print', 'illustration', 'other']),
+  z.enum(['painting', 'sculpture', 'digital_art', 'mixed_media', 'other']),
+  z.enum(['portrait', 'fashion', 'event', 'commercial', 'other']),
+  z.enum(['weddings', 'corporate', 'social', 'non_profit', 'other']),
+  z.enum(['runway', 'commercial', 'editorial', 'fitness', 'other']),
+  z.enum(['fashion', 'advertising', 'brand', 'art_direction', 'other']),
+]);
+
 // Define the form schema with validation rules
 const designerFormSchema = z.object({
   full_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Invalid email address" }).optional().or(z.literal("")),
-  specialty: z.string(),
+  specialty: specialtySchema,
   category: z.enum([
     "fashion_designer",
     "interior_designer",
@@ -80,6 +93,8 @@ const designerFormSchema = z.object({
   showcase_images: z.array(z.string()).optional(),
 });
 
+type DesignerFormValues = z.infer<typeof designerFormSchema>;
+
 interface DesignerFormProps {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -93,12 +108,12 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
   const [currentCategory, setCurrentCategory] = useState<CreatorCategory>("fashion_designer");
   const specialtyOptions = getSpecialtyOptions(currentCategory);
 
-  const form = useForm<z.infer<typeof designerFormSchema>>({
+  const form = useForm<DesignerFormValues>({
     resolver: zodResolver(designerFormSchema),
     defaultValues: {
       full_name: "",
       email: "",
-      specialty: "apparel",
+      specialty: 'apparel' as DesignerSpecialty,
       category: "fashion_designer",
       bio: "",
       location: "",
@@ -166,7 +181,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
       form.reset({
         full_name: "",
         email: "",
-        specialty: "apparel",
+        specialty: 'apparel' as DesignerSpecialty,
         category: "fashion_designer",
         bio: "",
         location: "",
@@ -193,7 +208,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
     }
   }, [designer, form]);
 
-  const onSubmit = async (values: z.infer<typeof designerFormSchema>) => {
+  const onSubmit = async (values: DesignerFormValues) => {
     setIsSubmitting(true);
     try {
       if (designer) {

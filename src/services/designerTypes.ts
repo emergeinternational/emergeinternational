@@ -55,62 +55,62 @@ export interface Designer {
 }
 
 // Helper function to get specialty options based on category
-export const getSpecialtyOptions = (category: CreatorCategory): { value: string; label: string }[] => {
-  const specialtyMap: Record<CreatorCategory, Array<{ value: string; label: string }>> = {
+export const getSpecialtyOptions = (category: CreatorCategory): { value: DesignerSpecialty; label: string }[] => {
+  const specialtyMap: Record<CreatorCategory, Array<{ value: DesignerSpecialty; label: string }>> = {
     fashion_designer: [
-      { value: 'apparel', label: 'Apparel' },
-      { value: 'accessories', label: 'Accessories' },
-      { value: 'footwear', label: 'Footwear' },
-      { value: 'jewelry', label: 'Jewelry' },
-      { value: 'other', label: 'Other' }
+      { value: 'apparel' as DesignerSpecialty, label: 'Apparel' },
+      { value: 'accessories' as DesignerSpecialty, label: 'Accessories' },
+      { value: 'footwear' as DesignerSpecialty, label: 'Footwear' },
+      { value: 'jewelry' as DesignerSpecialty, label: 'Jewelry' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     interior_designer: [
-      { value: 'residential', label: 'Residential' },
-      { value: 'commercial', label: 'Commercial' },
-      { value: 'hospitality', label: 'Hospitality' },
-      { value: 'other', label: 'Other' }
+      { value: 'residential' as DesignerSpecialty, label: 'Residential' },
+      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
+      { value: 'hospitality' as DesignerSpecialty, label: 'Hospitality' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     graphic_designer: [
-      { value: 'branding', label: 'Branding' },
-      { value: 'digital', label: 'Digital' },
-      { value: 'print', label: 'Print' },
-      { value: 'illustration', label: 'Illustration' },
-      { value: 'other', label: 'Other' }
+      { value: 'branding' as DesignerSpecialty, label: 'Branding' },
+      { value: 'digital' as DesignerSpecialty, label: 'Digital' },
+      { value: 'print' as DesignerSpecialty, label: 'Print' },
+      { value: 'illustration' as DesignerSpecialty, label: 'Illustration' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     visual_artist: [
-      { value: 'painting', label: 'Painting' },
-      { value: 'sculpture', label: 'Sculpture' },
-      { value: 'digital_art', label: 'Digital Art' },
-      { value: 'mixed_media', label: 'Mixed Media' },
-      { value: 'other', label: 'Other' }
+      { value: 'painting' as DesignerSpecialty, label: 'Painting' },
+      { value: 'sculpture' as DesignerSpecialty, label: 'Sculpture' },
+      { value: 'digital_art' as DesignerSpecialty, label: 'Digital Art' },
+      { value: 'mixed_media' as DesignerSpecialty, label: 'Mixed Media' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     photographer: [
-      { value: 'portrait', label: 'Portrait' },
-      { value: 'fashion', label: 'Fashion' },
-      { value: 'event', label: 'Event' },
-      { value: 'commercial', label: 'Commercial' },
-      { value: 'other', label: 'Other' }
+      { value: 'portrait' as DesignerSpecialty, label: 'Portrait' },
+      { value: 'fashion' as DesignerSpecialty, label: 'Fashion' },
+      { value: 'event' as DesignerSpecialty, label: 'Event' },
+      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     event_planner: [
-      { value: 'weddings', label: 'Weddings' },
-      { value: 'corporate', label: 'Corporate' },
-      { value: 'social', label: 'Social Events' },
-      { value: 'non_profit', label: 'Non-Profit Events' },
-      { value: 'other', label: 'Other' }
+      { value: 'weddings' as DesignerSpecialty, label: 'Weddings' },
+      { value: 'corporate' as DesignerSpecialty, label: 'Corporate' },
+      { value: 'social' as DesignerSpecialty, label: 'Social Events' },
+      { value: 'non_profit' as DesignerSpecialty, label: 'Non-Profit Events' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     model: [
-      { value: 'runway', label: 'Runway' },
-      { value: 'commercial', label: 'Commercial' },
-      { value: 'editorial', label: 'Editorial' },
-      { value: 'fitness', label: 'Fitness' },
-      { value: 'other', label: 'Other' }
+      { value: 'runway' as DesignerSpecialty, label: 'Runway' },
+      { value: 'commercial' as DesignerSpecialty, label: 'Commercial' },
+      { value: 'editorial' as DesignerSpecialty, label: 'Editorial' },
+      { value: 'fitness' as DesignerSpecialty, label: 'Fitness' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ],
     creative_director: [
-      { value: 'fashion', label: 'Fashion' },
-      { value: 'advertising', label: 'Advertising' },
-      { value: 'brand', label: 'Brand Development' },
-      { value: 'art_direction', label: 'Art Direction' },
-      { value: 'other', label: 'Other' }
+      { value: 'fashion' as DesignerSpecialty, label: 'Fashion' },
+      { value: 'advertising' as DesignerSpecialty, label: 'Advertising' },
+      { value: 'brand' as DesignerSpecialty, label: 'Brand Development' },
+      { value: 'art_direction' as DesignerSpecialty, label: 'Art Direction' },
+      { value: 'other' as DesignerSpecialty, label: 'Other' }
     ]
   };
 

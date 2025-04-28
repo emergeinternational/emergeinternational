@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,7 @@ const DesignerFormDialog = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
-  const [specialty, setSpecialty] = useState<string>("apparel");
+  const [specialty, setSpecialty] = useState<DesignerSpecialty>('apparel' as DesignerSpecialty);
   const [category, setCategory] = useState<CreatorCategory>("fashion_designer");
   const [portfolioUrl, setPortfolioUrl] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -85,7 +86,7 @@ const DesignerFormDialog = ({
     setEmail("");
     setBio("");
     setCategory("fashion_designer");
-    setSpecialty("apparel");
+    setSpecialty('apparel' as DesignerSpecialty);
     setPortfolioUrl("");
     setInstagram("");
     setTwitter("");
@@ -154,7 +155,7 @@ const DesignerFormDialog = ({
         full_name: fullName,
         email: email || null,
         bio: bio || null,
-        specialty,
+        specialty: specialty,
         category,
         portfolio_url: portfolioUrl || null,
         location: location || null,
@@ -183,10 +184,10 @@ const DesignerFormDialog = ({
       } else {
         const { error } = await supabase
           .from("designers")
-          .insert([{
+          .insert({
             ...designerData,
             created_at: new Date().toISOString(),
-          }]);
+          });
 
         if (error) throw error;
 

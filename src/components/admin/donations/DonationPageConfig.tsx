@@ -1,81 +1,46 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { DonationPageSettings } from "@/services/donationTypes";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+import { Loader2, Plus, Trash } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DonationPageSettings } from "@/services/donationTypes";
-
-const formSchema = z.object({
-  hero_title: z.string().min(2, {
-    message: "Hero title must be at least 2 characters.",
-  }),
-  hero_description: z.string().optional(),
-  hero_image_url: z.string().url({ message: "Invalid URL" }).optional(),
-  payment_methods: z.array(z.string()).optional(),
-  currency_options: z.array(z.string()).optional(),
-  suggested_amounts: z.array(z.number()).optional(),
-  min_donation_amount: z.number().optional(),
-  max_donation_amount: z.number().optional(),
-  thank_you_message: z.string().optional(),
-  is_active: z.boolean().default(false),
-  featured_member: z.object({
-    name: z.string(),
-    role: z.string(),
-    image_url: z.string().url({ message: "Invalid URL" }),
-    description: z.string(),
-  }).optional(),
-});
 
 const DonationPageConfig = () => {
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Form state
+  const [heroTitle, setHeroTitle] = useState("");
+  const [heroDescription, setHeroDescription] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [minDonation, setMinDonation] = useState(10);
+  const [maxDonation, setMaxDonation] = useState(10000);
+  const [suggestedAmounts, setSuggestedAmounts] = useState<number[]>([50, 100, 250, 500]);
+  const [currencyOptions, setCurrencyOptions] = useState<string[]>(["ETB", "USD"]);
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(["card", "bank_transfer", "mobile_money"]);
+  const [thankYouMessage, setThankYouMessage] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  
+  // New amount input for suggested amounts
+  const [newAmount, setNewAmount] = useState<number | "">("");
+  const [newCurrency, setNewCurrency] = useState("");
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
+  // Fetch settings
   const { data: settings, isLoading } = useQuery({
-    queryKey: ['donation-page-settings'],
+    queryKey: ["donation-page-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('donation_page_settings')
-        .select('*')
+        .from("donation_page_settings")
+        .select("*")
         .single();
       
       if (error) throw error;
@@ -83,551 +48,368 @@ const DonationPageConfig = () => {
     },
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      hero_title: settings?.hero_title || "",
-      hero_description: settings?.hero_description || "",
-      hero_image_url: settings?.hero_image_url || "",
-      payment_methods: settings?.payment_methods || [],
-      currency_options: settings?.currency_options || [],
-      suggested_amounts: settings?.suggested_amounts || [],
-      min_donation_amount: settings?.min_donation_amount || 1,
-      max_donation_amount: settings?.max_donation_amount || 1000,
-      thank_you_message: settings?.thank_you_message || "",
-      is_active: settings?.is_active || false,
-      featured_member: settings?.featured_member || {
-        name: "",
-        role: "",
-        image_url: "",
-        description: "",
-      },
-    },
-    mode: "onChange",
-  });
-
-  useEffect(() => {
-    if (settings) {
-      form.reset(settings);
-    }
-  }, [settings, form]);
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      const { data, error } = await supabase
+  // Update settings mutation
+  const updateSettings = useMutation({
+    mutationFn: async (updatedSettings: Partial<DonationPageSettings>) => {
+      const { error } = await supabase
         .from("donation_page_settings")
-        .upsert(
-          [
-            {
-              id: settings?.id || undefined,
-              ...values,
-            },
-          ],
-          { onConflict: "id" }
-        )
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error updating donation page settings:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update donation page settings.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Donation page settings updated successfully.",
-        });
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error);
+        .update(updatedSettings)
+        .eq("id", settings?.id);
+      
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["donation-page-settings"] });
       toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
+        title: "Settings updated",
+        description: "Donation page settings have been updated successfully.",
+      });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating settings",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
+    },
+  });
+
+  // Load settings into form state
+  useEffect(() => {
+    if (settings) {
+      setHeroTitle(settings.hero_title);
+      setHeroDescription(settings.hero_description || "");
+      setHeroImageUrl(settings.hero_image_url || "");
+      setMinDonation(settings.min_donation_amount);
+      setMaxDonation(settings.max_donation_amount);
+      setSuggestedAmounts(settings.suggested_amounts || []);
+      setCurrencyOptions(settings.currency_options || []);
+      setPaymentMethods(settings.payment_methods || []);
+      setThankYouMessage(settings.thank_you_message);
+      setIsActive(settings.is_active);
+    }
+  }, [settings]);
+
+  const handleSaveSettings = () => {
+    updateSettings.mutate({
+      hero_title: heroTitle,
+      hero_description: heroDescription || null,
+      hero_image_url: heroImageUrl || null,
+      min_donation_amount: minDonation,
+      max_donation_amount: maxDonation,
+      suggested_amounts: suggestedAmounts,
+      currency_options: currencyOptions,
+      payment_methods: paymentMethods,
+      thank_you_message: thankYouMessage,
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    });
+  };
+
+  const addSuggestedAmount = () => {
+    if (newAmount && !suggestedAmounts.includes(Number(newAmount))) {
+      setSuggestedAmounts([...suggestedAmounts, Number(newAmount)]);
+      setNewAmount("");
     }
   };
 
-  if (!isMounted) {
-    return <div>Loading...</div>;
+  const removeSuggestedAmount = (amount: number) => {
+    setSuggestedAmounts(suggestedAmounts.filter(a => a !== amount));
+  };
+
+  const addCurrency = () => {
+    if (newCurrency && !currencyOptions.includes(newCurrency)) {
+      setCurrencyOptions([...currencyOptions, newCurrency]);
+      setNewCurrency("");
+    }
+  };
+
+  const removeCurrency = (currency: string) => {
+    setCurrencyOptions(currencyOptions.filter(c => c !== currency));
+  };
+
+  const addPaymentMethod = () => {
+    if (newPaymentMethod && !paymentMethods.includes(newPaymentMethod)) {
+      setPaymentMethods([...paymentMethods, newPaymentMethod]);
+      setNewPaymentMethod("");
+    }
+  };
+
+  const removePaymentMethod = (method: string) => {
+    setPaymentMethods(paymentMethods.filter(m => m !== method));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
   }
 
   return (
-    <div className="container max-w-4xl mx-auto mt-10 p-4">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Donation Page Settings</h2>
+        {!isEditing ? (
+          <Button onClick={() => setIsEditing(true)}>Edit Settings</Button>
+        ) : (
+          <div className="space-x-2">
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button onClick={handleSaveSettings} disabled={updateSettings.isPending}>
+              {updateSettings.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Settings"
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Donation Page Configuration</CardTitle>
-          <CardDescription>
-            Manage settings for the donation page.
-          </CardDescription>
+          <CardTitle>Hero Section</CardTitle>
+          <CardDescription>Configure the main donation page hero section</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            <div>
+              <Label htmlFor="hero-title">Hero Title</Label>
+              <Input
+                id="hero-title"
+                value={heroTitle}
+                onChange={(e) => setHeroTitle(e.target.value)}
+                disabled={!isEditing}
+              />
+            </div>
+            <div>
+              <Label htmlFor="hero-description">Hero Description</Label>
+              <Textarea
+                id="hero-description"
+                value={heroDescription}
+                onChange={(e) => setHeroDescription(e.target.value)}
+                disabled={!isEditing}
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="hero-image">Hero Image URL</Label>
+              <Input
+                id="hero-image"
+                value={heroImageUrl}
+                onChange={(e) => setHeroImageUrl(e.target.value)}
+                disabled={!isEditing}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Donation Settings</CardTitle>
+          <CardDescription>Configure donation amounts and options</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="min-donation">Minimum Donation Amount</Label>
+              <Input
+                id="min-donation"
+                type="number"
+                value={minDonation}
+                onChange={(e) => setMinDonation(Number(e.target.value))}
+                disabled={!isEditing}
+              />
+            </div>
+            <div>
+              <Label htmlFor="max-donation">Maximum Donation Amount</Label>
+              <Input
+                id="max-donation"
+                type="number"
+                value={maxDonation}
+                onChange={(e) => setMaxDonation(Number(e.target.value))}
+                disabled={!isEditing}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <Label>Suggested Donation Amounts</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {suggestedAmounts.map((amount) => (
+                <div
+                  key={amount}
+                  className="flex items-center bg-gray-100 rounded-md px-3 py-1"
+                >
+                  <span>{amount}</span>
+                  {isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 ml-1"
+                      onClick={() => removeSuggestedAmount(amount)}
+                    >
+                      <Trash className="h-3 w-3 text-gray-500" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isEditing && (
+              <div className="flex gap-2 mt-2">
+                <Input
+                  type="number"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="Add amount"
+                  className="max-w-[150px]"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addSuggestedAmount}
+                  disabled={!newAmount}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          <div>
+            <Label>Currency Options</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {currencyOptions.map((currency) => (
+                <div
+                  key={currency}
+                  className="flex items-center bg-gray-100 rounded-md px-3 py-1"
+                >
+                  <span>{currency}</span>
+                  {isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 ml-1"
+                      onClick={() => removeCurrency(currency)}
+                    >
+                      <Trash className="h-3 w-3 text-gray-500" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isEditing && (
+              <div className="flex gap-2 mt-2">
+                <Input
+                  value={newCurrency}
+                  onChange={(e) => setNewCurrency(e.target.value)}
+                  placeholder="Add currency (e.g. USD)"
+                  className="max-w-[150px]"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addCurrency}
+                  disabled={!newCurrency}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          <div>
+            <Label>Payment Methods</Label>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {paymentMethods.map((method) => (
+                <div
+                  key={method}
+                  className="flex items-center bg-gray-100 rounded-md px-3 py-1"
+                >
+                  <span>{method}</span>
+                  {isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-1 ml-1"
+                      onClick={() => removePaymentMethod(method)}
+                    >
+                      <Trash className="h-3 w-3 text-gray-500" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isEditing && (
+              <div className="flex gap-2 mt-2">
+                <Input
+                  value={newPaymentMethod}
+                  onChange={(e) => setNewPaymentMethod(e.target.value)}
+                  placeholder="Add payment method"
+                  className="max-w-[200px]"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addPaymentMethod}
+                  disabled={!newPaymentMethod}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Thank You Message</CardTitle>
+          <CardDescription>Message displayed after successful donation</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="hero_title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hero Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter hero title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <Textarea
+            value={thankYouMessage}
+            onChange={(e) => setThankYouMessage(e.target.value)}
+            disabled={!isEditing}
+            rows={4}
+          />
+        </CardContent>
+      </Card>
 
-                <FormField
-                  control={form.control}
-                  name="hero_description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hero Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter hero description"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="hero_image_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hero Image URL</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter hero image URL" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="thank_you_message"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Thank You Message</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter thank you message"
-                          className="resize-none"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="min_donation_amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Minimum Donation Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter minimum amount"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="max_donation_amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Maximum Donation Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter maximum amount"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              <div>
-                <FormLabel>Payment Methods</FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="payment_methods"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("credit_card")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "credit_card",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "credit_card"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Credit Card
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="payment_methods"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("paypal")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "paypal",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "paypal"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">Paypal</FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="payment_methods"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("telebirr")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "telebirr",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "telebirr"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Telebirr
-                            </FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-                <FormDescription>
-                  Select the payment methods available for donations.
-                </FormDescription>
-                <FormMessage />
-              </div>
-
-              <Separator />
-
-              <div>
-                <FormLabel>Currency Options</FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="currency_options"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("USD")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "USD",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "USD"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">USD</FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="currency_options"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("ETB")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "ETB",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "ETB"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">ETB</FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <FormField
-                      control={form.control}
-                      name="currency_options"
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes("EUR")}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([
-                                        ...(field.value || []),
-                                        "EUR",
-                                      ])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "EUR"
-                                        )
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">EUR</FormLabel>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </div>
-                </div>
-                <FormDescription>
-                  Select the currency options available for donations.
-                </FormDescription>
-                <FormMessage />
-              </div>
-
-              <Separator />
-
-              <div>
-                <FormLabel>Suggested Donation Amounts</FormLabel>
-                <div className="flex flex-wrap gap-2">
-                  {[5, 10, 20, 50, 100].map((amount) => (
-                    <div key={amount}>
-                      <FormField
-                        control={form.control}
-                        name="suggested_amounts"
-                        render={({ field }) => {
-                          return (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(amount)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([
-                                          ...(field.value || []),
-                                          amount,
-                                        ])
-                                      : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== amount
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {amount}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <FormDescription>
-                  Select the suggested donation amounts.
-                </FormDescription>
-                <FormMessage />
-              </div>
-
-              <Separator />
-
-              <div>
-                <FormField
-                  control={form.control}
-                  name="is_active"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Donation Page Status
-                        </FormLabel>
-                        <FormDescription>
-                          Enable or disable the donation page.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-xl font-semibold mb-4">Featured Member</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="featured_member.name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="featured_member.role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter role" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="featured_member.image_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Image URL</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter image URL" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="featured_member.description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter description"
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <Button type="submit">Update Settings</Button>
-            </form>
-          </Form>
+      <Card>
+        <CardHeader>
+          <CardTitle>Page Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={isActive}
+              onCheckedChange={setIsActive}
+              disabled={!isEditing}
+              id="page-active"
+            />
+            <Label htmlFor="page-active">
+              Donation page is {isActive ? "active" : "inactive"}
+            </Label>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            When inactive, the donation page will show a message that donations are temporarily unavailable.
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -4,7 +4,7 @@ export interface Donation {
   amount: number;
   currency: string;
   payment_method?: string;
-  payment_status: 'pending' | 'approved' | 'rejected';
+  payment_status: 'pending' | 'completed' | 'approved' | 'rejected' | 'failed' | 'refunded';
   payment_proof_url?: string;
   message?: string;
   certificate_issued: boolean;
@@ -13,6 +13,7 @@ export interface Donation {
   updated_at?: string;
   donor_id?: string;
   user_id: string;
+  donor?: Donor; // Add this relation for join queries
 }
 
 export interface Donor {

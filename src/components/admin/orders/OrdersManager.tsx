@@ -1,21 +1,50 @@
 
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import OrdersTable from "./OrdersTable";
-import OrdersSummary from "./OrdersSummary";
+import { useToast } from "@/hooks/use-toast";
 import OrderFilters from "./OrderFilters";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import OrdersTable from "./OrdersTable";
 import OrderDetailsView from "./OrderDetailsView";
-import { Toaster } from "@/components/ui/toaster";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Order } from "@/services/orderTypes";
 
-// Export constants for use in other components
-export const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"];
-export const PAYMENT_STATUSES = ["pending", "completed", "failed", "refunded"];
+export interface OrderStatus {
+  value: string;
+  label: string;
+}
+
+export interface PaymentStatus {
+  value: string;
+  label: string;
+}
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  { value: "pending", label: "Pending" },
+  { value: "processing", label: "Processing" },
+  { value: "completed", label: "Completed" },
+  { value: "shipped", label: "Shipped" },
+  { value: "delivered", label: "Delivered" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "refunded", label: "Refunded" },
+  { value: "abandoned", label: "Abandoned" }
+];
+
+export const PAYMENT_STATUSES: PaymentStatus[] = [
+  { value: "pending", label: "Pending" },
+  { value: "completed", label: "Completed" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" }
+];
 
 export interface OrderFiltersState {
-  status: string;
+  status: string[];
   searchQuery: string;
+  paymentStatus: string[];
+  dateRange: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
 }
 
 const OrdersManager = () => {

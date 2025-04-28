@@ -98,7 +98,7 @@ const DonationsManager = () => {
   const calculateStats = () => {
     if (!donations) return { total: 0, average: 0, count: 0 };
     
-    const completedDonations = donations.filter(d => d.payment_status === "completed");
+    const completedDonations = donations.filter(d => ['completed', 'approved'].includes(d.payment_status));
     const total = completedDonations.reduce((sum, d) => sum + Number(d.amount), 0);
     const count = completedDonations.length;
     const average = count > 0 ? total / count : 0;
