@@ -26,7 +26,7 @@ const Footer = () => {
       title: "About",
       links: [
         { label: "Our Mission", href: "/about" },
-        { label: "Designers", href: "/designers" },
+        { label: "Creative Professionals", href: "/admin/creative-professionals" },
         { label: "Donations", href: "/donations" },
         { label: "Contact Us", href: "/contact" }
       ]
