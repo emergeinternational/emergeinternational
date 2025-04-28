@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { Toaster } from "@/components/ui/toaster";
@@ -56,55 +55,27 @@ const MediaSubmission = () => {
     try {
       setIsSubmitting(true);
       
-      // Common data structure to send to both tables
-      const commonData = {
+      // This data will be automatically synced to talent_applications by the database trigger
+      const emergeData = {
         full_name: data.fullName,
         email: data.email,
-        phone_number: data.phoneNumber, // for emerge_submissions
-        phone: data.phoneNumber, // for talent_applications
+        phone_number: data.phoneNumber,
         age: parseInt(data.age, 10),
-        category: data.category, // for emerge_submissions
-        category_type: data.category, // for talent_applications
-        talent_description: data.description, // for emerge_submissions
-        notes: data.description, // for talent_applications
-      };
-      
-      // Social media data formatted appropriately for each table
-      const emergeData = {
-        ...commonData,
+        category: data.category,
+        talent_description: data.description,
         instagram: data.instagramHandle || null,
-        tiktok: data.tiktokHandle || null
+        tiktok: data.tiktokHandle || null,
+        telegram: null
       };
       
-      const talentData = {
-        ...commonData,
-        status: "pending" as TalentStatus,
-        social_media: {
-          instagram: data.instagramHandle || null,
-          tiktok: data.tiktokHandle || null,
-          telegram: null
-        }
-      };
-      
-      // First insert into emerge_submissions (this is the original table)
-      const { error: emergeError } = await supabase
+      // Insert into emerge_submissions - the trigger will handle syncing to talent_applications
+      const { error } = await supabase
         .from('emerge_submissions')
         .insert(emergeData);
       
-      if (emergeError) {
-        console.error("Database insertion error for emerge_submissions:", emergeError);
-        throw new Error(`Failed to save your submission: ${emergeError.message}`);
-      }
-      
-      // Then insert into talent_applications (the talent management system)
-      const { error: talentError } = await supabase
-        .from('talent_applications')
-        .insert(talentData);
-      
-      // Log but don't stop submission if talent_applications insertion fails
-      if (talentError) {
-        console.error("Database insertion error for talent_applications:", talentError);
-        // We still consider this a success since the primary submission worked
+      if (error) {
+        console.error("Database insertion error:", error);
+        throw new Error(`Failed to save your submission: ${error.message}`);
       }
       
       toast({
@@ -309,8 +280,9 @@ const MediaSubmission = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-emerge-gold hover:bg-yellow-500 text-black font-medium"
+                    disabled={isSubmitting}
                   >
-                    Submit Entry
+                    {isSubmitting ? "Submitting..." : "Submit Entry"}
                   </Button>
                 </form>
               </Form>

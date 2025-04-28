@@ -600,6 +600,7 @@ export type Database = {
           measurements: Json | null
           phone_number: string | null
           portfolio_url: string | null
+          sync_status: string | null
           talent_description: string | null
           telegram: string | null
           tiktok: string | null
@@ -617,6 +618,7 @@ export type Database = {
           measurements?: Json | null
           phone_number?: string | null
           portfolio_url?: string | null
+          sync_status?: string | null
           talent_description?: string | null
           telegram?: string | null
           tiktok?: string | null
@@ -634,6 +636,7 @@ export type Database = {
           measurements?: Json | null
           phone_number?: string | null
           portfolio_url?: string | null
+          sync_status?: string | null
           talent_description?: string | null
           telegram?: string | null
           tiktok?: string | null
@@ -1511,6 +1514,17 @@ export type Database = {
           on_auth_user_created_exists: boolean | null
           problematic_function_removed: boolean | null
           problematic_trigger_removed: boolean | null
+        }
+        Relationships: []
+      }
+      talent_sync_status: {
+        Row: {
+          email: string | null
+          emerge_submission_id: string | null
+          exists_in_talent_applications: boolean | null
+          submission_date: string | null
+          talent_application_id: string | null
+          talent_sync_date: string | null
         }
         Relationships: []
       }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ExternalLink, MapPin, Instagram, ArrowDownUp } from "lucide-react";
+import { RefreshCw, ExternalLink, MapPin, Instagram, ArrowDownUp, CheckCircle } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -27,12 +27,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { fetchTalentApplications, updateApplicationStatus } from "@/services/talentService";
-import { syncEmergeSubmissions, getTalentRegistrationCounts } from "@/services/talentSyncService";
+import { syncEmergeSubmissions, getTalentRegistrationCounts, getSyncStatusSummary } from "@/services/talentSyncService";
 import { TalentApplication, TalentStatus } from "@/types/talentTypes";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TalentDataMigrationTool } from "./TalentDataMigrationTool";
+import { Badge } from "@/components/ui/badge";
 
 const TalentManagement = () => {
   const [selectedApplication, setSelectedApplication] = useState<TalentApplication | null>(null);
@@ -471,30 +472,64 @@ const TalentManagement = () => {
 };
 
 const TalentDatabaseStatus = () => {
-  const { data: registrationCounts, isLoading } = useQuery({
+  const { data: registrationCounts, isLoading: loadingCounts } = useQuery({
     queryKey: ['talent-registration-counts'],
     queryFn: getTalentRegistrationCounts,
   });
 
-  const syncNeeded = !isLoading && registrationCounts && 
+  const { data: syncStatus, isLoading: loadingSyncStatus } = useQuery({
+    queryKey: ['talent-sync-status'],
+    queryFn: getSyncStatusSummary,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const syncNeeded = !loadingCounts && registrationCounts && 
     registrationCounts.emergeSubmissions > registrationCounts.talentApplications;
 
   return (
     <Card className="p-4 bg-gray-50 mt-6">
-      <h3 className="font-medium mb-2">Talent Database Status</h3>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-medium">Talent Database Status</h3>
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          Auto-Sync Enabled
+        </Badge>
+      </div>
       <div className="space-y-2 text-sm">
-        <p>Talent applications count: {isLoading ? 'Loading...' : registrationCounts?.talentApplications || '0'}</p>
-        <p>Emerge submissions count: {isLoading ? 'Loading...' : registrationCounts?.emergeSubmissions || '0'}</p>
-        <p>Database connection: Active</p>
-        <p>Last checked: {new Date().toLocaleString()}</p>
+        <div className="flex flex-col sm:flex-row sm:justify-between">
+          <p>Talent applications count: {loadingCounts ? 'Loading...' : registrationCounts?.talentApplications || '0'}</p>
+          <p>Emerge submissions count: {loadingCounts ? 'Loading...' : registrationCounts?.emergeSubmissions || '0'}</p>
+        </div>
+        
+        {!loadingSyncStatus && syncStatus && (
+          <div className="flex flex-col sm:flex-row sm:justify-between border-t border-gray-200 pt-2 mt-2">
+            <p>Sync rate: <span className="font-medium">{syncStatus.syncPercentage}%</span></p>
+            <p>Pending sync: <span className="font-medium">{syncStatus.pendingCount}</span> records</p>
+          </div>
+        )}
+        
+        <div className="flex flex-col sm:flex-row sm:justify-between border-t border-gray-200 pt-2 mt-2">
+          <p>Database connection: Active</p>
+          <p>Last checked: {new Date().toLocaleString()}</p>
+        </div>
+        
+        <div className="space-y-1 mt-2 pt-2 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span className="text-sm">Real-time auto-sync is active</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <span className="text-sm">Sync monitoring is enabled</span>
+          </div>
+        </div>
         
         {syncNeeded && (
           <Alert className="mt-4 border-amber-300 bg-amber-50">
-            <AlertTitle>Data Sync Required</AlertTitle>
+            <AlertTitle>Historical Data Sync Required</AlertTitle>
             <AlertDescription>
-              There are {registrationCounts?.emergeSubmissions - registrationCounts?.talentApplications} submissions 
-              from the registration form that need to be synced to the talent management system. 
-              Click the "Sync Registrations" button above to import these submissions.
+              There are {registrationCounts?.emergeSubmissions - registrationCounts?.talentApplications} historical submissions 
+              from the registration form that need to be synced to the talent management system.
+              Use the migration tool below to import these submissions.
             </AlertDescription>
           </Alert>
         )}

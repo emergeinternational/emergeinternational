@@ -76,6 +76,18 @@ export async function syncEmergeSubmissions(): Promise<{
       return { success: false, transferredCount: 0, errorMessage: insertError.message };
     }
     
+    // Update sync status for these records
+    const submissionIds = newSubmissions.map(submission => submission.id);
+    const { error: updateError } = await supabase
+      .from('emerge_submissions')
+      .update({ sync_status: 'synced' })
+      .in('id', submissionIds);
+    
+    if (updateError) {
+      console.error("Error updating sync status:", updateError);
+      // Non-critical error, proceed anyway
+    }
+    
     console.log(`Successfully synced ${applicationData.length} records`);
     return { success: true, transferredCount: applicationData.length };
   } catch (error) {
@@ -261,6 +273,13 @@ export async function performFullTalentDataMigration(): Promise<{
         } else {
           migratedCount += batch.length;
           console.log(`Successfully migrated batch of ${batch.length} records`);
+          
+          // Update sync_status for the successfully migrated records
+          const submissionEmails = batch.map(record => record.email);
+          await supabase
+            .from('emerge_submissions')
+            .update({ sync_status: 'synced' })
+            .in('email', submissionEmails);
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Unknown error');
@@ -292,6 +311,73 @@ export async function performFullTalentDataMigration(): Promise<{
       skippedCount: 0,
       errorCount: 1,
       errors: [error instanceof Error ? error.message : "Unknown critical error during migration"]
+    };
+  }
+}
+
+/**
+ * Gets the recent synchronization logs
+ */
+export async function getSyncLogs(limit: number = 10): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('automation_logs')
+      .select('*')
+      .eq('function_name', 'sync_emerge_submission_to_talent')
+      .order('executed_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error("Error fetching sync logs:", error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error in getSyncLogs:", error);
+    return [];
+  }
+}
+
+/**
+ * Gets sync status overview using the talent_sync_status view
+ */
+export async function getSyncStatusSummary(): Promise<{
+  totalSubmissions: number;
+  syncedCount: number;
+  pendingCount: number;
+  syncPercentage: number;
+  error?: string;
+}> {
+  try {
+    // Use the talent_sync_status view to get sync status
+    const { data, error } = await supabase
+      .from('talent_sync_status')
+      .select('*');
+    
+    if (error) {
+      throw new Error(`Error fetching sync status: ${error.message}`);
+    }
+    
+    const totalSubmissions = data?.length || 0;
+    const syncedCount = data?.filter(item => item.exists_in_talent_applications).length || 0;
+    const pendingCount = totalSubmissions - syncedCount;
+    const syncPercentage = totalSubmissions > 0 ? (syncedCount / totalSubmissions) * 100 : 0;
+    
+    return {
+      totalSubmissions,
+      syncedCount,
+      pendingCount,
+      syncPercentage: Math.round(syncPercentage * 10) / 10 // Round to 1 decimal place
+    };
+  } catch (error) {
+    console.error("Error in getSyncStatusSummary:", error);
+    return {
+      totalSubmissions: 0,
+      syncedCount: 0,
+      pendingCount: 0,
+      syncPercentage: 0,
+      error: error instanceof Error ? error.message : "Unknown error"
     };
   }
 }
