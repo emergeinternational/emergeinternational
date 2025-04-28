@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +42,8 @@ const TalentManagement = () => {
   const { data: applications, isLoading, refetch } = useQuery({
     queryKey: ['talent-applications'],
     queryFn: fetchTalentApplications,
-    onSettled: (data, error) => {
-      if (error) {
+    meta: {
+      onError: (error: Error) => {
         console.error("Error in talent applications query:", error);
         toast({
           title: "Failed to load applications",
