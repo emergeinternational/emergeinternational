@@ -1,4 +1,3 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,55 +34,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("Fetching user role for:", userId);
       
-      // First try to find role in user_roles table
-      const { data: userRoleData, error: userRoleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (userRoleError) {
-        console.error('Error fetching user role from user_roles table:', userRoleError);
-        console.log("Falling back to profiles table for role lookup");
-        fallbackToProfilesTable(userId);
-        return;
-      }
-      
-      if (userRoleData) {
-        console.log('Role found in user_roles table:', userRoleData.role);
-        setUserRole(userRoleData.role as UserRole);
-        return;
-      }
-      
-      console.log("No role found in user_roles table, falling back to profiles table");
-      fallbackToProfilesTable(userId);
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-      setUserRole('user' as UserRole);
-    }
-  };
-  
-  const fallbackToProfilesTable = async (userId: string) => {
-    try {
-      console.log("Looking up role in profiles table for user:", userId);
-      
-      const { data, error } = await supabase
+      // First try to find role in profiles table since role column was moved there
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user role from profiles table:', error);
-        console.log("Setting default role to 'user'");
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('Error fetching user role from profiles table:', profileError);
         setUserRole('user' as UserRole);
         return;
       }
       
-      console.log('Role found in profiles table:', data.role);
-      setUserRole((data?.role as UserRole) ?? 'user' as UserRole);
+      if (profileData && profileData.role) {
+        console.log('Role found in profiles table:', profileData.role);
+        setUserRole(profileData.role as UserRole);
+        return;
+      }
+      
+      console.log("No role found or role is null in profiles table, setting default to 'user'");
+      setUserRole('user' as UserRole);
     } catch (error) {
-      console.error('Error in fallbackToProfilesTable:', error);
+      console.error('Error in fetchUserRole:', error);
       setUserRole('user' as UserRole);
     }
   };

@@ -33,14 +33,14 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     console.log("Creating new profile for user:", userId);
     
-    // Create minimal profile
+    // Create minimal profile with role included directly in profiles table
     const { error } = await supabase
       .from('profiles')
       .insert({ 
         id: userId,
         email: email,
         updated_at: new Date().toISOString(),
-        role: 'user' // Use string directly
+        role: 'user' // Set role directly in profiles table
       });
 
     if (error) {
@@ -57,7 +57,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
             id: userId,
             email: email,
             updated_at: new Date().toISOString(),
-            role: 'user' // Use string directly
+            role: 'user' // Set role directly in profiles table
           });
           
         if (retryError) {
@@ -73,38 +73,6 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
     }
     
     console.log("Profile created successfully for user:", userId);
-    
-    // Try to set the user role in user_roles table
-    try {
-      // Check if a role already exists
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-        
-      if (!existingRole) {
-        // Insert user role as string
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'user'  // Use string
-          });
-          
-        if (roleError) {
-          console.error("Could not set user role in user_roles table:", roleError);
-          console.log("Role insertion error:", roleError.message);
-        } else {
-          console.log("User role set successfully in user_roles table");
-        }
-      } else {
-        console.log("User role already exists");
-      }
-    } catch (roleError) {
-      console.error("Error setting user role in user_roles table:", roleError);
-    }
-    
     return true;
   } catch (error) {
     console.error("Exception in ensureUserProfile:", error);

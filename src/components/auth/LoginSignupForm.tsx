@@ -90,7 +90,9 @@ export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
             if (error.message && (
                 error.message.includes("database") || 
                 error.message.includes("Database") ||
-                error.message.includes("type") ||
+                error.message.includes("column") || 
+                error.message.includes("role") ||
+                error.message.includes("does not exist") ||
                 error.message.includes("foreign key") ||
                 error.message.includes("constraint")
               )) {
@@ -124,7 +126,7 @@ export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
           errorMessage = "Please check your email to confirm your account before logging in.";
         } else if (error.message.includes("Invalid login credentials")) {
           errorMessage = "Invalid email or password. Please try again.";
-        } else if (error.message.includes("database") || error.message.includes("Database")) {
+        } else if (error.message.includes("database") || error.message.includes("Database") || error.message.includes("column") || error.message.includes("role")) {
           errorMessage = "There was a problem with our database. Please try again in a few moments.";
         } else {
           errorMessage = error.message;
@@ -232,3 +234,5 @@ export const LoginSignupForm: React.FC<LoginSignupFormProps> = ({
     </form>
   );
 };
+
+export default LoginSignupForm;
