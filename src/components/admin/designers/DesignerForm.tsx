@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Designer, CreatorCategory, getSpecialtyOptions, DesignerSpecialty } from "@/services/designerTypes";
+import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -203,7 +202,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .update({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty as any as DesignerSpecialty,
+            specialty: values.specialty,
             category: values.category,
             bio: values.bio || null,
             location: values.location || null,
@@ -230,7 +229,7 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
           .insert({
             full_name: values.full_name,
             email: values.email || null,
-            specialty: values.specialty as any as DesignerSpecialty,
+            specialty: values.specialty,
             category: values.category,
             bio: values.bio || null,
             location: values.location || null,

@@ -20,7 +20,7 @@ const DesignersManager = () => {
         .from('designers')
         .select('*');
       if (error) throw error;
-      return data as Designer[];
+      return data as unknown as Designer[];
     },
   });
 

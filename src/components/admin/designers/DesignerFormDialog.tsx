@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Designer, CreatorCategory, DesignerSpecialty, getSpecialtyOptions } from "@/services/designerTypes";
+import { Designer, CreatorCategory, getSpecialtyOptions } from "@/services/designerTypes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,7 +154,7 @@ const DesignerFormDialog = ({
         full_name: fullName,
         email: email || null,
         bio: bio || null,
-        specialty: specialty as DesignerSpecialty,
+        specialty,
         category,
         portfolio_url: portfolioUrl || null,
         location: location || null,
@@ -290,7 +289,7 @@ const DesignerFormDialog = ({
                 <Label htmlFor="specialty">Specialty</Label>
                 <Select
                   value={specialty}
-                  onValueChange={(value) => setSpecialty(value as DesignerSpecialty)}
+                  onValueChange={(value) => setSpecialty(value)}
                 >
                   <SelectTrigger id="specialty">
                     <SelectValue placeholder="Select specialty" />
