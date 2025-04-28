@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import DonorsTable from "./DonorsTable";
+import DonationPageConfig from "./DonationPageConfig";
 
 const DonationsManager = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string>("donations");
 
-  // Fetch all donations with donor information
   const {
     data: donations,
     isLoading: donationsLoading,
@@ -40,7 +40,6 @@ const DonationsManager = () => {
     },
   });
 
-  // Filter donations based on search query
   const filteredDonations = donations?.filter((donation) => {
     const donorName = donation.donor?.full_name?.toLowerCase() || "";
     const donorEmail = donation.donor?.email?.toLowerCase() || "";
@@ -55,7 +54,6 @@ const DonationsManager = () => {
     );
   });
 
-  // Group donations by donor for the donors tab
   const donors = donations
     ? donations.reduce((acc: any[], donation: any) => {
         if (!donation.donor) return acc;
@@ -87,7 +85,6 @@ const DonationsManager = () => {
       }, [])
     : [];
 
-  // Filter donors based on search query
   const filteredDonors = donors?.filter((donor) => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -97,7 +94,6 @@ const DonationsManager = () => {
     );
   });
 
-  // Calculate stats
   const calculateStats = () => {
     if (!donations) return { total: 0, average: 0, count: 0 };
     
@@ -124,32 +120,24 @@ const DonationsManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Donation Stats */}
-      <DonationStats stats={donationStats} />
-      
-      {/* Search and Filter */}
-      <div className="relative w-full md:w-1/3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          placeholder={`Search ${activeTab}...`}
-          className="pl-10"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-      
-      {/* Tabs */}
-      <Tabs 
-        defaultValue="donations" 
-        onValueChange={(value) => setActiveTab(value)}
-        className="w-full"
-      >
+      <Tabs defaultValue="donations" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="donations">Donations</TabsTrigger>
           <TabsTrigger value="donors">Donors</TabsTrigger>
+          <TabsTrigger value="settings">Page Settings</TabsTrigger>
         </TabsList>
         
         <TabsContent value="donations">
+          <DonationStats stats={donationStats} />
+          <div className="relative w-full md:w-1/3">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Input
+              placeholder={`Search ${activeTab}...`}
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <DonationsTable 
             donations={filteredDonations || []}
             isLoading={donationsLoading}
@@ -162,6 +150,10 @@ const DonationsManager = () => {
             donors={filteredDonors || []}
             isLoading={donationsLoading}
           />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <DonationPageConfig />
         </TabsContent>
       </Tabs>
     </div>

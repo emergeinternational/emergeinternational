@@ -1,4 +1,3 @@
-
 export interface Donor {
   id: string;
   user_id?: string;
@@ -26,4 +25,21 @@ export interface Donation {
   created_at?: string;
   updated_at?: string;
   donor?: Donor;
+}
+
+export interface DonationPageSettings {
+  id: string;
+  hero_title: string;
+  hero_description: string | null;
+  hero_image_url: string | null;
+  min_donation_amount: number;
+  max_donation_amount: number;
+  suggested_amounts: number[];
+  currency_options: string[];
+  payment_methods: string[];
+  thank_you_message: string;
+  created_at?: string;
+  updated_at?: string;
+  updated_by?: string;
+  is_active: boolean;
 }

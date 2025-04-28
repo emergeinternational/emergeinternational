@@ -1,21 +1,23 @@
 
-export type DesignerCategory = "apparel" | "accessories" | "footwear" | "jewelry" | "other";
+export type DesignerCategory = 'apparel' | 'accessories' | 'footwear' | 'jewelry' | 'other';
+
+export interface SocialMedia {
+  instagram?: string;
+  twitter?: string;
+  website?: string;
+}
 
 export interface Designer {
   id: string;
   full_name: string;
-  email?: string;
-  bio?: string;
+  email?: string | null;
+  bio?: string | null;
   specialty: DesignerCategory;
-  portfolio_url?: string;
-  social_media?: {
-    instagram?: string;
-    twitter?: string;
-    website?: string;
-  };
-  products?: string[]; // Array of product IDs
+  portfolio_url?: string | null;
+  social_media?: SocialMedia;
+  products?: string[];
   featured: boolean;
-  image_url?: string;
+  image_url?: string | null;
   created_at?: string;
   updated_at?: string;
   sales_count?: number;

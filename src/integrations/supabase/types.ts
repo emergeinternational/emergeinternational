@@ -340,6 +340,57 @@ export type Database = {
           },
         ]
       }
+      donation_page_settings: {
+        Row: {
+          created_at: string | null
+          currency_options: string[] | null
+          hero_description: string | null
+          hero_image_url: string | null
+          hero_title: string
+          id: string
+          is_active: boolean | null
+          max_donation_amount: number | null
+          min_donation_amount: number | null
+          payment_methods: string[] | null
+          suggested_amounts: number[] | null
+          thank_you_message: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency_options?: string[] | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_title?: string
+          id?: string
+          is_active?: boolean | null
+          max_donation_amount?: number | null
+          min_donation_amount?: number | null
+          payment_methods?: string[] | null
+          suggested_amounts?: number[] | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency_options?: string[] | null
+          hero_description?: string | null
+          hero_image_url?: string | null
+          hero_title?: string
+          id?: string
+          is_active?: boolean | null
+          max_donation_amount?: number | null
+          min_donation_amount?: number | null
+          payment_methods?: string[] | null
+          suggested_amounts?: number[] | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       donations: {
         Row: {
           amount: number
