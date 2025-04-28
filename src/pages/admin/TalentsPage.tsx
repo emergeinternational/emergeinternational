@@ -1,9 +1,9 @@
 
 import AdminLayout from "../../layouts/AdminLayout";
-import TalentManagement from "../../components/admin/TalentManagement";
 import { Toaster } from "@/components/ui/toaster";
 import EmergingTalentList from "../../components/admin/EmergingTalentList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TalentManagement from "../../components/admin/talent/TalentManagement";
 
 const TalentsPage = () => {
   return (
