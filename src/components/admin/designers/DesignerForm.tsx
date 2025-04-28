@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Designer, CreatorCategory, DesignerSpecialty } from "@/services/designerTypes";
@@ -189,7 +188,18 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         const { error } = await supabase
           .from("designers")
           .update({
-            ...values,
+            full_name: values.full_name,
+            email: values.email || null,
+            specialty: values.specialty,
+            category: values.category,
+            bio: values.bio || null,
+            portfolio_url: values.portfolio_url || null,
+            image_url: values.image_url || null,
+            featured: values.featured,
+            social_media: values.social_media || null,
+            featured_project: values.featured_project || null,
+            achievements: values.achievements || [],
+            showcase_images: values.showcase_images || [],
             updated_at: new Date().toISOString(),
           })
           .eq("id", designer.id);
@@ -204,7 +214,18 @@ const DesignerForm = ({ open, setOpen, designer, onSuccess }: DesignerFormProps)
         const { error } = await supabase
           .from("designers")
           .insert({
-            ...values,
+            full_name: values.full_name,
+            email: values.email || null,
+            specialty: values.specialty,
+            category: values.category,
+            bio: values.bio || null,
+            portfolio_url: values.portfolio_url || null,
+            image_url: values.image_url || null,
+            featured: values.featured,
+            social_media: values.social_media || null,
+            featured_project: values.featured_project || null,
+            achievements: values.achievements || [],
+            showcase_images: values.showcase_images || [],
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });

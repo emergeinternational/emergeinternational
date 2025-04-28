@@ -16,6 +16,7 @@ const pageTitles: { [key: string]: string } = {
   '/admin': 'Admin Dashboard 🌍 | Emerge International',
   '/admin/events': 'Events Management 🌍 | Admin Dashboard',
   '/admin/creative-professionals': 'Creative Professionals 🌍 | Admin Dashboard',
+  '/creative-professionals': 'Creative Professionals 🌍 | Emerge International',
   '/payment': 'Complete Your Payment 🌍 | Emerge International',
   '/talent-registration': 'Join Our Creative Community 🌍 | Emerge International',
   '/submit': 'Media Submission 🌍 | Emerge International',

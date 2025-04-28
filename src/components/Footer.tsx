@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { Facebook, Instagram } from "lucide-react";
@@ -26,7 +27,7 @@ const Footer = () => {
       title: "About",
       links: [
         { label: "Our Mission", href: "/about" },
-        { label: "Creative Professionals", href: "/admin/creative-professionals" },
+        { label: "Creative Professionals", href: "/creative-professionals" },
         { label: "Donations", href: "/donations" },
         { label: "Contact Us", href: "/contact" }
       ]

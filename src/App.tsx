@@ -45,6 +45,7 @@ import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
 import TalentsPage from "./pages/admin/TalentsPage";
 import EventPayment from "./pages/EventPayment";
+import CreativeProfessionals from "./pages/CreativeProfessionals";
 
 // Create a fresh QueryClient instance
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => {
                   <Route path="/events" element={<Events />} />
                   <Route path="/event-payment/:eventId" element={<EventPayment />} />
                   <Route path="/payment" element={<Payment />} />
+                  <Route path="/creative-professionals" element={<CreativeProfessionals />} />
                   
                   {/* Protected routes */}
                   <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
