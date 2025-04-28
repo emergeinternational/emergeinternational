@@ -93,7 +93,7 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
         full_name: data.full_name,
         email: data.email,
         bio: data.bio,
-        specialty: getCategorySpecialty(data.category as CreatorCategory, data.specialty),
+        specialty: data.specialty, // Using string instead of typed specialty
         category: data.category,
         portfolio_url: data.portfolio_url,
         location: data.location,
@@ -126,7 +126,7 @@ const DesignerForm = ({ initialData = {}, onSuccess }: DesignerFormProps) => {
           .from('designers')
           .insert({
             ...designerData,
-            created_at: new Date().toISOString()
+            updated_at: new Date().toISOString() // Instead of created_at
           });
 
         if (error) throw error;

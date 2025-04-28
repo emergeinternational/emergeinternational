@@ -48,19 +48,37 @@ export const LoginSignupForm = ({
       if (isLogin) {
         await signIn(email, password);
       } else {
-        await signUp(email, password);
+        let success = false;
+        let attempts = 0;
+        const maxAttempts = 3;
         
-        toast({
-          title: "Account created",
-          description: "Please check your email to confirm your account.",
-        });
+        while (!success && attempts < maxAttempts) {
+          attempts++;
+          try {
+            await signUp(email, password);
+            success = true;
+            
+            toast({
+              title: "Account created",
+              description: "Please check your email to confirm your account.",
+            });
+            
+            break;
+          } catch (retryError) {
+            console.log(`Signup attempt ${attempts} failed:`, retryError);
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            } else {
+              throw retryError;
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Authentication error:", error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       
-      if (errorMessage.toLowerCase().includes("app_role") || 
-          errorMessage.toLowerCase().includes("database error") || 
+      if (errorMessage.toLowerCase().includes("database error") || 
           errorMessage.toLowerCase().includes("violates foreign key")) {
         toast({
           title: "Registration issue",

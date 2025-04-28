@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,10 +106,11 @@ const DesignersManager = () => {
 
       {isFormOpen && (
         <DesignerForm
-          open={isFormOpen}
-          setOpen={setIsFormOpen}
-          designer={selectedDesigner}
-          onSuccess={() => refetch()}
+          initialData={selectedDesigner}
+          onSuccess={() => {
+            refetch();
+            setIsFormOpen(false);
+          }}
         />
       )}
     </div>

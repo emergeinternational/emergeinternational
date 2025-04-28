@@ -217,22 +217,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data && data.user) {
         try {
           console.log("Creating profile for new user:", data.user.id);
-          let retries = 0;
-          const maxRetries = 3;
+          
+          // Wait a moment for auth to fully process
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           let profileCreated = false;
+          let attempts = 0;
+          const maxAttempts = 3;
           
-          // First attempt
-          profileCreated = await ensureUserProfile(data.user.id, email);
-          
-          // Retry with exponential backoff if needed
-          while (retries < maxRetries && !profileCreated) {
-            retries++;
-            console.warn(`Profile creation attempt ${retries} failed, retrying...`);
-            // Exponential backoff: 500ms, 1000ms, 2000ms
-            await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retries - 1)));
-            profileCreated = await ensureUserProfile(data.user.id, email);
+          while (!profileCreated && attempts < maxAttempts) {
+            attempts++;
+            try {
+              profileCreated = await ensureUserProfile(data.user.id, email);
+              if (profileCreated) {
+                console.log(`Profile created successfully on attempt ${attempts}`);
+                break;
+              } else {
+                console.log(`Profile creation attempt ${attempts} failed, retrying...`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+              }
+            } catch (attemptError) {
+              console.error(`Error on profile creation attempt ${attempts}:`, attemptError);
+            }
           }
-
+          
           if (!profileCreated) {
             console.error("Failed to create user profile after multiple attempts");
             // Continue since the auth user was created even if profile creation failed

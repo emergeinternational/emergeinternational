@@ -57,7 +57,7 @@ export interface Designer {
   full_name: string;
   email?: string;
   bio?: string;
-  specialty: DesignerSpecialty;
+  specialty: string; // Changed to string to match database
   category: CreatorCategory;
   portfolio_url?: string;
   image_url?: string;
@@ -151,12 +151,12 @@ export const getSpecialtyOptions = (category: CreatorCategory): { value: string;
 };
 
 // Helper function to get the appropriate specialty type based on category
-export const getCategorySpecialty = (category: CreatorCategory, specialty: string): DesignerSpecialty => {
-  // Simply return the specialty as the appropriate type since our union type will handle this
-  return specialty as DesignerSpecialty;
+export const getCategorySpecialty = (category: CreatorCategory, specialty: string): string => {
+  // Simply return the specialty as a string
+  return specialty;
 };
 
 // This function helps cast specialties to the database-expected types
-export const castSpecialtyForDatabase = (specialty: DesignerSpecialty): string => {
-  return specialty;
+export const castSpecialtyForDatabase = (specialty: string | DesignerSpecialty): string => {
+  return specialty.toString();
 };

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,7 +108,7 @@ const DesignerFormDialog = ({
         full_name: formData.full_name!,
         email: formData.email,
         bio: formData.bio!,
-        specialty: formData.specialty!,
+        specialty: formData.specialty as string,
         category: formData.category!,
         portfolio_url: formData.portfolio_url,
         location: formData.location,
@@ -138,7 +137,7 @@ const DesignerFormDialog = ({
           .from("designers")
           .insert({
             ...designerData,
-            created_at: new Date().toISOString()
+            updated_at: new Date().toISOString()
           });
 
         if (error) throw error;
