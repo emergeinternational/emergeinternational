@@ -68,7 +68,104 @@ serve(async (req) => {
       }
     }
     
-    // 2. Log function execution for monitoring
+    // 2. Sync talent submissions if operation is talent-sync
+    if (operation === 'all' || operation === 'talent-sync') {
+      try {
+        // Get submissions not yet synced to talent applications
+        const { data: emergeSubmissions, error: fetchError } = await supabaseAdmin
+          .from('emerge_submissions')
+          .select('*')
+          .eq('sync_status', 'pending');
+
+        if (fetchError) throw fetchError;
+
+        if (emergeSubmissions && emergeSubmissions.length > 0) {
+          // Get existing emails in talent_applications
+          const { data: existingApplications, error: existingError } = await supabaseAdmin
+            .from('talent_applications')
+            .select('email');
+
+          if (existingError) throw existingError;
+
+          // Create map of existing emails for O(1) lookup
+          const existingEmailsMap = new Map();
+          existingApplications?.forEach(app => {
+            if (app.email) existingEmailsMap.set(app.email.toLowerCase(), true);
+          });
+
+          // Filter out submissions that already exist in talent_applications
+          const newSubmissions = emergeSubmissions.filter(submission => 
+            !existingEmailsMap.has(submission.email?.toLowerCase())
+          );
+
+          console.log(`Found ${emergeSubmissions.length} pending submissions, ${newSubmissions.length} are new`);
+
+          if (newSubmissions.length > 0) {
+            // Format for talent_applications table
+            const applicationData = newSubmissions.map(submission => ({
+              full_name: submission.full_name,
+              email: submission.email,
+              phone: submission.phone_number,
+              age: submission.age,
+              status: 'pending',
+              social_media: {
+                instagram: submission.instagram || null,
+                telegram: submission.telegram || null,
+                tiktok: submission.tiktok || null
+              },
+              notes: submission.talent_description,
+              category_type: submission.category,
+              gender: submission.gender, // Include gender in the mapping
+              portfolio_url: submission.portfolio_url,
+              measurements: submission.measurements,
+              created_at: submission.created_at
+            }));
+
+            // Insert into talent_applications
+            const { data, error: insertError } = await supabaseAdmin
+              .from('talent_applications')
+              .insert(applicationData)
+              .select();
+
+            if (insertError) throw insertError;
+
+            // Update sync status
+            const submissionIds = newSubmissions.map(s => s.id);
+            await supabaseAdmin
+              .from('emerge_submissions')
+              .update({ sync_status: 'synced' })
+              .in('id', submissionIds);
+
+            results.operations.talentSync = {
+              success: true,
+              syncedCount: newSubmissions.length,
+            };
+
+            console.log(`Successfully synced ${newSubmissions.length} talent submissions`);
+          } else {
+            results.operations.talentSync = {
+              success: true,
+              syncedCount: 0,
+              message: "No new records to sync"
+            };
+          }
+        } else {
+          results.operations.talentSync = {
+            success: true,
+            syncedCount: 0,
+            message: "No pending submissions found"
+          };
+        }
+      } catch (error) {
+        console.error("Error syncing talent submissions:", error);
+        results.operations.talentSync = {
+          success: false,
+          error: error.message,
+        };
+      }
+    }
+    
+    // 3. Log function execution for monitoring
     try {
       const { data, error } = await supabaseAdmin
         .from('automation_logs')

@@ -60,7 +60,7 @@ export async function syncEmergeSubmissions(): Promise<{
       },
       notes: submission.talent_description,
       category_type: submission.category,
-      gender: submission.gender,
+      gender: submission.gender, // Include gender field in the mapping
       portfolio_url: submission.portfolio_url,
       measurements: submission.measurements,
       created_at: submission.created_at
@@ -232,7 +232,7 @@ export async function performFullTalentDataMigration(): Promise<{
           },
           notes: submission.talent_description || null,
           category_type: submission.category || null,
-          gender: submission.gender || null,
+          gender: submission.gender || null, // Ensure gender is included
           portfolio_url: submission.portfolio_url || null,
           measurements: submission.measurements || null,
           created_at: submission.created_at || new Date().toISOString()
