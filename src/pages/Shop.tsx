@@ -125,6 +125,7 @@ const Shop = () => {
           throw error;
         }
 
+        console.log("Fetched products from database:", data);
         return data as Product[] || [];
       } catch (err) {
         console.error("Error fetching products:", err);
@@ -133,8 +134,22 @@ const Shop = () => {
     },
   });
 
-  // Combine database products with mock products
-  const allProducts = [...(dbProducts || []), ...mockProducts];
+  // Combine database products with mock products, filtering out mock products that exist in DB
+  const combinedProducts = () => {
+    if (!dbProducts) return mockProducts;
+    
+    // Get all product titles from the database (lowercase for case-insensitive comparison)
+    const dbProductTitles = dbProducts.map(p => p.title.toLowerCase());
+    
+    // Filter out mock products that have already been converted to real products
+    const filteredMocks = mockProducts.filter(
+      mock => !dbProductTitles.includes(mock.title.toLowerCase())
+    );
+    
+    return [...dbProducts, ...filteredMocks];
+  };
+  
+  const allProducts = combinedProducts();
   
   const filteredProducts = activeCategory === "all" 
     ? allProducts 
@@ -200,13 +215,20 @@ const Shop = () => {
                     >
                       <div className="bg-gray-100 aspect-square mb-3 overflow-hidden">
                         <img 
-                          src={product.image_url} 
+                          src={product.image_url || '/placeholder.svg'} 
                           alt={product.title} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
                         />
                       </div>
                       <h3 className="font-medium">{product.title}</h3>
                       <p className="text-gray-700">${(product.price / 100).toFixed(2)}</p>
+                      <div className="mt-1 flex items-center space-x-2">
+                        <span className={`w-3 h-3 rounded-full ${product.in_stock ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <span className="text-xs">{product.in_stock ? 'In Stock' : 'Out of Stock'}</span>
+                      </div>
                       <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
                         <Globe size={12} />
                         <span>International Shipping Available</span>

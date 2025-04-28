@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -182,11 +183,12 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
       setUploadingImage(true);
       
       if (isMockProduct) {
-        setImageUrl("/placeholder.svg");
+        setImageUrl(file.name);
         toast({
           title: "Mock image set",
-          description: "For mock products, we're using a placeholder image.",
+          description: "For mock products, we're setting the image filename only. It will be uploaded when converting to a real product.",
         });
+        setUploadingImage(false);
         return;
       }
       
@@ -242,20 +244,22 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
         dimensions: weight ? dimensions : null,
         shipping_info: {
           free_shipping: shippingInfo.freeShipping,
-          shippingCost: shippingInfo.shippingCost,
+          shipping_cost: shippingInfo.shippingCost,
           estimated_delivery_days: shippingInfo.estimatedDeliveryDays
         },
         designer_id: designerId === "none" ? null : designerId,
         updated_at: new Date().toISOString(),
       };
 
-      if (isMockProduct && product?.id) {
-        const { error } = await supabase
+      // Handle conversion from mock to real product
+      if (isMockProduct) {
+        const { data, error } = await supabase
           .from('products')
           .insert([{
             ...productData,
             created_at: new Date().toISOString(),
-          }]);
+          }])
+          .select();
 
         if (error) throw error;
         
@@ -263,7 +267,18 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
           title: "Mock product converted",
           description: `${title} has been converted to a real product in the database.`,
         });
+
+        if (data && data[0]) {
+          // Update mock product with real product data for UI consistency
+          if (onMockSave && product) {
+            onMockSave({
+              ...product,
+              ...data[0]
+            });
+          }
+        }
       } else if (product?.id && !isMockProduct) {
+        // Update existing real product
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -276,6 +291,7 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
           description: `${title} has been updated successfully.`,
         });
       } else {
+        // Create new real product
         const { error } = await supabase
           .from('products')
           .insert([{
@@ -439,6 +455,10 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
                         src={imageUrl}
                         alt="Product"
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          // If image fails to load, set a placeholder
+                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                        }}
                       />
                     </div>
                   )}
@@ -465,7 +485,7 @@ const ProductFormDialog = ({ open, product, onClose, onMockSave }: ProductFormDi
                     />
                     <p className="text-sm text-gray-500 mt-2">
                       {isMockProduct 
-                        ? "This is a mock product. Image changes will not be saved to the database."
+                        ? "This is a mock product. Image will be fully processed when converted to a real product."
                         : "Recommended size: 800x800px. Max file size: 5MB."
                       }
                     </p>

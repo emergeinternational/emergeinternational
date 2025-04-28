@@ -149,7 +149,17 @@ const ProductsManager = () => {
             sales_count: 11
           },
         ];
-        setMockProducts(shopMockProducts);
+        
+        // Filter out any mock products that have already been converted to real products
+        if (products) {
+          const existingProductTitles = products.map(p => p.title.toLowerCase());
+          const filteredMocks = shopMockProducts.filter(
+            mock => !existingProductTitles.includes(mock.title.toLowerCase())
+          );
+          setMockProducts(filteredMocks);
+        } else {
+          setMockProducts(shopMockProducts);
+        }
       } catch (err) {
         console.error("Error loading mock products:", err);
       } finally {
@@ -158,10 +168,7 @@ const ProductsManager = () => {
     };
 
     loadMockProducts();
-  }, []);
-
-  console.log("Products fetched:", products);
-  console.log("Mock products:", mockProducts);
+  }, [products]);
 
   // Handle product edit
   const handleEditProduct = (product: Product) => {
@@ -204,6 +211,24 @@ const ProductsManager = () => {
     }
   };
 
+  // Handle mock product save/conversion
+  const handleMockProductSave = (editedProduct: Product) => {
+    if (editedProduct.id.startsWith("mock-")) {
+      // If this was a real conversion, remove it from mock products
+      if (!editedProduct.id.startsWith("mock-")) {
+        setMockProducts(prevMock => 
+          prevMock.filter(p => p.id !== `mock-${editedProduct.id}`)
+        );
+        refetch(); // Refresh to get the new real product
+      } else {
+        // Just update the UI for mock products
+        setMockProducts(prevMock => 
+          prevMock.map(p => p.id === editedProduct.id ? editedProduct : p)
+        );
+      }
+    }
+  };
+
   // Combine database products and mock products
   const combinedProducts = [...(products || []), ...mockProducts];
 
@@ -230,21 +255,6 @@ const ProductsManager = () => {
     setEditingProduct(null);
     if (refresh) {
       refetch();
-    }
-  };
-
-  // Handle save for mock products
-  const handleMockProductSave = (editedProduct: Product) => {
-    if (editedProduct.id.startsWith("mock-")) {
-      // Update mock product in state
-      setMockProducts(prevMock => 
-        prevMock.map(p => p.id === editedProduct.id ? editedProduct : p)
-      );
-      
-      toast({
-        title: "Mock product updated",
-        description: `"${editedProduct.title}" has been updated in the UI (not saved to database).`,
-      });
     }
   };
 
@@ -377,6 +387,7 @@ const ProductsManager = () => {
           <TabsTrigger value="footwear">Footwear</TabsTrigger>
           <TabsTrigger value="accessories">Accessories</TabsTrigger>
         </TabsList>
+        
         <TabsContent value="all">
           <ProductsTable 
             products={filteredProducts || []} 
@@ -386,42 +397,18 @@ const ProductsManager = () => {
             onRefresh={refetch} 
           />
         </TabsContent>
-        <TabsContent value="new_arrivals">
-          <ProductsTable 
-            products={filteredProducts || []} 
-            isLoading={isLoading || isLoadingMock} 
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteProduct}
-            onRefresh={refetch} 
-          />
-        </TabsContent>
-        <TabsContent value="clothing">
-          <ProductsTable 
-            products={filteredProducts || []} 
-            isLoading={isLoading || isLoadingMock} 
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteProduct}
-            onRefresh={refetch} 
-          />
-        </TabsContent>
-        <TabsContent value="footwear">
-          <ProductsTable 
-            products={filteredProducts || []} 
-            isLoading={isLoading || isLoadingMock} 
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteProduct}
-            onRefresh={refetch} 
-          />
-        </TabsContent>
-        <TabsContent value="accessories">
-          <ProductsTable 
-            products={filteredProducts || []} 
-            isLoading={isLoading || isLoadingMock} 
-            onEdit={handleEditProduct}
-            onDelete={handleDeleteProduct}
-            onRefresh={refetch} 
-          />
-        </TabsContent>
+        
+        {["new_arrivals", "clothing", "footwear", "accessories"].map((category) => (
+          <TabsContent key={category} value={category}>
+            <ProductsTable 
+              products={filteredProducts || []} 
+              isLoading={isLoading || isLoadingMock} 
+              onEdit={handleEditProduct}
+              onDelete={handleDeleteProduct}
+              onRefresh={refetch} 
+            />
+          </TabsContent>
+        ))}
       </Tabs>
 
       {/* Product Form Dialog */}
