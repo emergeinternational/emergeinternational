@@ -1,14 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const useOrdersRealtime = (onOrderChange?: () => void) => {
   const { toast } = useToast();
-  const [isSubscribed, setIsSubscribed] = useState(false);
   
   useEffect(() => {
-    // Set up Realtime subscription for orders
     const channel = supabase
       .channel('public:orders')
       .on('postgres_changes', 
@@ -18,39 +16,33 @@ export const useOrdersRealtime = (onOrderChange?: () => void) => {
           table: 'orders' 
         }, 
         (payload) => {
-          // Handle different events
+          // Show different toasts based on the event type
           if (payload.eventType === 'INSERT') {
             toast({
-              title: 'New Order',
+              title: "New Order Received",
               description: `Order #${payload.new.id.slice(0, 8)} has been created`,
             });
           } else if (payload.eventType === 'UPDATE') {
-            // Compare old and new status
+            // Show toast only for status changes
             if (payload.old.status !== payload.new.status) {
               toast({
-                title: 'Order Status Updated',
+                title: "Order Status Updated",
                 description: `Order #${payload.new.id.slice(0, 8)} status changed to ${payload.new.status}`,
               });
             }
           }
 
-          // If callback is provided, trigger it to refresh data
+          // Trigger callback to refresh data if provided
           if (onOrderChange) {
             onOrderChange();
           }
         }
       )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setIsSubscribed(true);
-        }
-      });
+      .subscribe();
 
-    // Clean up subscription on unmount
+    // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
   }, [onOrderChange, toast]);
-
-  return { isSubscribed };
 };

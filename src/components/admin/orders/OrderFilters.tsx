@@ -1,334 +1,175 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CheckIcon, Filter, Search, X } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
-import { ORDER_STATUSES, PAYMENT_STATUSES, OrderFiltersState } from "./OrdersManager";
+import { cn } from "@/lib/utils";
+import { OrderFiltersState, ORDER_STATUSES, PAYMENT_STATUSES } from "./OrdersManager";
 
 interface OrderFiltersProps {
   filters: OrderFiltersState;
-  setFilters: React.Dispatch<React.SetStateAction<OrderFiltersState>>;
+  setFilters: (filters: OrderFiltersState) => void;
 }
 
 const OrderFilters = ({ filters, setFilters }: OrderFiltersProps) => {
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isPaymentStatusOpen, setIsPaymentStatusOpen] = useState(false);
-  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
+  // Local state for date range to handle calendar UI
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: filters.dateRange.from,
+    to: filters.dateRange.to,
+  });
 
-  const toggleStatusFilter = (value: string) => {
-    setFilters(prev => {
-      if (prev.status.includes(value)) {
-        return {
-          ...prev,
-          status: prev.status.filter(status => status !== value)
-        };
-      } else {
-        return {
-          ...prev,
-          status: [...prev.status, value]
-        };
-      }
-    });
-  };
-
-  const togglePaymentStatusFilter = (value: string) => {
-    setFilters(prev => {
-      if (prev.paymentStatus.includes(value)) {
-        return {
-          ...prev,
-          paymentStatus: prev.paymentStatus.filter(status => status !== value)
-        };
-      } else {
-        return {
-          ...prev,
-          paymentStatus: [...prev.paymentStatus, value]
-        };
-      }
-    });
-  };
-
-  const handleDateRangeChange = (date: Date | undefined) => {
-    const { from, to } = filters.dateRange;
-    
-    if (!from) {
-      setFilters({
-        ...filters,
-        dateRange: { from: date, to }
-      });
-    } else if (from && !to && date && date >= from) {
-      setFilters({
-        ...filters,
-        dateRange: { from, to: date }
-      });
-      setIsDateRangeOpen(false);
-    } else {
-      setFilters({
-        ...filters,
-        dateRange: { from: date, to: undefined }
-      });
-    }
-  };
-
-  const resetDateRange = () => {
+  // Update parent filters when date range changes
+  useEffect(() => {
     setFilters({
       ...filters,
-      dateRange: { from: undefined, to: undefined }
+      dateRange,
+    });
+  }, [dateRange]);
+
+  const handleStatusChange = (value: string) => {
+    setFilters({
+      ...filters,
+      status: value ? [value] : [],
     });
   };
 
-  const resetAllFilters = () => {
+  const handlePaymentStatusChange = (value: string) => {
+    setFilters({
+      ...filters,
+      paymentStatus: value ? [value] : [],
+    });
+  };
+
+  const handleSearchChange = (value: string) => {
+    setFilters({
+      ...filters,
+      searchQuery: value,
+    });
+  };
+
+  const handleResetFilters = () => {
     setFilters({
       status: [],
       paymentStatus: [],
-      dateRange: { from: undefined, to: undefined },
-      searchQuery: ""
+      dateRange: {
+        from: undefined,
+        to: undefined,
+      },
+      searchQuery: "",
     });
+    setDateRange({ from: undefined, to: undefined });
   };
 
-  // Count active filters
-  const activeFiltersCount = 
-    filters.status.length + 
-    filters.paymentStatus.length + 
-    (filters.dateRange.from ? 1 : 0) +
-    (filters.searchQuery ? 1 : 0);
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-          <Input
-            placeholder="Search by order ID, customer name or email..."
-            className="pl-10"
-            value={filters.searchQuery}
-            onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-          />
-          {filters.searchQuery && (
-            <button 
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              onClick={() => setFilters({ ...filters, searchQuery: "" })}
-            >
-              <X size={16} />
-            </button>
-          )}
+    <div className="space-y-4 bg-white p-4 rounded-lg border">
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Order Status</label>
+          <Select
+            value={filters.status[0] || ""}
+            onValueChange={handleStatusChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Statuses</SelectItem>
+              {ORDER_STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex gap-2 self-end sm:self-auto">
-          <Popover open={isStatusOpen} onOpenChange={setIsStatusOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10">
-                <Filter className="mr-2 h-4 w-4" />
-                Status
-                {filters.status.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 px-1 min-w-4 rounded-full">
-                    {filters.status.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Filter status..." />
-                <CommandList>
-                  <CommandEmpty>No results found.</CommandEmpty>
-                  <CommandGroup>
-                    {ORDER_STATUSES.map((status) => (
-                      <CommandItem
-                        key={status.value}
-                        onSelect={() => toggleStatusFilter(status.value)}
-                        className="flex items-center justify-between"
-                      >
-                        <span>{status.label}</span>
-                        {filters.status.includes(status.value) && <CheckIcon className="h-4 w-4" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandSeparator />
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => setFilters({ ...filters, status: [] })}
-                      className="text-sm text-center justify-center text-gray-500 hover:text-gray-900"
-                    >
-                      Clear filters
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
 
-          <Popover open={isPaymentStatusOpen} onOpenChange={setIsPaymentStatusOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10">
-                <Filter className="mr-2 h-4 w-4" />
-                Payment
-                {filters.paymentStatus.length > 0 && (
-                  <Badge variant="secondary" className="ml-2 px-1 min-w-4 rounded-full">
-                    {filters.paymentStatus.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Filter payment status..." />
-                <CommandList>
-                  <CommandEmpty>No results found.</CommandEmpty>
-                  <CommandGroup>
-                    {PAYMENT_STATUSES.map((status) => (
-                      <CommandItem
-                        key={status.value}
-                        onSelect={() => togglePaymentStatusFilter(status.value)}
-                        className="flex items-center justify-between"
-                      >
-                        <span>{status.label}</span>
-                        {filters.paymentStatus.includes(status.value) && <CheckIcon className="h-4 w-4" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandSeparator />
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => setFilters({ ...filters, paymentStatus: [] })}
-                      className="text-sm text-center justify-center text-gray-500 hover:text-gray-900"
-                    >
-                      Clear filters
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Payment Status</label>
+          <Select
+            value={filters.paymentStatus[0] || ""}
+            onValueChange={handlePaymentStatusChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Payment Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Payment Statuses</SelectItem>
+              {PAYMENT_STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <Popover open={isDateRangeOpen} onOpenChange={setIsDateRangeOpen}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Date Range</label>
+          <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10">
-                <Filter className="mr-2 h-4 w-4" />
-                Date
-                {(filters.dateRange.from || filters.dateRange.to) && (
-                  <Badge variant="secondary" className="ml-2 px-1 min-w-4 rounded-full">
-                    ✓
-                  </Badge>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !dateRange.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                      {format(dateRange.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <div className="p-3 space-y-3">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-medium">Date Range</h4>
-                  <p className="text-xs text-gray-500">
-                    {filters.dateRange.from
-                      ? filters.dateRange.to
-                        ? `${format(filters.dateRange.from, "MMM dd, yyyy")} - ${format(filters.dateRange.to, "MMM dd, yyyy")}`
-                        : `From ${format(filters.dateRange.from, "MMM dd, yyyy")}`
-                      : "Select a date range"}
-                  </p>
-                </div>
-                <Calendar
-                  mode="range"
-                  selected={{
-                    from: filters.dateRange.from,
-                    to: filters.dateRange.to,
-                  }}
-                  onSelect={(range) => {
-                    setFilters({
-                      ...filters,
-                      dateRange: {
-                        from: range?.from,
-                        to: range?.to,
-                      },
-                    });
-                  }}
-                  numberOfMonths={2}
-                  defaultMonth={filters.dateRange.from}
-                  disabled={{ after: new Date() }}
-                />
-                <div className="flex justify-end">
-                  {(filters.dateRange.from || filters.dateRange.to) && (
-                    <Button variant="ghost" size="sm" onClick={resetDateRange}>
-                      Reset
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={() => setIsDateRangeOpen(false)}>
-                    Apply
-                  </Button>
-                </div>
-              </div>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
             </PopoverContent>
           </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Search Orders</label>
+          <Input
+            placeholder="Search by ID, customer, or email..."
+            value={filters.searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Active filters */}
-      {activeFiltersCount > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm text-gray-500">Active filters:</span>
-          {filters.status.map((status) => (
-            <Badge key={status} variant="secondary" className="px-2 py-1">
-              {ORDER_STATUSES.find(s => s.value === status)?.label || status}
-              <button 
-                className="ml-1 text-gray-500 hover:text-gray-800"
-                onClick={() => toggleStatusFilter(status)}
-              >
-                <X size={14} />
-              </button>
-            </Badge>
-          ))}
-          {filters.paymentStatus.map((status) => (
-            <Badge key={status} variant="secondary" className="px-2 py-1">
-              Payment: {PAYMENT_STATUSES.find(s => s.value === status)?.label || status}
-              <button 
-                className="ml-1 text-gray-500 hover:text-gray-800"
-                onClick={() => togglePaymentStatusFilter(status)}
-              >
-                <X size={14} />
-              </button>
-            </Badge>
-          ))}
-          {filters.dateRange.from && (
-            <Badge variant="secondary" className="px-2 py-1">
-              Date: {filters.dateRange.from ? format(filters.dateRange.from, "MMM dd") : ""}
-              {filters.dateRange.to ? ` - ${format(filters.dateRange.to, "MMM dd")}` : ""}
-              <button 
-                className="ml-1 text-gray-500 hover:text-gray-800"
-                onClick={resetDateRange}
-              >
-                <X size={14} />
-              </button>
-            </Badge>
-          )}
-          {filters.searchQuery && (
-            <Badge variant="secondary" className="px-2 py-1">
-              "{filters.searchQuery}"
-              <button 
-                className="ml-1 text-gray-500 hover:text-gray-800"
-                onClick={() => setFilters({ ...filters, searchQuery: "" })}
-              >
-                <X size={14} />
-              </button>
-            </Badge>
-          )}
-          <Button variant="ghost" size="sm" onClick={resetAllFilters} className="text-sm">
-            Clear all
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleResetFilters}>
+          Reset Filters
+        </Button>
+      </div>
     </div>
   );
 };
