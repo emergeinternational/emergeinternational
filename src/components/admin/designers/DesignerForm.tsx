@@ -1,28 +1,57 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Label } from '@/components/ui/label';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Designer, DesignerSpecialty, CreatorCategory } from '@/types/designerTypes';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Designer, CreatorCategory } from '@/services/designerTypes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface DesignerFormProps {
-  designer?: Designer;
-  onSuccess: () => void;
-  onCancel?: () => void;
+const formSchema = z.object({
+  full_name: z.string().min(2, {
+    message: "Full name must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email.",
+  }).optional(),
+  bio: z.string().optional(),
+  specialty: z.string().min(2, {
+    message: "Specialty must be at least 2 characters.",
+  }),
+  category: z.enum([
+    'fashion_designer',
+    'model',
+    'photographer',
+    'event_planner',
+    'interior_designer',
+    'graphic_designer',
+    'visual_artist',
+    'creative_director'
+  ] as [CreatorCategory, ...CreatorCategory[]], {
+    required_error: "Please select a category.",
+  }),
+  portfolio_url: z.string().url({
+    message: "Please enter a valid URL.",
+  }).optional(),
+  location: z.string().optional(),
+  featured: z.boolean().default(false),
+  image_url: z.string().url({
+    message: "Please enter a valid image URL.",
+  }).optional(),
+});
+
+export interface DesignerFormProps {
+  onSubmit: (data: Partial<Designer>) => void;
+  defaultValues?: Partial<Designer>;
+  isLoading?: boolean;
 }
 
-const DesignerForm: React.FC<DesignerFormProps> = ({ designer, onSuccess, onCancel }) => {
-  const isEditing = !!designer;
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<Designer>({
-    defaultValues: designer || {
+export const DesignerForm: React.FC<DesignerFormProps> = ({ onSubmit, defaultValues, isLoading }) => {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaultValues || {
       full_name: '',
       email: '',
       bio: '',
@@ -30,192 +59,114 @@ const DesignerForm: React.FC<DesignerFormProps> = ({ designer, onSuccess, onCanc
       category: 'fashion_designer',
       portfolio_url: '',
       location: '',
-      social_media: {
-        instagram: '',
-        twitter: '',
-        facebook: '',
-        website: '',
-      },
-      image_url: '',
       featured: false,
+      image_url: '',
     },
+    mode: "onChange"
   });
 
-  const watchCategory = watch('category');
-  const watchFeatured = watch('featured');
-
-  const onSubmit = async (data: Designer) => {
-    setIsSubmitting(true);
-    try {
-      const formData = {
-        ...data,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (isEditing && designer) {
-        const { error } = await supabase
-          .from('designers')
-          .update(formData)
-          .eq('id', designer.id);
-
-        if (error) throw error;
-        toast.success('Designer updated successfully');
-      } else {
-        const { error } = await supabase
-          .from('designers')
-          .insert([formData]);
-
-        if (error) throw error;
-        toast.success('Designer created successfully');
-      }
-      
-      onSuccess();
-    } catch (error) {
-      console.error('Error saving designer:', error);
-      toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { handleSubmit, register, formState: { errors }, control } = form;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label htmlFor="full_name">Full Name</Label>
-          <Input
-            id="full_name"
-            {...register('full_name', { required: 'Name is required' })}
-            placeholder="Designer name"
-          />
-          {errors.full_name && (
-            <p className="text-red-500 text-sm">{errors.full_name.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            {...register('email', { required: 'Email is required' })}
-            placeholder="designer@example.com"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Select
-            defaultValue={watchCategory}
-            onValueChange={(value) => setValue('category', value as CreatorCategory)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
-              <SelectItem value="interior_designer">Interior Designer</SelectItem>
-              <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
-              <SelectItem value="photographer">Photographer</SelectItem>
-              <SelectItem value="model">Model</SelectItem>
-              <SelectItem value="visual_artist">Visual Artist</SelectItem>
-              <SelectItem value="event_planner">Event Planner</SelectItem>
-              <SelectItem value="creative_director">Creative Director</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="specialty">Specialty</Label>
-          <Input
-            id="specialty"
-            {...register('specialty', { required: 'Specialty is required' })}
-            placeholder="e.g., Apparel, Accessories, etc."
-          />
-          {errors.specialty && (
-            <p className="text-red-500 text-sm">{errors.specialty.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
-          <Input
-            id="location"
-            {...register('location')}
-            placeholder="City, Country"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="portfolio_url">Portfolio URL</Label>
-          <Input
-            id="portfolio_url"
-            {...register('portfolio_url')}
-            placeholder="https://example.com"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="image_url">Profile Image URL</Label>
-          <Input
-            id="image_url"
-            {...register('image_url')}
-            placeholder="https://example.com/image.jpg"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="instagram">Instagram</Label>
-          <Input
-            id="instagram"
-            {...register('social_media.instagram')}
-            placeholder="@username"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="featured">Featured Designer</Label>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="featured"
-              checked={watchFeatured}
-              onCheckedChange={(checked) => setValue('featured', checked)}
-            />
-            <Label htmlFor="featured" className="cursor-pointer">
-              {watchFeatured ? 'Yes' : 'No'}
-            </Label>
-          </div>
-        </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="full_name">Full Name</Label>
+        <Input id="full_name" type="text" {...register("full_name")} disabled={isLoading} />
+        {errors.full_name && (
+          <p className="text-red-500 text-sm">{errors.full_name.message}</p>
+        )}
       </div>
 
-      <div className="space-y-2 col-span-2">
-        <Label htmlFor="bio">Biography</Label>
-        <Textarea
-          id="bio"
-          {...register('bio', { required: 'Bio is required' })}
-          placeholder="Brief description of the designer's background and style"
-          rows={4}
-        />
+      <div>
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" {...register("email")} disabled={isLoading} />
+        {errors.email && (
+          <p className="text-red-500 text-sm">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="bio">Bio</Label>
+        <Textarea id="bio" {...register("bio")} disabled={isLoading} />
         {errors.bio && (
           <p className="text-red-500 text-sm">{errors.bio.message}</p>
         )}
       </div>
 
-      <div className="flex justify-end space-x-2">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
+      <div>
+        <Label htmlFor="specialty">Specialty</Label>
+        <Input id="specialty" type="text" {...register("specialty")} disabled={isLoading} />
+        {errors.specialty && (
+          <p className="text-red-500 text-sm">{errors.specialty.message}</p>
         )}
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : isEditing ? 'Update Designer' : 'Create Designer'}
-        </Button>
       </div>
+
+      <div>
+        <Label htmlFor="category">Category</Label>
+        <Select
+          onValueChange={(value) => form.setValue('category', value as CreatorCategory)}
+          defaultValue={defaultValues?.category || 'fashion_designer'}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fashion_designer">Fashion Designer</SelectItem>
+            <SelectItem value="model">Model</SelectItem>
+            <SelectItem value="photographer">Photographer</SelectItem>
+            <SelectItem value="event_planner">Event Planner</SelectItem>
+            <SelectItem value="interior_designer">Interior Designer</SelectItem>
+            <SelectItem value="graphic_designer">Graphic Designer</SelectItem>
+            <SelectItem value="visual_artist">Visual Artist</SelectItem>
+            <SelectItem value="creative_director">Creative Director</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.category && (
+          <p className="text-red-500 text-sm">{errors.category.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="portfolio_url">Portfolio URL</Label>
+        <Input id="portfolio_url" type="url" {...register("portfolio_url")} disabled={isLoading} />
+        {errors.portfolio_url && (
+          <p className="text-red-500 text-sm">{errors.portfolio_url.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="location">Location</Label>
+        <Input id="location" type="text" {...register("location")} disabled={isLoading} />
+        {errors.location && (
+          <p className="text-red-500 text-sm">{errors.location.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="image_url">Image URL</Label>
+        <Input id="image_url" type="url" {...register("image_url")} disabled={isLoading} />
+        {errors.image_url && (
+          <p className="text-red-500 text-sm">{errors.image_url.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="featured">Featured</Label>
+        <input
+          id="featured"
+          type="checkbox"
+          className="ml-2"
+          {...register("featured")}
+          disabled={isLoading}
+        />
+        {errors.featured && (
+          <p className="text-red-500 text-sm">{errors.featured.message}</p>
+        )}
+      </div>
+
+      <Button type="submit" disabled={isLoading}>
+        {isLoading ? "Submitting..." : "Submit"}
+      </Button>
     </form>
   );
 };
-
-export default DesignerForm;

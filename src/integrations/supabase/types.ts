@@ -1505,7 +1505,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      registration_system_diagnostics: {
+        Row: {
+          handle_new_user_exists: boolean | null
+          on_auth_user_created_exists: boolean | null
+          problematic_function_removed: boolean | null
+          problematic_trigger_removed: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_current_user_profile: {

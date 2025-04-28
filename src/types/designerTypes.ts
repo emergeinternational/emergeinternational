@@ -1,4 +1,3 @@
-
 // Designer related types
 export type CreatorCategory = 
   | 'fashion_designer' 
@@ -10,8 +9,12 @@ export type CreatorCategory =
   | 'visual_artist'
   | 'creative_director';
 
-// Updated to use string type for specialty
-export type DesignerSpecialty = string;
+export type DesignerSpecialty = 
+  | 'apparel'
+  | 'accessories'
+  | 'footwear'
+  | 'jewelry'
+  | 'other';
 
 export interface SocialMedia {
   instagram?: string;

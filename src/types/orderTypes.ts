@@ -1,4 +1,3 @@
-
 // Order related types for the application
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
@@ -49,7 +48,15 @@ export interface Order {
   profiles?: UserProfile;
 }
 
-// Order constants
+export interface OrderFiltersState {
+  searchTerm: string;
+  status: OrderStatus | 'all';
+  dateRange: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
+}
+
 export const ORDER_STATUSES: OrderStatus[] = [
   'pending',
   'processing', 
