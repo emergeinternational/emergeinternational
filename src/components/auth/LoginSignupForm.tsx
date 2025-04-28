@@ -1,8 +1,6 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { OTPVerification } from "./OTPVerification";
 
@@ -58,14 +56,19 @@ export const LoginSignupForm = ({
         });
       }
     } catch (error) {
+      console.error("Authentication error:", error);
       const errorMessage = error instanceof Error ? error.message : "An error occurred";
       
-      // Handle potential database error saving new user
       if (errorMessage.includes("database") || errorMessage.includes("saving")) {
-        console.error("Database error during user registration:", error);
         toast({
           title: "Registration issue",
           description: "There was a problem creating your account. Please try again or contact support.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("already registered")) {
+        toast({
+          title: "Email already registered",
+          description: "This email is already in use. Please try logging in instead.",
           variant: "destructive",
         });
       } else {

@@ -1,9 +1,9 @@
-
 import { useEffect, useState, createContext, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { ensureUserProfile } from '@/utils/ensureUserProfile';
 
 type UserRole = 'admin' | 'editor' | 'viewer' | 'user';
 
@@ -206,22 +206,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       
-      // Only create a profile if we got a user back and the auto-profile creation didn't work
       if (data && data.user) {
         try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({ 
-              id: data.user.id,
-              email: email,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-            
-          if (profileError) {
-            console.error("Error creating profile during signup:", profileError);
+          const profileCreated = await ensureUserProfile(data.user.id, email);
+          if (!profileCreated) {
+            console.warn("Profile creation may have failed during signup - will try again on authentication");
           }
         } catch (profileError) {
-          console.error("Exception creating profile during signup:", profileError);
+          console.error("Exception ensuring user profile during signup:", profileError);
         }
       }
     } catch (error) {

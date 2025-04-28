@@ -21,6 +21,7 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
 
     // If found, no need to create
     if (existingProfile) {
+      console.log("Profile already exists for user:", userId);
       return true;
     }
 
@@ -30,20 +31,31 @@ export const ensureUserProfile = async (userId: string, email?: string): Promise
       return false;
     }
 
-    // No profile found, create one
+    console.log("Creating new profile for user:", userId);
+    
+    // No profile found, create one with basic info
     const { error } = await supabase
       .from('profiles')
       .insert({ 
         id: userId,
         email: email,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        role: 'user' // Set a default role directly in the profiles table
       });
 
     if (error) {
       console.error("Error creating user profile:", error);
+      // Check if it's a foreign key constraint issue
+      if (error.message.includes('foreign key constraint')) {
+        console.log("Foreign key constraint error - this could be a race condition. Retrying...");
+        // Wait briefly and try again
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return await ensureUserProfile(userId, email);
+      }
       return false;
     }
     
+    console.log("Profile created successfully for user:", userId);
     return true;
   } catch (error) {
     console.error("Exception in ensureUserProfile:", error);
