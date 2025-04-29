@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Course, ScrapedCourse, CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 import { trackCourseEngagement } from "./courseDataService";
+import { sanitizeScrapedCourse } from './scraping/courseScraperValidation';
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
@@ -220,5 +221,23 @@ export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'crea
   } catch (error) {
     console.error("Error in createVerifiedCourse:", error);
     return null;
+  }
+};
+
+// Get all scraped courses
+export const getScrapedCourses = async (): Promise<ScrapedCourse[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Ensure each course has all the required properties
+    return data ? data.map(course => sanitizeScrapedCourse(course)) : [];
+  } catch (error) {
+    console.error('Error fetching scraped courses:', error);
+    return [];
   }
 };

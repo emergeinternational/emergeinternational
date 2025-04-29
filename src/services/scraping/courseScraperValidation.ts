@@ -171,3 +171,37 @@ export const calculateSimilarity = (str1: string, str2: string): number => {
   
   return maxLength > 0 ? 1 - distance / maxLength : 1;
 };
+
+// Sanitize a scraped course to ensure it has all required fields
+export const sanitizeScrapedCourse = (course: Partial<ScrapedCourse>): ScrapedCourse => {
+  return {
+    title: course.title || 'Untitled Course',
+    summary: course.summary || '',
+    category: course.category || 'designer',
+    hosting_type: course.hosting_type || 'external',
+    external_link: course.external_link || '',
+    image_url: course.image_url || '',
+    video_embed_url: course.video_embed_url || '',
+    created_at: course.created_at || new Date().toISOString(),
+    updated_at: course.updated_at || new Date().toISOString(),
+    is_approved: course.is_approved || false,
+    is_reviewed: course.is_reviewed || false,
+    review_notes: course.review_notes || '',
+    scraper_source: course.scraper_source || 'manual',
+    level: course.level || 'beginner',
+    hash_identifier: course.hash_identifier || '',
+    is_duplicate: course.is_duplicate || false,
+    duplicate_confidence: course.duplicate_confidence || 0,
+    duplicate_of: course.duplicate_of || '',
+  };
+};
+
+// Fix the specific issue with the 'id' property in SelectQueryError
+export const handleQueryError = (error: any) => {
+  console.error('Query error:', error);
+  return {
+    error: error.message || 'Unknown error occurred',
+    details: error.details || 'No additional details',
+    hint: error.hint || 'No hints available'
+  };
+};
