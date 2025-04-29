@@ -8,7 +8,11 @@ import { PlusCircle, Search } from "lucide-react";
 import DesignersTable from "./DesignersTable";
 import DesignerFormDialog from "./DesignerFormDialog";
 
-const DesignersManager = () => {
+interface DesignersManagerProps {
+  isLocked?: boolean;
+}
+
+const DesignersManager = ({ isLocked = false }: DesignersManagerProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDesigner, setEditingDesigner] = useState<any>(null);
@@ -79,6 +83,7 @@ const DesignersManager = () => {
             setIsFormOpen(true);
           }} 
           className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+          disabled={isLocked}
         >
           <PlusCircle className="mr-2" size={18} />
           Add New Designer
@@ -91,6 +96,7 @@ const DesignersManager = () => {
         isLoading={isLoading} 
         onEdit={handleEditDesigner}
         onRefresh={refetch}
+        isLocked={isLocked}
       />
 
       {/* Designer Form Dialog */}
