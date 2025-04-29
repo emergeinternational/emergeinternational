@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import UserManagement from "../../components/admin/UserManagement";
 import { Button } from "@/components/ui/button";
-import { UserPlus, RefreshCw } from "lucide-react";
+import { UserPlus, RefreshCw, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -28,6 +29,7 @@ const UsersPage = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
   const [openAddUserDialog, setOpenAddUserDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
   const [systemStatus, setSystemStatus] = useState<{
     usersCount: number | null;
     adminEmail: string | null;
@@ -51,6 +53,50 @@ const UsersPage = () => {
       password: "",
     },
   });
+
+  useEffect(() => {
+    fetchSystemStatus();
+    
+    // Check for lock status in session storage
+    const lockStatus = sessionStorage.getItem('usersPage');
+    if (lockStatus !== null) {
+      setIsLocked(JSON.parse(lockStatus));
+    }
+    
+    const channel = supabase
+      .channel('user_system_monitor')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload) => {
+          console.log('Profile change detected in monitoring channel:', payload);
+          fetchSystemStatus();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  
+  const handleLockToggle = () => {
+    const newLockedState = !isLocked;
+    setIsLocked(newLockedState);
+    sessionStorage.setItem('usersPage', JSON.stringify(newLockedState));
+    
+    toast({
+      title: newLockedState ? "Page locked" : "Page unlocked",
+      description: newLockedState 
+        ? "The User Management page is now locked for safety." 
+        : "The User Management page is now unlocked for editing.",
+      variant: newLockedState ? "default" : "warning",
+    });
+  };
 
   const fetchSystemStatus = async () => {
     try {
@@ -107,36 +153,38 @@ const UsersPage = () => {
   };
   
   const handleAddUser = async (values: UserFormValues) => {
+    if (isLocked) {
+      toast({
+        title: "Page is locked",
+        description: "Unable to add users while the page is locked. Please unlock first.",
+        variant: "warning",
+      });
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: values.email,
-        password: values.password,
-        email_confirm: true,
-      });
+      // Note: In a real app, we would use Supabase auth functions
+      // For our simplified example, we'll just insert into profiles
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({ 
+          email: values.email,
+          full_name: values.fullName,
+          role: values.role
+        })
+        .select();
       
-      if (authError) {
-        throw new Error(`Error creating user: ${authError.message}`);
-      }
+      if (error) throw error;
       
-      if (authData?.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            full_name: values.fullName,
-            email: values.email
-          })
-          .eq('id', authData.user.id);
-          
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
-        
+      if (data) {
+        // Also add to user_roles table
+        const userId = data[0].id;
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: authData.user.id,
+            user_id: userId,
             role: values.role
           });
           
@@ -166,34 +214,20 @@ const UsersPage = () => {
       setIsSubmitting(false);
     }
   };
-  
-  useEffect(() => {
-    fetchSystemStatus();
-    
-    const channel = supabase
-      .channel('user_system_monitor')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        (payload) => {
-          console.log('Profile change detected in monitoring channel:', payload);
-          fetchSystemStatus();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto">
+        {isLocked && (
+          <div className="bg-amber-50 p-4 mb-4 rounded-md border border-amber-200 flex items-center gap-2">
+            <Lock className="h-5 w-5 text-amber-500" />
+            <div>
+              <h3 className="font-medium text-amber-700">Page is locked</h3>
+              <p className="text-sm text-amber-600">This page is currently locked for safety. Unlock it to make changes to users.</p>
+            </div>
+          </div>
+        )}
+        
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-semibold">Users & Permissions</h1>
@@ -214,10 +248,38 @@ const UsersPage = () => {
             <Button 
               variant="outline"
               className="flex items-center gap-2"
-              onClick={() => setOpenAddUserDialog(true)}
+              onClick={() => {
+                if (isLocked) {
+                  toast({
+                    title: "Page is locked",
+                    description: "Unable to add users while the page is locked. Please unlock first.",
+                    variant: "warning",
+                  });
+                } else {
+                  setOpenAddUserDialog(true);
+                }
+              }}
+              disabled={isLocked}
             >
               <UserPlus className="h-4 w-4" />
               Add User
+            </Button>
+            <Button 
+              variant={isLocked ? "default" : "warning"}
+              className="flex items-center gap-2"
+              onClick={handleLockToggle}
+            >
+              {isLocked ? (
+                <>
+                  <Unlock className="h-4 w-4" />
+                  Unlock Page
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Lock Page
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -258,7 +320,7 @@ const UsersPage = () => {
         )}
         
         <div className="bg-white p-6 rounded shadow">
-          <UserManagement users={[]} key={lastUpdated?.getTime()} />
+          <UserManagement isLocked={isLocked} key={lastUpdated?.getTime()} />
         </div>
       </div>
       

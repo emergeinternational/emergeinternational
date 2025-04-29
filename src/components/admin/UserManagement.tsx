@@ -6,7 +6,9 @@ import {
   Shield,
   UserCheck, 
   UserX,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  Unlock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -57,9 +59,10 @@ interface UserWithRole {
 
 interface UserManagementProps {
   users?: UserWithRole[];
+  isLocked?: boolean;
 }
 
-const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
+const UserManagement = ({ users: initialUsers, isLocked = false }: UserManagementProps) => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<UserFilterState>({
@@ -193,6 +196,7 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
   }, [initialUsers]);
 
   const fetchUsers = async () => {
+    console.log("Fetching users...");
     setLoading(true);
     try {
       const { data: profiles, error: profilesError } = await supabase
@@ -208,6 +212,8 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
         }));
         throw profilesError;
       }
+
+      console.log("Fetched profiles:", profiles);
       
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -221,6 +227,8 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
         }));
         throw rolesError;
       }
+
+      console.log("Fetched user roles:", userRoles);
       
       const oneHourAgo = new Date();
       oneHourAgo.setHours(oneHourAgo.getHours() - 1);
@@ -248,6 +256,7 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
           lastRefreshed: new Date().toISOString(),
           fetchMethod: 'profiles-table'
         }));
+        console.log("Enhanced users:", enhancedUsers);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -262,6 +271,15 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
   };
   
   const updateUserRole = async (userId: string, newRole: UserRole) => {
+    if (isLocked) {
+      toast({
+        title: "Page is locked",
+        description: "Unable to update user role while the page is locked. Please unlock first.",
+        variant: "warning",
+      });
+      return;
+    }
+    
     setUsers(prevUsers => 
       prevUsers.map(u => 
         u.id === userId ? { ...u, loading: true } : u
@@ -341,6 +359,45 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
       });
     }
   };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (isLocked) {
+      toast({
+        title: "Page is locked",
+        description: "Unable to delete user while the page is locked. Please unlock first.",
+        variant: "warning",
+      });
+      return;
+    }
+    
+    try {
+      // Note: Deleting a user from auth.users would normally be done by an admin in the Supabase dashboard
+      // Here we'll just remove them from profiles to simulate deletion in our app
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "User deactivated",
+        description: "User has been successfully deactivated from the system.",
+      });
+      
+      // Refresh our user list
+      fetchUsers();
+      
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      
+      toast({
+        title: "Error deactivating user",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive"
+      });
+    }
+  };
   
   const getRoleColor = (role: UserRole) => {
     switch (role) {
@@ -375,6 +432,16 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
 
   return (
     <div className="space-y-4">
+      {isLocked && (
+        <div className="bg-amber-50 p-4 mb-4 rounded-md border border-amber-200 flex items-center gap-2">
+          <Lock className="h-5 w-5 text-amber-500" />
+          <div>
+            <h3 className="font-medium text-amber-700">Page is locked</h3>
+            <p className="text-sm text-amber-600">This page is currently locked. Unlock it to make changes to user roles and permissions.</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">User Management</h2>
       </div>
@@ -446,7 +513,19 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
                     </Button>
                   </div>
                 ) : (
-                  'No users found in the system'
+                  <div className="flex flex-col items-center gap-2">
+                    <AlertTriangle className="h-8 w-8 text-amber-500" />
+                    <p>No users found in the system</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={fetchUsers}
+                      className="flex items-center gap-1"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Refresh
+                    </Button>
+                  </div>
                 )}
               </TableCell>
             </TableRow>
@@ -492,7 +571,7 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={user.loading}
+                          disabled={user.loading || isLocked}
                           className={user.loading ? "opacity-50 cursor-not-allowed" : ""}
                         >
                           {user.loading ? "Updating..." : "Change Role"}
@@ -523,7 +602,11 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          disabled={isLocked}
+                        >
                           <X className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -538,6 +621,7 @@ const UserManagement = ({ users: initialUsers }: UserManagementProps = {}) => {
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             className="bg-red-600 hover:bg-red-700"
+                            onClick={() => handleDeleteUser(user.id)}
                           >
                             Delete
                           </AlertDialogAction>

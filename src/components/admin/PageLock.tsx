@@ -1,96 +1,88 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Lock, Unlock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lock, Unlock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface PageLockProps {
-  userRole: string | null;
   pageId: string;
-  onLockStatusChange: (status: boolean) => void;
+  onLockStatusChange: (isLocked: boolean) => void;
+  initialLockState?: boolean;
+  userRole?: string;
 }
 
-const PageLock: React.FC<PageLockProps> = ({ userRole, pageId, onLockStatusChange }) => {
-  const [isLocked, setIsLocked] = useState(true);
+const PageLock: React.FC<PageLockProps> = ({ 
+  pageId,
+  onLockStatusChange,
+  initialLockState = true,
+  userRole = 'admin' // Default to admin role
+}) => {
+  const [isLocked, setIsLocked] = useState(initialLockState);
   const { toast } = useToast();
-  
-  // Fetch the lock status from session storage on component mount
-  useEffect(() => {
-    const lockStatus = sessionStorage.getItem(`page_lock_${pageId}`);
-    if (lockStatus !== null) {
-      setIsLocked(JSON.parse(lockStatus));
-      onLockStatusChange(JSON.parse(lockStatus));
-    }
-  }, [pageId, onLockStatusChange]);
 
-  // Handle unlocking of the page with confirmation
-  const handleUnlock = () => {
-    if (userRole === 'admin' || userRole === 'editor') {
-      const confirmation = window.confirm('Are you sure you want to unlock this page for editing?');
-      if (confirmation) {
-        setIsLocked(false);
-        sessionStorage.setItem(`page_lock_${pageId}`, JSON.stringify(false));
-        onLockStatusChange(false);
-        toast({
-          title: "Page unlocked",
-          description: "You can now edit content on this page"
-        });
-      }
+  // On mount, check session storage for lock status
+  useEffect(() => {
+    const storedLockStatus = sessionStorage.getItem(`pageLock_${pageId}`);
+    if (storedLockStatus !== null) {
+      const parsedStatus = JSON.parse(storedLockStatus);
+      setIsLocked(parsedStatus);
+      onLockStatusChange(parsedStatus);
     } else {
+      // Set default lock state in session storage if not present
+      sessionStorage.setItem(`pageLock_${pageId}`, JSON.stringify(initialLockState));
+    }
+  }, [pageId, initialLockState, onLockStatusChange]);
+
+  const toggleLock = () => {
+    // Only admins and editors can toggle lock
+    if (userRole !== 'admin' && userRole !== 'editor') {
       toast({
         title: "Permission denied",
-        description: "You don't have permission to unlock this page",
-        variant: "destructive"
+        description: "Only admins and editors can change page lock status.",
+        variant: "destructive",
       });
+      return;
     }
-  };
 
-  // Handle locking the page again
-  const handleLock = () => {
-    setIsLocked(true);
-    sessionStorage.setItem(`page_lock_${pageId}`, JSON.stringify(true));
-    onLockStatusChange(true);
+    const newLockState = !isLocked;
+
+    // Confirm before unlocking
+    if (isLocked && !confirm('Are you sure you want to unlock this page? This will allow editing of content.')) {
+      return;
+    }
+
+    setIsLocked(newLockState);
+    sessionStorage.setItem(`pageLock_${pageId}`, JSON.stringify(newLockState));
+    onLockStatusChange(newLockState);
+
     toast({
-      title: "Page locked",
-      description: "This page is now locked for editing"
+      title: newLockState ? "Page locked" : "Page unlocked",
+      description: newLockState 
+        ? "The page is now locked for safety." 
+        : "The page is now unlocked for editing.",
+      variant: newLockState ? "default" : "warning",
     });
   };
 
   return (
-    <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-md">
-      <div className="flex items-center gap-2">
-        {isLocked ? (
-          <Lock className="h-4 w-4 text-amber-500" />
-        ) : (
-          <Unlock className="h-4 w-4 text-green-500" />
-        )}
-        <span className="text-sm font-medium">Status:</span>
-        <Badge variant={isLocked ? "outline" : "secondary"}>
-          {isLocked ? 'Locked' : 'Unlocked'}
-        </Badge>
-      </div>
-      
-      {(userRole === 'admin' || userRole === 'editor') && (
-        <Button 
-          variant={isLocked ? "outline" : "secondary"} 
-          size="sm" 
-          onClick={isLocked ? handleUnlock : handleLock}
-        >
-          {isLocked ? 'Unlock Page' : 'Lock Page'}
-        </Button>
+    <Button 
+      variant={isLocked ? "default" : "warning"}
+      className="flex items-center gap-2"
+      onClick={toggleLock}
+      title={isLocked ? "Unlock page to enable editing" : "Lock page to prevent changes"}
+    >
+      {isLocked ? (
+        <>
+          <Unlock className="h-4 w-4" />
+          Unlock Page
+        </>
+      ) : (
+        <>
+          <Lock className="h-4 w-4" />
+          Lock Page
+        </>
       )}
-      
-      {isLocked && userRole !== 'admin' && userRole !== 'editor' && (
-        <Alert variant="default" className="p-2 text-sm max-w-md">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            This page is currently locked for editing
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
+    </Button>
   );
 };
 
