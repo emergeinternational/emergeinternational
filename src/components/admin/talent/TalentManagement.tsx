@@ -8,7 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import TalentSyncSection from "./TalentSyncSection";
 import TalentApplicationsTable from "./TalentApplicationsTable";
 
-const TalentManagement = () => {
+interface TalentManagementProps {
+  isLocked?: boolean;
+}
+
+const TalentManagement = ({ isLocked = false }: TalentManagementProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
@@ -51,9 +55,13 @@ const TalentManagement = () => {
     }
   };
 
+  const refetchApplications = async () => {
+    await refetch();
+  };
+
   return (
     <div className="space-y-6">
-      <TalentSyncSection refetchApplications={refetch} />
+      {!isLocked && <TalentSyncSection refetchApplications={refetchApplications} />}
 
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Applications</h2>
@@ -72,6 +80,7 @@ const TalentManagement = () => {
         applications={applications}
         isLoading={isLoading}
         isRefreshing={isRefreshing}
+        isLocked={isLocked}
       />
     </div>
   );
