@@ -13,6 +13,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PageLock from "@/components/admin/PageLock";
 
 const userSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -57,12 +58,6 @@ const UsersPage = () => {
   useEffect(() => {
     fetchSystemStatus();
     
-    // Check for lock status in session storage
-    const lockStatus = sessionStorage.getItem('usersPage');
-    if (lockStatus !== null) {
-      setIsLocked(JSON.parse(lockStatus));
-    }
-    
     const channel = supabase
       .channel('user_system_monitor')
       .on(
@@ -84,18 +79,8 @@ const UsersPage = () => {
     };
   }, []);
   
-  const handleLockToggle = () => {
-    const newLockedState = !isLocked;
-    setIsLocked(newLockedState);
-    sessionStorage.setItem('usersPage', JSON.stringify(newLockedState));
-    
-    toast({
-      title: newLockedState ? "Page locked" : "Page unlocked",
-      description: newLockedState 
-        ? "The User Management page is now locked for safety." 
-        : "The User Management page is now unlocked for editing.",
-      variant: newLockedState ? "default" : "warning",
-    });
+  const handleLockStatusChange = (status: boolean) => {
+    setIsLocked(status);
   };
 
   const fetchSystemStatus = async () => {
@@ -157,7 +142,7 @@ const UsersPage = () => {
       toast({
         title: "Page is locked",
         description: "Unable to add users while the page is locked. Please unlock first.",
-        variant: "warning",
+        variant: "destructive", // Changed from "warning"
       });
       return;
     }
@@ -165,26 +150,33 @@ const UsersPage = () => {
     try {
       setIsSubmitting(true);
       
-      // Note: In a real app, we would use Supabase auth functions
-      // For our simplified example, we'll just insert into profiles
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({ 
-          email: values.email,
-          full_name: values.fullName,
-          role: values.role
-        })
-        .select();
+      // Register the user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+      });
       
-      if (error) throw error;
+      if (authError) throw authError;
       
-      if (data) {
+      if (authData.user) {
+        // Update the user's profile with additional information
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            full_name: values.fullName,
+            role: values.role
+          })
+          .eq('id', authData.user.id);
+          
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+        }
+        
         // Also add to user_roles table
-        const userId = data[0].id;
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: userId,
+            user_id: authData.user.id,
             role: values.role
           });
           
@@ -253,7 +245,7 @@ const UsersPage = () => {
                   toast({
                     title: "Page is locked",
                     description: "Unable to add users while the page is locked. Please unlock first.",
-                    variant: "warning",
+                    variant: "destructive", // Changed from "warning"
                   });
                 } else {
                   setOpenAddUserDialog(true);
@@ -264,23 +256,11 @@ const UsersPage = () => {
               <UserPlus className="h-4 w-4" />
               Add User
             </Button>
-            <Button 
-              variant={isLocked ? "default" : "warning"}
-              className="flex items-center gap-2"
-              onClick={handleLockToggle}
-            >
-              {isLocked ? (
-                <>
-                  <Unlock className="h-4 w-4" />
-                  Unlock Page
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4" />
-                  Lock Page
-                </>
-              )}
-            </Button>
+            <PageLock 
+              pageId="usersPage" 
+              onLockStatusChange={handleLockStatusChange}
+              initialLockState={isLocked}
+            />
           </div>
         </div>
         

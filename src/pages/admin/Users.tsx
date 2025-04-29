@@ -4,9 +4,10 @@ import AdminLayout from "@/layouts/AdminLayout";
 import UserManagement from '@/components/admin/UserManagement';
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, UserPlus } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import PageLock from '@/components/admin/PageLock';
 
 const Users = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,17 +41,10 @@ const Users = () => {
     };
     
     checkUsers();
-    
-    // Check for lock status in session storage
-    const lockStatus = sessionStorage.getItem('usersPage');
-    if (lockStatus !== null) {
-      setIsLocked(JSON.parse(lockStatus));
-    }
   }, []);
   
   const handleLockStatusChange = (status: boolean) => {
     setIsLocked(status);
-    sessionStorage.setItem('usersPage', JSON.stringify(status));
   };
 
   return (
@@ -59,18 +53,16 @@ const Users = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Users Management</h1>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => handleLockStatusChange(!isLocked)}
-              className="flex items-center gap-2"
-            >
-              {isLocked ? 'Unlock Page' : 'Lock Page'}
-            </Button>
+            <PageLock 
+              pageId="usersPage"
+              onLockStatusChange={handleLockStatusChange}
+              initialLockState={isLocked}
+            />
           </div>
         </div>
         
         {!hasUsers && !isLoading && (
-          <Alert variant="warning" className="mb-6">
+          <Alert variant="destructive" className="mb-6"> {/* Changed from "warning" to "destructive" */}
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>No Users Found</AlertTitle>
             <AlertDescription>

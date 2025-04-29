@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { 
   Check, 
@@ -8,7 +7,8 @@ import {
   UserX,
   AlertTriangle,
   Lock,
-  Unlock
+  Unlock,
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -275,7 +275,7 @@ const UserManagement = ({ users: initialUsers, isLocked = false }: UserManagemen
       toast({
         title: "Page is locked",
         description: "Unable to update user role while the page is locked. Please unlock first.",
-        variant: "warning",
+        variant: "destructive",
       });
       return;
     }
@@ -365,7 +365,7 @@ const UserManagement = ({ users: initialUsers, isLocked = false }: UserManagemen
       toast({
         title: "Page is locked",
         description: "Unable to delete user while the page is locked. Please unlock first.",
-        variant: "warning",
+        variant: "destructive",
       });
       return;
     }

@@ -1,162 +1,116 @@
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
-import DonationsTable from "./DonationsTable";
-import DonorsTable from "./DonorsTable";
-import DonationStats from "./DonationStats";
+import { useState, useEffect } from "react";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import DonationsTable from './DonationsTable';
+import DonationDetailsDialog from './DonationDetailsDialog';
+import DonationStats from './DonationStats';
 
-const DonationsManager = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<string>("donations");
+interface DonationsManagerProps {
+  isLocked?: boolean;
+}
 
-  // Fetch all donations
-  const {
-    data: donations,
-    isLoading: donationsLoading,
-    error: donationsError,
-    refetch: refetchDonations,
-  } = useQuery({
-    queryKey: ["admin-donations"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("donations")
-        .select("*, profiles(full_name, email, phone_number)")
-        .order("created_at", { ascending: false });
+const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false }) => {
+  const [donations, setDonations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const { toast } = useToast();
 
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Filter donations based on search query
-  const filteredDonations = donations?.filter((donation) => {
-    const donorName = donation.profiles?.full_name?.toLowerCase() || "";
-    const donorEmail = donation.profiles?.email?.toLowerCase() || "";
-    const searchLower = searchQuery.toLowerCase();
+  useEffect(() => {
+    fetchDonations();
     
-    return (
-      donorName.includes(searchLower) ||
-      donorEmail.includes(searchLower) ||
-      donation.id.toLowerCase().includes(searchLower) ||
-      donation.payment_method?.toLowerCase().includes(searchLower) ||
-      donation.amount.toString().includes(searchLower)
-    );
-  });
-
-  // Group donations by donor for the donors tab
-  const donors = donations
-    ? donations.reduce((acc: any[], donation: any) => {
-        if (!donation.profiles) return acc;
-        
-        const existingDonorIndex = acc.findIndex(
-          (donor) => donor.user_id === donation.user_id
-        );
-        
-        if (existingDonorIndex >= 0) {
-          acc[existingDonorIndex].total_amount += donation.amount;
-          acc[existingDonorIndex].donation_count += 1;
-          
-          if (new Date(donation.created_at) > new Date(acc[existingDonorIndex].last_donation_date)) {
-            acc[existingDonorIndex].last_donation_date = donation.created_at;
-          }
-        } else {
-          acc.push({
-            user_id: donation.user_id,
-            full_name: donation.profiles.full_name,
-            email: donation.profiles.email,
-            phone_number: donation.profiles.phone_number,
-            total_amount: donation.amount,
-            donation_count: 1,
-            last_donation_date: donation.created_at,
-          });
+    const channel = supabase
+      .channel('donations_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'donations'
+        },
+        (payload) => {
+          console.log('Donation change detected:', payload);
+          fetchDonations();
         }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  
+  const fetchDonations = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('donations')
+        .select(`
+          *,
+          donor:donor_id (
+            id, 
+            full_name, 
+            email, 
+            phone
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Process the donations to get donor info
+      const processedDonations = data.map(donation => {
+        // If donor relation isn't found, use empty values for full_name and email
+        const donorFullName = donation.donor ? donation.donor.full_name : 'Unknown Donor';
+        const donorEmail = donation.donor ? donation.donor.email : 'No email available';
         
-        return acc;
-      }, [])
-    : [];
-
-  // Filter donors based on search query
-  const filteredDonors = donors?.filter((donor) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      donor.full_name?.toLowerCase().includes(searchLower) ||
-      donor.email?.toLowerCase().includes(searchLower) ||
-      donor.phone_number?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Calculate stats
-  const calculateStats = () => {
-    if (!donations) return { total: 0, average: 0, count: 0 };
-    
-    const completedDonations = donations.filter(d => d.payment_status === "completed");
-    const total = completedDonations.reduce((sum, d) => sum + Number(d.amount), 0);
-    const count = completedDonations.length;
-    const average = count > 0 ? total / count : 0;
-    
-    return { total, average, count };
+        return {
+          ...donation,
+          donor_name: donorFullName,
+          donor_email: donorEmail
+        };
+      });
+      
+      setDonations(processedDonations);
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+      toast({
+        title: "Error loading donations",
+        description: error instanceof Error ? error.message : "Failed to load donations data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
-  const donationStats = calculateStats();
-
-  if (donationsError) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-red-500">Error loading donations data</p>
-        <Button onClick={() => refetchDonations()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
-    );
-  }
+  const handleViewDetails = (donation: any) => {
+    setSelectedDonation(donation);
+    setIsDetailsOpen(true);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Donation Stats */}
-      <DonationStats stats={donationStats} />
+      <DonationStats donations={donations} isLoading={isLoading} />
       
-      {/* Search and Filter */}
-      <div className="relative w-full md:w-1/3">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          placeholder={`Search ${activeTab}...`}
-          className="pl-10"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+      <DonationsTable 
+        donations={donations} 
+        isLoading={isLoading} 
+        onViewDetails={handleViewDetails} 
+        onRefresh={fetchDonations}
+        isLocked={isLocked}
+      />
+      
+      {selectedDonation && (
+        <DonationDetailsDialog
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          donation={selectedDonation}
+          isLocked={isLocked}
         />
-      </div>
-      
-      {/* Tabs */}
-      <Tabs 
-        defaultValue="donations" 
-        onValueChange={(value) => setActiveTab(value)}
-        className="w-full"
-      >
-        <TabsList className="mb-4">
-          <TabsTrigger value="donations">Donations</TabsTrigger>
-          <TabsTrigger value="donors">Donors</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="donations">
-          <DonationsTable 
-            donations={filteredDonations || []}
-            isLoading={donationsLoading}
-            onRefresh={refetchDonations}
-          />
-        </TabsContent>
-        
-        <TabsContent value="donors">
-          <DonorsTable 
-            donors={filteredDonors || []}
-            isLoading={donationsLoading}
-          />
-        </TabsContent>
-      </Tabs>
+      )}
     </div>
   );
 };

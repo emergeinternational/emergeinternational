@@ -60,13 +60,13 @@ const PageLock: React.FC<PageLockProps> = ({
       description: newLockState 
         ? "The page is now locked for safety." 
         : "The page is now unlocked for editing.",
-      variant: newLockState ? "default" : "warning",
+      variant: newLockState ? "default" : "destructive",  // Changed from "warning" to "destructive"
     });
   };
 
   return (
     <Button 
-      variant={isLocked ? "default" : "warning"}
+      variant={isLocked ? "default" : "destructive"}  // Changed from "warning" to "destructive"
       className="flex items-center gap-2"
       onClick={toggleLock}
       title={isLocked ? "Unlock page to enable editing" : "Lock page to prevent changes"}
