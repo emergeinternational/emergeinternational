@@ -83,7 +83,7 @@ const PageLock: React.FC<PageLockProps> = ({ userRole, pageId, onLockStatusChang
       )}
       
       {isLocked && userRole !== 'admin' && userRole !== 'editor' && (
-        <Alert variant="warning" className="p-2 text-sm max-w-md">
+        <Alert variant="default" className="p-2 text-sm max-w-md">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             This page is currently locked for editing
