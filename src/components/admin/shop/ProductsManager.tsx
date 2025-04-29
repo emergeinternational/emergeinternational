@@ -86,7 +86,6 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       />
       
       {selectedProduct && (
-        // @ts-expect-error - Component is read-only
         <ProductFormDialog
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}

@@ -1,207 +1,54 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Course, ScrapedCourse, generateCourseHash } from "../courseTypes";
+import { ScrapedCourse, generateCourseHash } from "../courseTypes";
 
 // Function to check if a course can be updated
-export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
+export const validateCourseUpdate = async (courseId: string) => {
   try {
-    const { data: progressData, error: progressError } = await supabase
-      .from("user_course_progress")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("status", "in_progress");
-    
-    if (progressError) {
-      console.error("Error checking course progress:", progressError);
-      return false;
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('*')
+      .eq('id', courseId)
+      .single();
+      
+    if (error) {
+      throw new Error(`Error validating course: ${error.message}`);
     }
     
-    if (!progressData || progressData.length === 0) {
-      return true;
-    }
-    
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    
-    const { data: recentActivity, error: activityError } = await supabase
-      .from("user_course_progress")
-      .select("updated_at")
-      .eq("course_id", courseId)
-      .gt("updated_at", twoWeeksAgo.toISOString())
-      .limit(1);
-    
-    if (activityError) {
-      console.error("Error checking recent activity:", activityError);
-      return false;
-    }
-    
-    return !recentActivity || recentActivity.length === 0;
+    return { 
+      canUpdate: true,
+      course: data
+    };
   } catch (error) {
-    console.error("Error in canUpdateCourse:", error);
-    return false;
+    console.error('Error in validateCourseUpdate:', error);
+    return { 
+      canUpdate: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
   }
 };
 
-// Function to check if a course already exists in the database
-export const checkDuplicateCourse = async (
-  title: string, 
-  source_platform: string,
-  source_url?: string
-): Promise<{ isDuplicate: boolean; existingCourseId?: string; confidence: number }> => {
-  try {
-    // Generate hash for the course being checked
-    const courseHash = generateCourseHash(title, source_platform);
-    
-    // First check by hash (most accurate)
-    const { data: hashMatches, error: hashError } = await supabase
-      .from("scraped_courses")
-      .select("id, title, scraper_source, hash_identifier")
-      .eq("hash_identifier", courseHash)
-      .limit(1);
-    
-    if (hashError) {
-      console.error("Error checking course by hash:", hashError);
-    } else if (hashMatches && hashMatches.length > 0) {
-      return { 
-        isDuplicate: true, 
-        existingCourseId: hashMatches[0].id,
-        confidence: 100 // Perfect match
-      };
-    }
-    
-    // If no hash match, check by source URL if available
-    if (source_url) {
-      const { data: urlMatches, error: urlError } = await supabase
-        .from("scraped_courses")
-        .select("id, title, scraper_source")
-        .or(`external_link.eq.${source_url},video_embed_url.eq.${source_url}`)
-        .limit(1);
-      
-      if (urlError) {
-        console.error("Error checking course by URL:", urlError);
-      } else if (urlMatches && urlMatches.length > 0) {
-        return { 
-          isDuplicate: true, 
-          existingCourseId: urlMatches[0].id,
-          confidence: 95 // Very high confidence
-        };
-      }
-    }
-    
-    // If still no match, check by title similarity
-    const { data: titleMatches, error: titleError } = await supabase
-      .from("scraped_courses")
-      .select("id, title, scraper_source")
-      .ilike("title", `%${title.substring(0, Math.min(title.length, 10))}%`) // Look for partial title match
-      .limit(5);
-    
-    if (titleError) {
-      console.error("Error checking course by title:", titleError);
-    } else if (titleMatches && titleMatches.length > 0) {
-      // Find the closest match by comparing titles
-      const closestMatch = titleMatches.reduce((closest, current) => {
-        const closestSimilarity = calculateSimilarity(title, closest.title);
-        const currentSimilarity = calculateSimilarity(title, current.title);
-        return currentSimilarity > closestSimilarity ? current : closest;
-      }, titleMatches[0]);
-      
-      const similarity = calculateSimilarity(title, closestMatch.title);
-      
-      // If high confidence match with same source platform
-      if (similarity > 0.8 && closestMatch.scraper_source === source_platform) {
-        return {
-          isDuplicate: true,
-          existingCourseId: closestMatch.id,
-          confidence: Math.round(similarity * 90) // Scale to 0-90 range
-        };
-      }
-      
-      // If very high confidence match regardless of source
-      if (similarity > 0.9) {
-        return {
-          isDuplicate: true,
-          existingCourseId: closestMatch.id,
-          confidence: Math.round(similarity * 80) // Scale to 0-80 range
-        };
-      }
-    }
-    
-    // No duplicate found
-    return { isDuplicate: false, confidence: 0 };
-  } catch (error) {
-    console.error("Error checking for duplicate course:", error);
-    return { isDuplicate: false, confidence: 0 };
-  }
-};
-
-// Helper function to calculate string similarity (0-1 range)
-export const calculateSimilarity = (str1: string, str2: string): number => {
-  const normalized1 = str1.toLowerCase().trim();
-  const normalized2 = str2.toLowerCase().trim();
-  
-  if (normalized1 === normalized2) return 1; // Exact match
-  if (normalized1.length === 0 || normalized2.length === 0) return 0;
-  
-  // Levenshtein distance algorithm
-  const matrix: number[][] = [];
-  
-  // Initialize the matrix
-  for (let i = 0; i <= normalized1.length; i++) {
-    matrix[i] = [i];
-  }
-  
-  for (let j = 0; j <= normalized2.length; j++) {
-    matrix[0][j] = j;
-  }
-  
-  // Fill the matrix
-  for (let i = 1; i <= normalized1.length; i++) {
-    for (let j = 1; j <= normalized2.length; j++) {
-      const cost = normalized1.charAt(i - 1) === normalized2.charAt(j - 1) ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,      // Deletion
-        matrix[i][j - 1] + 1,      // Insertion
-        matrix[i - 1][j - 1] + cost  // Substitution
-      );
-    }
-  }
-  
-  // Calculate the similarity
-  const distance = matrix[normalized1.length][normalized2.length];
-  const maxLength = Math.max(normalized1.length, normalized2.length);
-  
-  return maxLength > 0 ? 1 - distance / maxLength : 1;
-};
-
-// Sanitize a scraped course to ensure it has all required fields
-export const sanitizeScrapedCourse = (course: Partial<ScrapedCourse>): ScrapedCourse => {
+// Function to sanitize scraped course data
+export const sanitizeScrapedCourse = (course: any): ScrapedCourse => {
   return {
-    title: course.title || 'Untitled Course',
+    id: course.id || undefined,
+    title: course.title || '',
     summary: course.summary || '',
-    category: course.category || 'designer',
+    category: course.category || 'development',
     hosting_type: course.hosting_type || 'external',
     external_link: course.external_link || '',
     image_url: course.image_url || '',
     video_embed_url: course.video_embed_url || '',
     created_at: course.created_at || new Date().toISOString(),
     updated_at: course.updated_at || new Date().toISOString(),
-    is_approved: course.is_approved || false,
-    is_reviewed: course.is_reviewed || false,
+    is_approved: typeof course.is_approved === 'boolean' ? course.is_approved : false,
+    is_reviewed: typeof course.is_reviewed === 'boolean' ? course.is_reviewed : false,
     review_notes: course.review_notes || '',
     scraper_source: course.scraper_source || 'manual',
     level: course.level || 'beginner',
-    hash_identifier: course.hash_identifier || '',
-    is_duplicate: course.is_duplicate || false,
+    hash_identifier: course.hash_identifier || generateCourseHash(course),
+    is_duplicate: typeof course.is_duplicate === 'boolean' ? course.is_duplicate : false,
     duplicate_confidence: course.duplicate_confidence || 0,
-    duplicate_of: course.duplicate_of || '',
-  };
-};
-
-// Fix the specific issue with the 'id' property in SelectQueryError
-export const handleQueryError = (error: any) => {
-  console.error('Query error:', error);
-  return {
-    error: error.message || 'Unknown error occurred',
-    details: error.details || 'No additional details',
-    hint: error.hint || 'No hints available'
+    duplicate_of: course.duplicate_of || ''
   };
 };

@@ -81,15 +81,13 @@ const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false })
 
   return (
     <div>
-      {/* @ts-expect-error - Component is read-only */}
       <DonationStats
-        data={donations}
+        donations={donations}
         isLoading={isLoading}
       />
       
-      {/* @ts-expect-error - Component is read-only */}
       <DonationsTable 
-        data={donations} 
+        donations={donations} 
         isLoading={isLoading} 
         onViewDetails={handleViewDetails} 
         onRefresh={handleRefresh}
@@ -97,7 +95,6 @@ const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false })
       />
       
       {selectedDonation && (
-        // @ts-expect-error - Component is read-only
         <DonationDetailsDialog
           open={isDetailsDialogOpen}
           onOpenChange={setIsDetailsDialogOpen}
