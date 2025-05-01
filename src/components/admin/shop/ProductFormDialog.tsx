@@ -1,26 +1,30 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -28,22 +32,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Category } from "@radix-ui/react-select";
-import {
-  Dispatch,
-  SetStateAction,
-  useState
-} from 'react';
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { ProductFormDialogProps, ProductVariation } from "./ProductFormDialog.d";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { useFieldArray } from "react-hook-form";
+import { safeJsonStringify } from "@/utils/jsonUtils";
+import { ProductVariation } from "./ProductFormDialog.d";
 
-const formSchema = z.object({
+const productFormSchema = z.object({
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
   }),
@@ -54,35 +48,45 @@ const formSchema = z.object({
     try {
       const num = parseFloat(value);
       return !isNaN(num) && num > 0;
-    } catch (e) {
+    } catch (error) {
       return false;
     }
   }, {
     message: "Price must be a valid number greater than zero.",
   }),
-  category: z.string().min(1, {
-    message: "Please select a category.",
+  category: z.string().min(2, {
+    message: "Category must be at least 2 characters.",
   }),
   imageUrl: z.string().url({
-    message: "Please enter a valid URL.",
+    message: "Image URL must be a valid URL.",
   }),
   isPublished: z.boolean().default(false),
   inStock: z.boolean().default(true),
-  variations: z.array(
-    z.object({
-      name: z.string(),
-      options: z.array(z.string()),
-      price_adjustments: z.array(z.number())
-    })
-  ).optional(),
 });
 
-const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductChange }: ProductFormDialogProps) => {
+type ProductFormData = z.infer<typeof productFormSchema>;
+
+interface ProductFormDialogProps {
+  open: boolean;
+  onOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
+  product?: any;
+  onSuccess?: () => void;
+  onProductChange?: (product: any) => void;
+}
+
+const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
+  open,
+  onOpenChange,
+  product,
+  onSuccess,
+  onProductChange,
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productFormSchema),
     defaultValues: {
       title: product?.title || "",
       description: product?.description || "",
@@ -91,79 +95,172 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
       imageUrl: product?.image_url || "",
       isPublished: product?.is_published || false,
       inStock: product?.in_stock || true,
-      variations: product?.variations ? JSON.parse(product.variations) : []
     },
   });
 
-  const onSubmit = async (data: any) => {
-    setIsSubmitting(true);
-    
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        title: product.title || "",
+        description: product.description || "",
+        price: product.price?.toString() || "",
+        category: product.category || "",
+        imageUrl: product.image_url || "",
+        isPublished: product.is_published || false,
+        inStock: product.in_stock || true,
+      });
+
+      // Parse variations from JSON string
+      try {
+        const parsedVariations = product.variations ? JSON.parse(product.variations) : [];
+        setVariations(parsedVariations);
+      } catch (error) {
+        console.error("Error parsing variations:", error);
+        toast({
+          title: "Error",
+          description: "Failed to parse product variations",
+          variant: "destructive",
+        });
+        setVariations([]);
+      }
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        price: "",
+        category: "",
+        imageUrl: "",
+        isPublished: false,
+        inStock: true,
+      });
+      setVariations([]);
+    }
+  }, [product, form, toast]);
+
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  const handleVariationChange = (index: number, field: string, value: any) => {
+    const updatedVariations = [...variations];
+    if (field === 'options' || field === 'price_adjustments') {
+      updatedVariations[index][field] = value;
+    } else {
+      updatedVariations[index][field] = value;
+    }
+    setVariations(updatedVariations);
+  };
+
+  const handleAddVariation = () => {
+    setVariations([
+      ...variations,
+      {
+        name: "",
+        options: [],
+        price_adjustments: [],
+      },
+    ]);
+  };
+
+  const handleRemoveVariation = (index: number) => {
+    const updatedVariations = [...variations];
+    updatedVariations.splice(index, 1);
+    setVariations(updatedVariations);
+  };
+
+  const onSubmit = async (data: ProductFormData) => {
+    if (product) {
+      handleSaveChanges();
+    } else {
+      handleCreateProduct();
+    }
+  };
+
+  // Handle save changes, update instead of create
+  const handleSaveChanges = async () => {
     try {
-      // Convert variations to JSON-compatible format
-      const variationsJson = data.variations ? JSON.stringify(data.variations) : null;
-      
+      setIsSubmitting(true);
+
+      const formValues = form.getValues();
       const productData = {
-        title: data.title,
-        description: data.description,
-        price: parseFloat(data.price),
-        category: data.category,
-        image_url: data.imageUrl,
-        is_published: data.isPublished,
-        in_stock: data.inStock,
-        variations: variationsJson, // Use JSON string instead of array of objects
+        title: formValues.title,
+        description: formValues.description,
+        price: parseFloat(formValues.price),
+        category: formValues.category,
+        image_url: formValues.imageUrl,
+        is_published: formValues.isPublished,
+        in_stock: formValues.inStock,
+        variations: safeJsonStringify(variations), // Stringify the variations
         updated_at: new Date().toISOString()
       };
 
-      let result;
-      
-      if (product) {
-        // Update existing product
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', product.id);
-        
-        if (error) throw error;
-        result = { ...product, ...productData };
-        
-        toast({
-          title: "Product updated",
-          description: "The product has been successfully updated.",
-        });
-      } else {
-        // Create new product
-        productData.created_at = new Date().toISOString();
-        
-        const { data: newProduct, error } = await supabase
-          .from('products')
-          .insert(productData)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        result = newProduct;
-        
-        toast({
-          title: "Product created",
-          description: "The new product has been successfully created.",
-        });
+      const { error } = await supabase
+        .from("products")
+        .update(productData)
+        .eq("id", product.id);
+
+      if (error) {
+        throw error;
       }
-      
-      if (onProductChange) {
-        onProductChange(result);
-      }
-      
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving product:", error);
+
       toast({
-        variant: "destructive",
+        title: "Success",
+        description: "Product updated successfully",
+      });
+
+      onSuccess?.();
+    } catch (error) {
+      console.error("Failed to update product:", error);
+      toast({
         title: "Error",
-        description: "There was a problem saving the product. Please try again.",
+        description: "Failed to update product",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle create new product
+  const handleCreateProduct = async () => {
+    try {
+      setIsSubmitting(true);
+
+      const formValues = form.getValues();
+      const productData = {
+        title: formValues.title,
+        description: formValues.description,
+        price: parseFloat(formValues.price),
+        category: formValues.category,
+        image_url: formValues.imageUrl,
+        is_published: formValues.isPublished,
+        in_stock: formValues.inStock,
+        variations: safeJsonStringify(variations), // Stringify the variations
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from("products")
+        .insert(productData)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Product created successfully",
+      });
+
+      onSuccess?.();
+    } catch (error) {
+      console.error("Failed to create product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create product",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -171,14 +268,16 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{product ? "Edit Product" : "Create New Product"}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {product ? "Update product details." : "Enter details for the new product."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[625px]">
+        <DialogHeader>
+          <DialogTitle>{product ? "Edit Product" : "Create New Product"}</DialogTitle>
+          <DialogDescription>
+            {product
+              ? "Edit the details of the selected product."
+              : "Create a new product by entering the details below."}
+          </DialogDescription>
+        </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -188,7 +287,7 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Product title" {...field} />
+                    <Input placeholder="Product Title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -201,7 +300,11 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Product description" {...field} />
+                    <Textarea
+                      placeholder="Product Description"
+                      className="resize-none"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -214,7 +317,7 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
                 <FormItem>
                   <FormLabel>Price</FormLabel>
                   <FormControl>
-                    <Input placeholder="Product price" type="number" {...field} />
+                    <Input placeholder="Product Price" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -226,20 +329,9 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="clothing">Clothing</SelectItem>
-                      <SelectItem value="books">Books</SelectItem>
-                      <SelectItem value="home_decor">Home Decor</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input placeholder="Product Category" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -251,60 +343,136 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
                 <FormItem>
                   <FormLabel>Image URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="Product image URL" {...field} />
+                    <Input placeholder="Product Image URL" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium leading-none">Publish</p>
+                <p className="text-sm text-muted-foreground">
+                  Set product to published.
+                </p>
+              </div>
               <FormField
                 control={form.control}
                 name="isPublished"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel>Publish</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium leading-none">In Stock</p>
+                <p className="text-sm text-muted-foreground">
+                  Set product to in stock.
+                </p>
+              </div>
               <FormField
                 control={form.control}
                 name="inStock"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center space-x-2">
-                      <FormLabel>In Stock</FormLabel>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </div>
-                    <FormMessage />
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
             </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit"}
+
+            <div>
+              <FormLabel>Variations</FormLabel>
+              {variations.map((variation, index) => (
+                <div key={index} className="border p-4 rounded-md mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <FormLabel>Variation Name</FormLabel>
+                      <Input
+                        type="text"
+                        placeholder="Variation Name"
+                        value={variation.name}
+                        onChange={(e) => handleVariationChange(index, "name", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <FormLabel>Options (comma-separated)</FormLabel>
+                      <Input
+                        type="text"
+                        placeholder="Option 1, Option 2"
+                        value={variation.options.join(",")}
+                        onChange={(e) =>
+                          handleVariationChange(
+                            index,
+                            "options",
+                            e.target.value.split(",")
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <FormLabel>Price Adjustments (comma-separated)</FormLabel>
+                      <Input
+                        type="text"
+                        placeholder="0, 5, -3"
+                        value={variation.price_adjustments.join(",")}
+                        onChange={(e) =>
+                          handleVariationChange(
+                            index,
+                            "price_adjustments",
+                            e.target.value.split(",").map(Number)
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => handleRemoveVariation(index)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Variation
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddVariation}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Variation
               </Button>
-            </AlertDialogFooter>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Save changes"}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 };
 

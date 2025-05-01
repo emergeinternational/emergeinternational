@@ -63,6 +63,9 @@ export interface ScrapedCourse {
   review_notes?: string;
   created_at?: string;
   updated_at?: string;
+  // Add missing properties
+  is_duplicate?: boolean;
+  duplicate_confidence?: number;
 }
 
 export interface CourseProgress {

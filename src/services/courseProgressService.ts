@@ -1,7 +1,18 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import type { CourseProgress } from "./courseTypes";
-import { sanitizeCourseProgress } from "./courseTypes";
+import { CourseProgress } from "./courseTypes";
+
+// Helper function to sanitize course progress data
+export const sanitizeCourseProgress = (progress: any): CourseProgress => {
+  return {
+    id: progress.id,
+    user_id: progress.user_id,
+    course_id: progress.course_id,
+    progress: progress.progress || 0,
+    status: progress.status || "started",
+    date_started: progress.date_started,
+    date_completed: progress.date_completed
+  };
+};
 
 export const getUserCourseProgress = async (
   userId: string

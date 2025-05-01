@@ -1,8 +1,27 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Course } from "./courseTypes";
-import { sanitizeCourseData } from "./courseTypes";
-import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
+
+// Helper function to sanitize course data
+export const sanitizeCourseData = (course: any): Course => {
+  return {
+    id: course.id,
+    title: course.title || "",
+    summary: course.summary || "",
+    image_url: course.image_url || "",
+    video_embed_url: course.video_embed_url || "",
+    external_link: course.external_link || "",
+    is_published: course.is_published || false,
+    category: course.category || "other",
+    level: course.level || "beginner",
+    hosting_type: course.hosting_type || "hosted",
+    price: course.price || 0,
+    created_at: course.created_at,
+    updated_at: course.updated_at,
+    content: course.content,
+    duration: course.duration,
+    career_interests: course.career_interests || []
+  };
+};
 
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {

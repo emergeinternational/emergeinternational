@@ -55,19 +55,24 @@ export const getCourseById = async (id: string): Promise<Course | null> => {
 
 // Get courses by category
 export const getCoursesByCategory = async (category: CourseCategory): Promise<Course[]> => {
-  const { data, error } = await supabase
-    .from("courses")
-    .select("*")
-    .eq("category", category)
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("category", category)
+      .eq("is_published", true)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error(`Error fetching courses with category ${category}:`, error);
+    if (error) {
+      console.error(`Error fetching courses with category ${category}:`, error);
+      return [];
+    }
+
+    return data as Course[];
+  } catch (error) {
+    console.error(`Error in getCoursesByCategory:`, error);
     return [];
   }
-
-  return data as Course[];
 };
 
 // Get courses by level
@@ -89,18 +94,34 @@ export const getCoursesByLevel = async (level: CourseLevel): Promise<Course[]> =
 
 // Create a new course
 export const createCourse = async (course: Omit<Course, "id" | "created_at" | "updated_at">): Promise<Course | null> => {
-  const { data, error } = await supabase
-    .from("courses")
-    .insert(course)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("courses")
+      .insert({
+        title: course.title,
+        summary: course.summary,
+        image_url: course.image_url,
+        video_embed_url: course.video_embed_url,
+        external_link: course.external_link,
+        is_published: course.is_published,
+        category: course.category,
+        level: course.level,
+        hosting_type: course.hosting_type,
+        price: course.price
+      })
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Error creating course:", error);
+    if (error) {
+      console.error("Error creating course:", error);
+      return null;
+    }
+
+    return data as Course;
+  } catch (error) {
+    console.error("Error in createCourse:", error);
     return null;
   }
-
-  return data as Course;
 };
 
 // Update a course
