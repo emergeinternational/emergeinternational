@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
+import { Product } from "@/services/productTypes";
 import { RefetchOptions } from '@tanstack/react-query';
 
 interface ProductsManagerProps {
@@ -11,9 +12,9 @@ interface ProductsManagerProps {
 }
 
 const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) => {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -66,7 +67,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
     }
   };
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };

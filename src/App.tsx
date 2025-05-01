@@ -16,6 +16,7 @@ import PremiumEnrollmentsPage from "./pages/admin/PremiumEnrollmentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
 import PremiumCoursesPage from "./pages/admin/PremiumCoursesPage";
 import ProductsPage from "./pages/admin/ProductsPage";
+import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import DesignersPage from "./pages/admin/DesignersPage";
 import DonationsManagementPage from "./pages/admin/DonationsManagementPage";
 import Login from "./pages/Login";
@@ -45,6 +46,7 @@ import Landing from "./pages/Landing";
 import TestAuthPage from "./pages/TestAuthPage";
 import TalentsPage from "./pages/admin/TalentsPage";
 import EventPayment from "./pages/EventPayment";
+import EventDetails from "./pages/EventDetails";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +92,7 @@ const App = () => {
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/shop/product/:id" element={<ProductDetail />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/event-details/:id" element={<EventDetails />} />
                 <Route path="/event-payment/:eventId" element={<EventPayment />} />
                 <Route path="/payment" element={<Payment />} />
                 
@@ -124,6 +127,11 @@ const App = () => {
                 <Route path="/admin/products" element={
                   <RoleBasedRoute allowedRoles={['admin', 'editor']}>
                     <ProductsPage />
+                  </RoleBasedRoute>
+                } />
+                <Route path="/admin/product-management" element={
+                  <RoleBasedRoute allowedRoles={['admin', 'editor']}>
+                    <ProductManagementPage />
                   </RoleBasedRoute>
                 } />
                 <Route path="/admin/designers" element={
