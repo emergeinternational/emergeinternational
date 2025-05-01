@@ -38,29 +38,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface DonationsTableProps {
-  donations: any[];
-  isLoading: boolean;
-  onRefresh: () => void;
-}
-
 const DonationsTable = ({
   donations,
   isLoading,
   onRefresh,
-}: DonationsTableProps) => {
+  onViewDetails,
+  isLocked,
+}) => {
   const { toast } = useToast();
-  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
+  const [selectedDonation, setSelectedDonation] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [donationToRefund, setDonationToRefund] = useState<any | null>(null);
+  const [donationToRefund, setDonationToRefund] = useState(null);
   const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
 
-  const handleViewDetails = (donation: any) => {
+  const handleViewDetails = (donation) => {
     setSelectedDonation(donation);
+    setDetailsOpen(true);
+    onViewDetails(donation);
   };
 
-  const handleRefund = (donation: any) => {
+  const handleRefund = (donation) => {
     setDonationToRefund(donation);
     setRefundDialogOpen(true);
   };
@@ -85,7 +84,7 @@ const DonationsTable = ({
       });
       
       onRefresh();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error processing refund",
         description: error.message || "Something went wrong",
@@ -98,7 +97,7 @@ const DonationsTable = ({
     }
   };
 
-  const generateCertificate = async (donation: any) => {
+  const generateCertificate = async (donation) => {
     try {
       setIsGeneratingCertificate(true);
       
@@ -125,7 +124,7 @@ const DonationsTable = ({
       });
       
       onRefresh();
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error generating certificate",
         description: error.message || "Something went wrong",
@@ -228,7 +227,7 @@ const DonationsTable = ({
                       {donation.payment_status === "completed" && !donation.certificate_issued && (
                         <DropdownMenuItem 
                           onClick={() => generateCertificate(donation)}
-                          disabled={isGeneratingCertificate}
+                          disabled={isGeneratingCertificate || isLocked}
                         >
                           <FileCheck className="mr-2 h-4 w-4" />
                           Generate Certificate
@@ -244,7 +243,7 @@ const DonationsTable = ({
                         </DropdownMenuItem>
                       )}
                       
-                      {donation.payment_status === "completed" && (
+                      {donation.payment_status === "completed" && !isLocked && (
                         <DropdownMenuItem 
                           onClick={() => handleRefund(donation)}
                           className="text-red-600"
@@ -266,8 +265,9 @@ const DonationsTable = ({
       {selectedDonation && (
         <DonationDetailsDialog
           donation={selectedDonation}
-          open={!!selectedDonation}
-          onClose={() => setSelectedDonation(null)}
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          isLocked={isLocked}
         />
       )}
 

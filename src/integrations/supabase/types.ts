@@ -1643,7 +1643,12 @@ export type Database = {
         | "musical_artist"
         | "fine_artist"
         | "event_planner"
-      certificate_status: "pending" | "approved" | "denied"
+      certificate_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "rejected"
+        | "ineligible"
       course_category:
         | "model"
         | "designer"
@@ -1798,7 +1803,13 @@ export const Constants = {
         "fine_artist",
         "event_planner",
       ],
-      certificate_status: ["pending", "approved", "denied"],
+      certificate_status: [
+        "pending",
+        "approved",
+        "denied",
+        "rejected",
+        "ineligible",
+      ],
       course_category: [
         "model",
         "designer",
