@@ -25,6 +25,9 @@ export const checkUserEligibility = async (
     const isEligible = onlineCoursesCompleted >= settings.min_courses_required && 
                        workshopsCompleted >= settings.min_workshops_required;
     
+    // Define the status based on eligibility
+    const initialStatus: CertificateStatus = isEligible ? 'pending' : 'ineligible';
+    
     // Check or create eligibility record
     const { data: eligibilityData, error: eligibilityError } = await supabase
       .from("certificate_eligibility")
@@ -34,35 +37,55 @@ export const checkUserEligibility = async (
     
     if (eligibilityError) throw eligibilityError;
     
+    let certificateEligibility: CertificateEligibility;
+    
     if (!eligibilityData) {
       // Create new eligibility record
-      await supabase.from("certificate_eligibility").insert({
-        user_id: userId,
-        online_courses_completed: onlineCoursesCompleted,
-        workshops_completed: workshopsCompleted,
-        is_eligible: isEligible,
-        admin_approved: false,
-        status: isEligible ? 'pending' : 'ineligible'
-      });
+      const { data: newEligibilityData, error: insertError } = await supabase
+        .from("certificate_eligibility")
+        .insert({
+          user_id: userId,
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          is_eligible: isEligible,
+          admin_approved: false,
+          status: initialStatus
+        })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+      certificateEligibility = newEligibilityData as CertificateEligibility;
     } else {
+      // Determine the new status based on eligibility and approval
+      let newStatus: CertificateStatus = initialStatus;
+      if (isEligible && eligibilityData.admin_approved) {
+        newStatus = 'approved';
+      } else if (!isEligible) {
+        newStatus = 'ineligible';
+      }
+      
       // Update existing eligibility record
-      await supabase.from("certificate_eligibility").update({
-        online_courses_completed: onlineCoursesCompleted,
-        workshops_completed: workshopsCompleted,
-        is_eligible: isEligible,
-        status: isEligible && !eligibilityData.admin_approved ? 'pending' : 
-                isEligible && eligibilityData.admin_approved ? 'approved' : 'ineligible'
-      }).eq("user_id", userId);
+      const { data: updatedEligibility, error: updateError } = await supabase
+        .from("certificate_eligibility")
+        .update({
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          is_eligible: isEligible,
+          status: newStatus
+        })
+        .eq("user_id", userId)
+        .select()
+        .single();
+      
+      if (updateError) throw updateError;
+      certificateEligibility = updatedEligibility as CertificateEligibility;
     }
     
     return {
-      online_courses_completed: onlineCoursesCompleted,
-      workshops_completed: workshopsCompleted,
+      ...certificateEligibility,
       min_courses_required: settings.min_courses_required,
-      min_workshops_required: settings.min_workshops_required,
-      is_eligible: isEligible,
-      admin_approved: eligibilityData?.admin_approved || false,
-      status: isEligible ? (eligibilityData?.admin_approved ? 'approved' : 'pending') : 'ineligible'
+      min_workshops_required: settings.min_workshops_required
     };
   } catch (error) {
     console.error("Error checking certificate eligibility:", error);
@@ -80,6 +103,7 @@ export const getUsersEligibleForCertificates = async (): Promise<EligibleUser[]>
       `)
       .eq("is_eligible", true)
       .eq("admin_approved", false)
+      .eq("status", 'pending')
       .order("created_at", { ascending: false });
     
     if (error) throw error;
@@ -139,11 +163,13 @@ export const updateCertificateApproval = async (
   approved: boolean
 ): Promise<boolean> => {
   try {
+    const newStatus: CertificateStatus = approved ? 'approved' : 'rejected';
+    
     const { error } = await supabase
       .from("certificate_eligibility")
       .update({
         admin_approved: approved,
-        status: approved ? 'approved' : 'rejected'
+        status: newStatus
       })
       .eq("user_id", userId);
     

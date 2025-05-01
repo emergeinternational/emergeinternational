@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ScrapedCourse } from "../courseTypes";
+import { ScrapedCourse, generateCourseHash } from "../courseTypes";
 
 // Function to check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
@@ -42,55 +42,79 @@ export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
   }
 };
 
-// Function to check for duplicate courses
-export const checkDuplicateCourse = async (
-  title: string, 
-  source: string, 
-  sourceUrl?: string
-): Promise<{ isDuplicate: boolean; existingId?: string; confidence: number }> => {
+// Check if a course is a duplicate
+export const checkDuplicateCourse = async (course: ScrapedCourse): Promise<{ 
+  isDuplicate: boolean; 
+  confidence: number; 
+  duplicateId?: string 
+}> => {
   try {
-    // Generate hash for duplicate detection
-    const normalizedTitle = title.toLowerCase().trim().replace(/\s+/g, '');
-    const normalizedSource = source.toLowerCase().trim();
-    const courseHash = `${normalizedTitle}-${normalizedSource}`;
+    if (!course.title) {
+      return { isDuplicate: false, confidence: 0 };
+    }
     
-    // First check existing courses table by hash
-    const { data: existingCourses, error: coursesError } = await supabase
-      .from("courses")
+    const hash = generateCourseHash(course);
+    
+    // Check for exact match by hash
+    const { data: exactMatch, error: exactMatchError } = await supabase
+      .from("scraped_courses")
       .select("id, title")
-      .eq("hash_identifier", courseHash)
-      .limit(1);
+      .eq("hash_identifier", hash)
+      .neq("id", course.id || '')
+      .limit(1)
+      .maybeSingle();
     
-    if (coursesError) {
-      console.error("Error checking for duplicate in courses:", coursesError);
-    } else if (existingCourses && existingCourses.length > 0) {
-      return {
-        isDuplicate: true,
-        existingId: existingCourses[0].id,
-        confidence: 100 // Exact match
+    if (exactMatchError) {
+      console.error("Error checking for exact match:", exactMatchError);
+    }
+    
+    if (exactMatch) {
+      return { 
+        isDuplicate: true, 
+        confidence: 100, 
+        duplicateId: exactMatch.id 
       };
     }
     
-    // If we have a source URL, check for matching URLs
-    if (sourceUrl) {
-      const { data: urlMatches, error: urlError } = await supabase
-        .from("courses")
-        .select("id, title")
-        .or(`source_url.eq.${sourceUrl},external_link.eq.${sourceUrl},video_embed_url.eq.${sourceUrl}`)
-        .limit(1);
-      
-      if (urlError) {
-        console.error("Error checking URL duplicates:", urlError);
-      } else if (urlMatches && urlMatches.length > 0) {
-        return {
-          isDuplicate: true,
-          existingId: urlMatches[0].id,
-          confidence: 90 // Very high confidence
-        };
-      }
+    // Check by title similarity
+    const normalizedTitle = course.title.toLowerCase().trim();
+    const { data: similarTitles, error: similarTitlesError } = await supabase
+      .from("scraped_courses")
+      .select("id, title")
+      .neq("id", course.id || '');
+    
+    if (similarTitlesError) {
+      console.error("Error checking for similar titles:", similarTitlesError);
+      return { isDuplicate: false, confidence: 0 };
     }
     
-    // If we get here, it's likely not a duplicate
+    // Simple similarity check (in a real app, you'd use a more sophisticated algorithm)
+    const similarCourse = similarTitles?.find(c => {
+      if (!c.title) return false;
+      const otherTitle = c.title.toLowerCase().trim();
+      
+      // Check if one title contains the other
+      if (normalizedTitle.includes(otherTitle) || otherTitle.includes(normalizedTitle)) {
+        return true;
+      }
+      
+      // Check for word overlap
+      const words1 = normalizedTitle.split(/\s+/);
+      const words2 = otherTitle.split(/\s+/);
+      const commonWords = words1.filter(word => words2.includes(word));
+      
+      // If more than 70% of words match, consider it similar
+      return commonWords.length / Math.max(words1.length, words2.length) > 0.7;
+    });
+    
+    if (similarCourse) {
+      return { 
+        isDuplicate: true, 
+        confidence: 90, 
+        duplicateId: similarCourse.id 
+      };
+    }
+    
     return { isDuplicate: false, confidence: 0 };
   } catch (error) {
     console.error("Error in checkDuplicateCourse:", error);
@@ -98,28 +122,26 @@ export const checkDuplicateCourse = async (
   }
 };
 
-// Function to sanitize scraped course data
-export const sanitizeScrapedCourse = (course: Partial<ScrapedCourse>): ScrapedCourse => {
-  // Ensure all required fields are present with default values
+export const sanitizeScrapedCourse = (data: any): ScrapedCourse => {
   return {
-    id: course.id || '',
-    title: course.title || 'Untitled Course',
-    summary: course.summary || '',
-    category: course.category || 'model',
-    level: course.level || 'beginner',
-    video_embed_url: course.video_embed_url || '',
-    external_link: course.external_link || '',
-    image_url: course.image_url || '',
-    hosting_type: course.hosting_type || 'external',
-    created_at: course.created_at || new Date().toISOString(),
-    is_approved: course.is_approved ?? false,
-    is_reviewed: course.is_reviewed ?? false,
-    scraper_source: course.scraper_source || 'manual',
-    hash_identifier: course.hash_identifier || '',
-    review_notes: course.review_notes || '',
-    source_id: course.source_id || '',
-    is_duplicate: course.is_duplicate ?? false,
-    duplicate_confidence: course.duplicate_confidence || 0,
-    duplicate_of: course.duplicate_of || null
+    id: data.id,
+    title: data.title,
+    summary: data.summary || '',
+    category: data.category,
+    level: data.level || 'beginner',
+    hosting_type: data.hosting_type || 'external',
+    external_link: data.external_link || '',
+    image_url: data.image_url || '',
+    video_embed_url: data.video_embed_url || '',
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    is_approved: !!data.is_approved,
+    is_reviewed: !!data.is_reviewed,
+    review_notes: data.review_notes || '',
+    scraper_source: data.scraper_source || 'manual',
+    hash_identifier: data.hash_identifier || '',
+    is_duplicate: !!data.is_duplicate,
+    duplicate_confidence: data.duplicate_confidence || 0,
+    duplicate_of: data.duplicate_of || ''
   };
 };

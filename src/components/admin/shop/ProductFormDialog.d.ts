@@ -3,10 +3,10 @@ import { Dispatch, SetStateAction } from 'react';
 import { ProductCategory } from '@/services/productTypes';
 
 export interface ProductVariation {
-  size?: string;
-  color?: string;
-  quantity: number;
-  sku?: string;
+  id?: string;
+  name: string;
+  options: string[];
+  price_adjustments: number[];
 }
 
 export interface ProductFormDialogProps {

@@ -157,7 +157,7 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
     try {
       setIsSubmitting(true);
       
-      // Prepare the product data - ensure variations is handled properly
+      // Convert variations to JSON format for storage
       const productData = {
         title,
         description,
@@ -166,7 +166,7 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductCh
         image_url: imageUrl,
         is_published: isPublished,
         in_stock: inStock,
-        variations, // Store as JSON array
+        variations: JSON.stringify(variations), // Convert to JSON string
         updated_at: new Date().toISOString(),
       };
 

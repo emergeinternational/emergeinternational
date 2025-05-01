@@ -1,16 +1,29 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign, Users, CreditCard } from "lucide-react";
+import { DonationStatsProps } from "./DonationStats.d";
+import { useMemo } from "react";
 
-interface DonationStatsProps {
-  stats: {
-    total: number;
-    average: number;
-    count: number;
-  };
-}
+const DonationStats = ({ donations, isLoading }: DonationStatsProps) => {
+  const stats = useMemo(() => {
+    if (!donations || donations.length === 0) {
+      return {
+        total: 0,
+        average: 0,
+        count: 0
+      };
+    }
+    
+    const total = donations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
+    const uniqueDonors = new Set(donations.map(d => d.donor_id)).size;
+    
+    return {
+      total,
+      average: donations.length ? total / donations.length : 0,
+      count: uniqueDonors
+    };
+  }, [donations]);
 
-const DonationStats = ({ stats }: DonationStatsProps) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

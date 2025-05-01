@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Course } from "../courseTypes";
+import { Course, CourseLevel, CourseCategory, CourseHostingType } from "../courseTypes";
 
 // Log scraper activity
 export const logScraperActivity = async (
@@ -26,13 +26,13 @@ export const logScraperActivity = async (
 };
 
 // Create a verified course directly (for manual course creation)
-export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
+export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; message?: string; id?: string }> => {
   try {
     const validatedData = {
       ...courseData,
-      category: courseData.category,
-      level: courseData.level || 'beginner',
-      hosting_type: courseData.hosting_type
+      category: courseData.category as CourseCategory,
+      level: courseData.level || 'beginner' as CourseLevel,
+      hosting_type: courseData.hosting_type as CourseHostingType
     };
     
     const { data, error } = await supabase
@@ -43,12 +43,12 @@ export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'crea
     
     if (error) {
       console.error("Error creating verified course:", error);
-      return null;
+      return { success: false, message: error.message };
     }
     
-    return data.id;
-  } catch (error) {
+    return { success: true, id: data.id };
+  } catch (error: any) {
     console.error("Error in createVerifiedCourse:", error);
-    return null;
+    return { success: false, message: error.message };
   }
 };

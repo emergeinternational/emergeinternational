@@ -45,7 +45,7 @@ export interface AppCertificate {
 }
 
 export interface CertificateEligibility {
-  id: string;
+  id?: string;
   user_id: string;
   online_courses_completed: number;
   workshops_completed: number;
