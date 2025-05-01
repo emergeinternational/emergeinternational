@@ -998,6 +998,50 @@ export type Database = {
         }
         Relationships: []
       }
+      product_variations: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          price: number | null
+          product_id: string
+          size: string | null
+          sku: string
+          stock_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          price?: number | null
+          product_id: string
+          size?: string | null
+          sku: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          price?: number | null
+          product_id?: string
+          size?: string | null
+          sku?: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
