@@ -54,7 +54,15 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       
       if (error) throw error;
       
-      setProducts(data || []);
+      // Transform the data to ensure variations is properly typed
+      const typedProducts = (data || []).map((item: any) => {
+        return {
+          ...item,
+          variations: Array.isArray(item.variations) ? item.variations : []
+        } as Product;
+      });
+      
+      setProducts(typedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -94,6 +102,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
           onSuccess={() => {
             fetchProducts();
             setSelectedProduct(null);
+            setIsEditDialogOpen(false);
           }}
         />
       )}

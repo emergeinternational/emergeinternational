@@ -11,14 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Product, ProductCategory, ProductVariation } from "@/services/productTypes";
 import { Trash, Plus, Upload, Loader2 } from "lucide-react";
+import { ProductFormDialogProps } from "./ProductFormDialog.d";
 
-interface ProductFormDialogProps {
-  open: boolean;
-  product?: Product | null;
-  onClose: (refresh: boolean) => void;
-}
-
-const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) => {
+const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFormDialogProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -172,7 +167,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
         image_url: imageUrl,
         is_published: isPublished,
         in_stock: inStock,
-        variations: variations as any,
+        variations,
         updated_at: new Date().toISOString(),
       };
 
@@ -206,7 +201,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
         });
       }
 
-      onClose(true);
+      onSuccess();
       resetForm();
     } catch (error: any) {
       toast({
@@ -220,7 +215,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
   };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose(false)}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -442,7 +437,7 @@ const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) =
             <Button 
               type="button"
               variant="outline"
-              onClick={() => onClose(false)}
+              onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel
