@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
 interface DonationsManagerProps {
-  isLocked: boolean;
+  isLocked?: boolean;
 }
 
-const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked }) => {
+const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false }) => {
   const [donations, setDonations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedDonation, setSelectedDonation] = useState<any>(null);

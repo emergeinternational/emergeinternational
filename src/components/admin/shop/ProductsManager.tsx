@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +80,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       if (variationsError) throw variationsError;
       
       // Map variations to their products
-      const productsWithVariations = productsData.map((product: Product) => {
+      const productsWithVariations = productsData.map((product: any) => {
         const productVariations = variationsData.filter(
           (variation: ProductVariation) => variation.product_id === product.id
         );

@@ -11,17 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Download, ExternalLink, Mail, Phone, User } from "lucide-react";
+import { DonationDetailsDialogProps } from "./DonationDetailsDialog.d";
 
-interface DonationDetailsDialogProps {
-  donation: any;
-  open: boolean;
-  onClose: () => void;
-}
-
-const DonationDetailsDialog = ({
+const DonationDetailsDialog: React.FC<DonationDetailsDialogProps> = ({
   donation,
   open,
-  onClose,
+  onOpenChange,
+  isLocked,
 }: DonationDetailsDialogProps) => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A";
@@ -48,7 +44,7 @@ const DonationDetailsDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Donation Details</DialogTitle>
@@ -171,7 +167,7 @@ const DonationDetailsDialog = ({
               Download Certificate
             </Button>
           )}
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
