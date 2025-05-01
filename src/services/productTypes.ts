@@ -24,7 +24,7 @@ export interface Product {
   in_stock: boolean;
   stock_quantity?: number;
   designer_id?: string;
-  variations?: string[];
+  variations: ProductVariation[];
   sku?: string;
   weight?: number;
   dimensions?: any;

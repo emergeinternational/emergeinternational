@@ -2,6 +2,8 @@
 export interface ProductFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editProduct?: any;
   product?: any;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  isLocked?: boolean;
 }

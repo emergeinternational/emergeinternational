@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
-import { Product } from "@/services/productTypes";
+import { Product, ProductVariation } from "@/services/productTypes";
 import { RefetchOptions } from '@tanstack/react-query';
 
 interface ProductsManagerProps {
@@ -47,22 +47,36 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      // Fetch products first
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (productsError) throw productsError;
       
-      // Transform the data to ensure variations is properly typed
-      const typedProducts = (data || []).map((item: any) => {
+      // Fetch variations for all products
+      const { data: variationsData, error: variationsError } = await supabase
+        .from('product_variations')
+        .select('*');
+        
+      if (variationsError) throw variationsError;
+      
+      // Map variations to their products
+      const productsWithVariations = productsData.map((product: Product) => {
+        const productVariations = variationsData.filter(
+          (variation: ProductVariation) => variation.product_id === product.id
+        );
+        
         return {
-          ...item,
-          variations: Array.isArray(item.variations) ? item.variations : []
-        } as Product;
+          ...product,
+          variations: productVariations.length > 0 
+            ? productVariations 
+            : (Array.isArray(product.variations) ? product.variations : [])
+        };
       });
       
-      setProducts(typedProducts);
+      setProducts(productsWithVariations);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
