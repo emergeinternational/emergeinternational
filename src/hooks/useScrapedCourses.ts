@@ -6,7 +6,8 @@ import {
   approveScrapedCourse, 
   rejectScrapedCourse,
   triggerManualScrape,
-  getDuplicateStats
+  getDuplicateStats,
+  submitScrapedCourse
 } from '@/services/scraping/courseScraperCore';
 import { useToast } from './use-toast';
 
@@ -46,8 +47,8 @@ export const useScrapedCourses = () => {
   const handleApprove = async (course: ScrapedCourse) => {
     setProcessingAction(true);
     try {
-      const courseId = await approveScrapedCourse(course.id);
-      if (courseId) {
+      const result = await approveScrapedCourse(course.id);
+      if (result.success) {
         toast({
           title: "Success",
           description: course.is_duplicate && course.duplicate_confidence && course.duplicate_confidence >= 90 
@@ -152,6 +153,7 @@ export const useScrapedCourses = () => {
     handleApprove,
     handleReject,
     runManualScrape,
-    fetchStats
+    fetchStats,
+    submitScrapedCourse
   };
 };
