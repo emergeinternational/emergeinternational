@@ -26,12 +26,11 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   open,
   onOpenChange,
   onSuccess,
-  editProduct,
   product,
   isLocked
 }) => {
   const { toast } = useToast();
-  const [activeProduct, setActiveProduct] = useState<any>(editProduct || product || {});
+  const [activeProduct, setActiveProduct] = useState<any>(product || {});
   const [title, setTitle] = useState(activeProduct?.title || "");
   const [description, setDescription] = useState(activeProduct?.description || "");
   const [price, setPrice] = useState(activeProduct?.price?.toString() || "");
@@ -48,28 +47,27 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   const [variations, setVariations] = useState<ProductVariation[]>([]);
   
   useEffect(() => {
-    const productToUse = editProduct || product;
-    if (productToUse) {
-      setActiveProduct(productToUse);
-      setTitle(productToUse.title || "");
-      setDescription(productToUse.description || "");
-      setPrice(productToUse.price?.toString() || "");
-      setCategory(productToUse.category || "clothing");
-      setImageUrl(productToUse.image_url || "");
-      setIsPublished(productToUse.is_published || false);
-      setInStock(productToUse.in_stock || false);
-      setSku(productToUse.sku || "");
-      setWeight(productToUse.weight?.toString() || "");
-      setStockQuantity(productToUse.stock_quantity?.toString() || "0");
+    if (product) {
+      setActiveProduct(product);
+      setTitle(product.title || "");
+      setDescription(product.description || "");
+      setPrice(product.price?.toString() || "");
+      setCategory(product.category || "clothing");
+      setImageUrl(product.image_url || "");
+      setIsPublished(product.is_published || false);
+      setInStock(product.in_stock || false);
+      setSku(product.sku || "");
+      setWeight(product.weight?.toString() || "");
+      setStockQuantity(product.stock_quantity?.toString() || "0");
       
       // If we have a product ID, fetch the variations from the database
-      if (productToUse.id) {
-        fetchVariations(productToUse.id);
+      if (product.id) {
+        fetchVariations(product.id);
       } else {
         setVariations([]);
       }
     }
-  }, [editProduct, product]);
+  }, [product]);
 
   const fetchVariations = async (productId: string) => {
     try {
@@ -224,37 +222,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
         if (error) throw error;
         
         // Handle variations - we need to manage them in a separate table now
-        for (const variation of variations) {
-          if (variation.id.startsWith('temp-')) {
-            // This is a new variation, so insert it
-            const { error: varError } = await supabase
-              .from('product_variations')
-              .insert({
-                product_id: productId,
-                size: variation.size,
-                color: variation.color,
-                stock_quantity: variation.stock_quantity,
-                sku: variation.sku,
-                price: variation.price || null
-              });
-            
-            if (varError) throw varError;
-          } else {
-            // This is an existing variation, so update it
-            const { error: varError } = await supabase
-              .from('product_variations')
-              .update({
-                size: variation.size,
-                color: variation.color,
-                stock_quantity: variation.stock_quantity,
-                sku: variation.sku,
-                price: variation.price || null
-              })
-              .eq('id', variation.id);
-            
-            if (varError) throw varError;
-          }
-        }
+        await handleProductVariations(productId);
         
         toast({
           title: "Product updated",
@@ -275,22 +243,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
         productId = data[0].id;
         
         // Now create all the variations
-        if (variations.length > 0) {
-          const variationsToInsert = variations.map(v => ({
-            product_id: productId,
-            size: v.size,
-            color: v.color,
-            stock_quantity: v.stock_quantity,
-            sku: v.sku,
-            price: v.price
-          }));
-          
-          const { error: varError } = await supabase
-            .from('product_variations')
-            .insert(variationsToInsert);
-          
-          if (varError) throw varError;
-        }
+        await handleProductVariations(productId);
         
         toast({
           title: "Product created",
@@ -310,6 +263,63 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle creating/updating variations for a product
+  const handleProductVariations = async (productId: string) => {
+    try {
+      // Handle each variation
+      for (const variation of variations) {
+        if (variation.id.startsWith('temp-')) {
+          // This is a new variation, insert it
+          await supabase.from('product_variations').insert({
+            product_id: productId,
+            size: variation.size,
+            color: variation.color,
+            stock_quantity: variation.stock_quantity,
+            sku: variation.sku,
+            price: variation.price || null
+          });
+        } else {
+          // This is an existing variation, update it
+          await supabase.from('product_variations').update({
+            size: variation.size,
+            color: variation.color,
+            stock_quantity: variation.stock_quantity,
+            sku: variation.sku,
+            price: variation.price || null
+          }).eq('id', variation.id);
+        }
+      }
+      
+      // Get IDs of current variations to check for deleted ones
+      const currentVariationIds = variations
+        .filter(v => !v.id.startsWith('temp-'))
+        .map(v => v.id);
+      
+      // Delete variations that were removed
+      if (currentVariationIds.length > 0) {
+        const { data: existingVariations } = await supabase
+          .from('product_variations')
+          .select('id')
+          .eq('product_id', productId);
+        
+        if (existingVariations) {
+          const existingIds = existingVariations.map(v => v.id);
+          const toDeleteIds = existingIds.filter(id => !currentVariationIds.includes(id));
+          
+          if (toDeleteIds.length > 0) {
+            await supabase
+              .from('product_variations')
+              .delete()
+              .in('id', toDeleteIds);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error handling product variations:", err);
+      throw err;
     }
   };
 

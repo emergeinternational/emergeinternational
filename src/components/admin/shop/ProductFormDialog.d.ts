@@ -1,9 +1,10 @@
 
+import { Product } from "@/services/productTypes";
+
 export interface ProductFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editProduct?: any;
-  product?: any;
+  product?: Product | null;
   onSuccess?: () => void;
   isLocked?: boolean;
 }

@@ -39,8 +39,26 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       )
       .subscribe();
       
+    // Also listen for variation changes
+    const variationsChannel = supabase
+      .channel('variation_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_variations'
+        },
+        (payload) => {
+          console.log('Variation change detected:', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+      
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(variationsChannel);
     };
   }, []);
 
