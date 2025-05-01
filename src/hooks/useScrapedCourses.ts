@@ -57,7 +57,7 @@ export const useScrapedCourses = () => {
         });
         setCourses(courses.filter(c => c.id !== course.id));
       } else {
-        throw new Error("Failed to approve course");
+        throw new Error(result.message || "Failed to approve course");
       }
     } catch (error) {
       console.error("Error approving course:", error);
@@ -84,7 +84,7 @@ export const useScrapedCourses = () => {
         setCourses(courses.filter(c => c.id !== courseId));
         return true;
       } else {
-        throw new Error("Failed to reject course");
+        throw new Error(result.message || "Failed to reject course");
       }
     } catch (error) {
       console.error("Error rejecting course:", error);
@@ -113,7 +113,7 @@ export const useScrapedCourses = () => {
         await fetchStats();
         return true;
       } else {
-        throw new Error(result.message);
+        throw new Error(result.message || "Failed to run course scraper");
       }
     } catch (error) {
       console.error("Error running manual scrape:", error);
