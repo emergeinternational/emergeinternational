@@ -1,6 +1,6 @@
 
 import { Dispatch, SetStateAction } from 'react';
-import { ProductCategory } from '@/services/productTypes';
+import { Json } from '@/types/supabase';
 
 export interface ProductVariation {
   id?: string;

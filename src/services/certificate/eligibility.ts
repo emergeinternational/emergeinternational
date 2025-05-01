@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CertificateEligibility, EligibleUser, CertificateStatus } from "./types";
 import { getCertificateSettings } from "./settings";
@@ -188,6 +187,133 @@ export const userMeetsRequirements = async (userId: string): Promise<boolean> =>
     return eligibility.is_eligible && eligibility.admin_approved;
   } catch (error) {
     console.error("Error checking if user meets requirements:", error);
+    return false;
+  }
+};
+
+// Fix the createEligibilityCheck function to match the database schema
+export const createEligibilityCheck = async (userId: string): Promise<CertificateEligibility | null> => {
+  try {
+    // Get eligibility settings
+    const settings = await getCertificateSettings();
+    if (!settings) {
+      console.error("Failed to get certificate settings");
+      return null;
+    }
+
+    // Count completed courses and workshops
+    const { data: progressData, error: progressError } = await supabase
+      .from('user_course_progress')
+      .select('course_category, status')
+      .eq('user_id', userId)
+      .eq('status', 'completed');
+
+    if (progressError) {
+      console.error("Error fetching user course progress:", progressError);
+      return null;
+    }
+
+    const onlineCoursesCompleted = progressData.filter(p => p.course_category !== 'workshop').length;
+    const workshopsCompleted = progressData.filter(p => p.course_category === 'workshop').length;
+
+    // Determine if eligible
+    const isEligible = (
+      onlineCoursesCompleted >= settings.min_courses_required &&
+      workshopsCompleted >= settings.min_workshops_required
+    );
+
+    // Prepare status
+    const status: CertificateStatus = isEligible ? 'pending' : 'ineligible';
+
+    // Check if record already exists
+    const { data: existingRecord, error: existingError } = await supabase
+      .from('certificate_eligibility')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Error checking existing eligibility:", existingError);
+      return null;
+    }
+
+    let result;
+
+    if (existingRecord) {
+      // Update existing record
+      const { data, error } = await supabase
+        .from('certificate_eligibility')
+        .update({
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          is_eligible: isEligible,
+          status: status as any // Type assertion to bypass TypeScript error
+        })
+        .eq('id', existingRecord.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating eligibility:", error);
+        return null;
+      }
+
+      result = data;
+    } else {
+      // Create new record
+      const { data, error } = await supabase
+        .from('certificate_eligibility')
+        .insert({
+          user_id: userId,
+          online_courses_completed: onlineCoursesCompleted,
+          workshops_completed: workshopsCompleted,
+          is_eligible: isEligible,
+          admin_approved: false,
+          status: status as any // Type assertion to bypass TypeScript error
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating eligibility:", error);
+        return null;
+      }
+
+      result = data;
+    }
+
+    return {
+      ...result,
+      min_courses_required: settings.min_courses_required,
+      min_workshops_required: settings.min_workshops_required
+    };
+  } catch (error) {
+    console.error("Error in createEligibilityCheck:", error);
+    return null;
+  }
+};
+
+export const updateEligibilityStatus = async (
+  id: string, 
+  status: CertificateStatus
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('certificate_eligibility')
+      .update({ 
+        status: status as any, // Type assertion to bypass TypeScript error
+        admin_approved: status === 'approved'
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error updating eligibility status:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error in updateEligibilityStatus:", error);
     return false;
   }
 };

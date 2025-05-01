@@ -5,5 +5,5 @@ export interface DonationDetailsDialogProps {
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
   donation: any;
-  isLocked: boolean;
+  isLocked?: boolean;
 }

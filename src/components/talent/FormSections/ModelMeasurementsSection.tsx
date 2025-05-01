@@ -1,164 +1,109 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
+import { useEffect } from 'react';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 
 interface ModelMeasurementsSectionProps {
   form: UseFormReturn<any>;
-  show: boolean;  // Explicitly typed as boolean
+  show: boolean;
   gender: string;
 }
 
 export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasurementsSectionProps) => {
+  useEffect(() => {
+    if (show) {
+      // Initialize measurements object if it doesn't exist
+      const currentValues = form.getValues();
+      if (!currentValues.measurements) {
+        form.setValue('measurements', {
+          height: '',
+          weight: '',
+          chest: '',
+          waist: '',
+          hips: '',
+          shoulders: '',
+          inseam: '',
+        });
+      }
+    }
+  }, [show, form]);
+
   if (!show) return null;
 
   return (
     <div className="space-y-6">
-      <div className="border-t pt-6">
-        <h3 className="text-lg font-medium text-black">Model Measurements</h3>
-        <p className="text-gray-600 text-sm mb-4">
-          Please provide your measurements accurately. All measurements should be in centimeters (cm) unless specified otherwise.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <h3 className="text-lg font-medium">Physical Measurements</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
           name="measurements.height"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">Height</FormLabel>
+              <FormLabel>Height (in cm)</FormLabel>
               <FormControl>
-                <Input placeholder="175 cm" {...field} />
+                <Input type="number" placeholder="Height in cm" {...field} />
               </FormControl>
-              <FormDescription className="text-xs text-gray-500">
-                Enter height in centimeters
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {gender === "Male" ? (
-          <>
-            <FormField
-              control={form.control}
-              name="measurements.chest"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Chest</FormLabel>
-                  <FormControl>
-                    <Input placeholder="100 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure around the fullest part of chest
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormField
+          control={form.control}
+          name="measurements.weight"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Weight (in kg)</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="Weight in kg" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name="measurements.waist"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Waist</FormLabel>
-                  <FormControl>
-                    <Input placeholder="80 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure at natural waistline
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        {gender === "Female" && (
+          <FormField
+            control={form.control}
+            name="measurements.bust"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bust (in cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Bust measurement" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-            <FormField
-              control={form.control}
-              name="measurements.inseam"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Inseam</FormLabel>
-                  <FormControl>
-                    <Input placeholder="82 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure from crotch to ankle
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        ) : (
-          <>
-            <FormField
-              control={form.control}
-              name="measurements.bust"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Bust</FormLabel>
-                  <FormControl>
-                    <Input placeholder="90 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure around fullest part of bust
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="measurements.waist"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Waist</FormLabel>
-                  <FormControl>
-                    <Input placeholder="60 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure at smallest part of waist
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="measurements.hips"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="font-bold text-black">Hips</FormLabel>
-                  <FormControl>
-                    <Input placeholder="90 cm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs text-gray-500">
-                    Measure at fullest part of hips
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
+        {gender === "Male" && (
+          <FormField
+            control={form.control}
+            name="measurements.chest"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Chest (in cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Chest measurement" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         )}
 
         <FormField
           control={form.control}
-          name="shoeSize"
+          name="measurements.waist"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">Shoe Size</FormLabel>
+              <FormLabel>Waist (in cm)</FormLabel>
               <FormControl>
-                <Input placeholder="US 7 / EU 37.5" {...field} />
+                <Input type="number" placeholder="Waist measurement" {...field} />
               </FormControl>
-              <FormDescription className="text-xs text-gray-500">
-                US/EU size preferred
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -166,18 +111,43 @@ export const ModelMeasurementsSection = ({ form, show, gender }: ModelMeasuremen
 
         <FormField
           control={form.control}
-          name="dressSize"
+          name="measurements.hips"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="font-bold text-black">
-                {gender === "Male" ? "Suit Size" : "Dress Size"}
-              </FormLabel>
+              <FormLabel>Hips (in cm)</FormLabel>
               <FormControl>
-                <Input placeholder="US 4 / EU 34" {...field} />
+                <Input type="number" placeholder="Hips measurement" {...field} />
               </FormControl>
-              <FormDescription className="text-xs text-gray-500">
-                US/EU size preferred
-              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {gender === "Male" && (
+          <FormField
+            control={form.control}
+            name="measurements.shoulders"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shoulders (in cm)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Shoulders measurement" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          control={form.control}
+          name="measurements.inseam"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Inseam (in cm)</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="Inseam measurement" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

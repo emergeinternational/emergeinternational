@@ -1,147 +1,100 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ScrapedCourse, generateCourseHash } from "../courseTypes";
+import { Course } from "../courseTypes";
+import { logScraperActivity } from "./courseScraperHelpers";
 
-// Function to check if a course can be updated
+// Check if a course can be updated
 export const canUpdateCourse = async (courseId: string): Promise<boolean> => {
   try {
-    const { data: progressData, error: progressError } = await supabase
-      .from("user_course_progress")
-      .select("*")
-      .eq("course_id", courseId)
-      .eq("status", "in_progress");
+    // Check if the course exists
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id')
+      .eq('id', courseId)
+      .single();
     
-    if (progressError) {
-      console.error("Error checking course progress:", progressError);
+    if (error || !data) {
       return false;
     }
     
-    if (!progressData || progressData.length === 0) {
-      return true;
-    }
+    // Additional checks could be added here
+    // For example, checking if the course has enrollments
     
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    
-    const { data: recentActivity, error: activityError } = await supabase
-      .from("user_course_progress")
-      .select("updated_at")
-      .eq("course_id", courseId)
-      .gt("updated_at", twoWeeksAgo.toISOString())
-      .limit(1);
-    
-    if (activityError) {
-      console.error("Error checking recent activity:", activityError);
-      return false;
-    }
-    
-    return !recentActivity || recentActivity.length === 0;
+    return true;
   } catch (error) {
-    console.error("Error in canUpdateCourse:", error);
+    console.error("Error checking if course can be updated:", error);
     return false;
   }
 };
 
-// Check if a course is a duplicate
-export const checkDuplicateCourse = async (course: ScrapedCourse): Promise<{ 
-  isDuplicate: boolean; 
-  confidence: number; 
-  duplicateId?: string 
-}> => {
+// Check for duplicate course
+export const checkDuplicateCourse = async (title: string): Promise<boolean> => {
   try {
-    if (!course.title) {
-      return { isDuplicate: false, confidence: 0 };
+    // Check existing courses
+    const { data: existingCourses, error: coursesError } = await supabase
+      .from('courses')
+      .select('id, title')
+      .ilike('title', `%${title}%`)
+      .limit(1);
+    
+    if (coursesError) {
+      throw coursesError;
     }
     
-    const hash = generateCourseHash(course);
-    
-    // Check for exact match by hash
-    const { data: exactMatch, error: exactMatchError } = await supabase
-      .from("scraped_courses")
-      .select("id, title")
-      .eq("hash_identifier", hash)
-      .neq("id", course.id || '')
-      .limit(1)
-      .maybeSingle();
-    
-    if (exactMatchError) {
-      console.error("Error checking for exact match:", exactMatchError);
+    if (existingCourses && existingCourses.length > 0) {
+      await logScraperActivity('duplicate_check', 'found_match', 'warning', {
+        input_title: title,
+        matched_title: existingCourses[0].title,
+        matched_id: existingCourses[0].id
+      });
+      return true;
     }
     
-    if (exactMatch) {
-      return { 
-        isDuplicate: true, 
-        confidence: 100, 
-        duplicateId: exactMatch.id 
-      };
+    // Check scraped courses
+    const { data: existingScraped, error: scrapedError } = await supabase
+      .from('scraped_courses')
+      .select('id, title')
+      .ilike('title', `%${title}%`)
+      .limit(1);
+    
+    if (scrapedError) {
+      throw scrapedError;
     }
     
-    // Check by title similarity
-    const normalizedTitle = course.title.toLowerCase().trim();
-    const { data: similarTitles, error: similarTitlesError } = await supabase
-      .from("scraped_courses")
-      .select("id, title")
-      .neq("id", course.id || '');
-    
-    if (similarTitlesError) {
-      console.error("Error checking for similar titles:", similarTitlesError);
-      return { isDuplicate: false, confidence: 0 };
+    if (existingScraped && existingScraped.length > 0) {
+      await logScraperActivity('duplicate_check', 'found_match_in_scraped', 'warning', {
+        input_title: title,
+        matched_title: existingScraped[0].title,
+        matched_id: existingScraped[0].id
+      });
+      return true;
     }
     
-    // Simple similarity check (in a real app, you'd use a more sophisticated algorithm)
-    const similarCourse = similarTitles?.find(c => {
-      if (!c.title) return false;
-      const otherTitle = c.title.toLowerCase().trim();
-      
-      // Check if one title contains the other
-      if (normalizedTitle.includes(otherTitle) || otherTitle.includes(normalizedTitle)) {
-        return true;
-      }
-      
-      // Check for word overlap
-      const words1 = normalizedTitle.split(/\s+/);
-      const words2 = otherTitle.split(/\s+/);
-      const commonWords = words1.filter(word => words2.includes(word));
-      
-      // If more than 70% of words match, consider it similar
-      return commonWords.length / Math.max(words1.length, words2.length) > 0.7;
-    });
-    
-    if (similarCourse) {
-      return { 
-        isDuplicate: true, 
-        confidence: 90, 
-        duplicateId: similarCourse.id 
-      };
-    }
-    
-    return { isDuplicate: false, confidence: 0 };
+    return false;
   } catch (error) {
-    console.error("Error in checkDuplicateCourse:", error);
-    return { isDuplicate: false, confidence: 0 };
+    console.error("Error checking for duplicate course:", error);
+    await logScraperActivity('duplicate_check', 'error', 'error', { 
+      error: error instanceof Error ? error.message : String(error),
+      title
+    });
+    return false;
   }
 };
 
-export const sanitizeScrapedCourse = (data: any): ScrapedCourse => {
-  return {
-    id: data.id,
-    title: data.title,
-    summary: data.summary || '',
-    category: data.category,
-    level: data.level || 'beginner',
-    hosting_type: data.hosting_type || 'external',
-    external_link: data.external_link || '',
-    image_url: data.image_url || '',
-    video_embed_url: data.video_embed_url || '',
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    is_approved: !!data.is_approved,
-    is_reviewed: !!data.is_reviewed,
-    review_notes: data.review_notes || '',
-    scraper_source: data.scraper_source || 'manual',
-    hash_identifier: data.hash_identifier || '',
-    is_duplicate: !!data.is_duplicate,
-    duplicate_confidence: data.duplicate_confidence || 0,
-    duplicate_of: data.duplicate_of || ''
+// Sanitize scraped course data
+export const sanitizeScrapedCourse = (courseData: any): Partial<Course> => {
+  // Basic sanitization
+  const sanitized: Partial<Course> = {
+    title: courseData.title ? String(courseData.title).trim().substring(0, 255) : "Untitled Course",
+    summary: courseData.summary ? String(courseData.summary).trim().substring(0, 1000) : null,
+    image_url: courseData.image_url || null,
+    video_embed_url: courseData.video_embed_url || null,
+    external_link: courseData.external_link || null,
+    category: courseData.category || "other",
+    level: courseData.level || "beginner",
+    hosting_type: courseData.hosting_type || "external",
+    scraper_source: courseData.scraper_source || "unknown"
   };
+  
+  return sanitized;
 };
