@@ -1,6 +1,18 @@
 
 export type ProductCategory = 'clothing' | 'footwear' | 'accessories' | 'new_arrivals';
 
+export interface ProductVariation {
+  id: string;
+  product_id: string;
+  size?: string;
+  color?: string;
+  stock_quantity: number;
+  sku: string;
+  price?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Product {
   id: string;
   title: string;
