@@ -3,29 +3,19 @@ import {
   ScrapedCourse, 
   CourseCategory, 
   CourseLevel, 
-  HostingType,
-  sanitizeScrapedCourse 
+  HostingType
 } from '../courseTypes';
 import { supabase } from '@/integrations/supabase/client';
-
-// Simple type definition for the simplified course
-type SimplifiedCourse = {
-  title: string;
-  category: CourseCategory;
-  external_link?: string;
-  hosting_type: HostingType;
-  level?: CourseLevel;
-  [key: string]: any;
-};
+import { sanitizeScrapedCourse } from './courseScraperValidation';
 
 // Process scraped data
-const processScrapedData = (data: SimplifiedCourse[]): SimplifiedCourse[] => {
+const processScrapedData = (data: any[]): any[] => {
   // Implementation here
   return data;
 };
 
 // Get pending scraped courses
-export async function getPendingScrapedCourses() {
+export async function getPendingScrapedCourses(): Promise<ScrapedCourse[]> {
   try {
     const { data, error } = await supabase
       .from('scraped_courses')
@@ -73,10 +63,96 @@ export async function rejectScrapedCourse(courseId: string, notes: string) {
     
     if (error) throw error;
     
-    return { success: true };
+    return true;
   } catch (error) {
     console.error('Error rejecting course:', error);
-    return { success: false, error };
+    return false;
+  }
+}
+
+// Check for duplicates
+export async function checkDuplicateCourse(title: string, externalLink?: string): Promise<{ isDuplicate: boolean, duplicateId?: string, confidence: number }> {
+  try {
+    // Basic implementation - could be enhanced with fuzzy matching algorithms
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, title')
+      .ilike('title', `%${title}%`)
+      .limit(1);
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      // Simple string similarity check
+      const similarity = calculateTitleSimilarity(title, data[0].title);
+      return { 
+        isDuplicate: similarity > 0.8,
+        duplicateId: data[0].id,
+        confidence: similarity * 100
+      };
+    }
+    
+    return { isDuplicate: false, confidence: 0 };
+  } catch (error) {
+    console.error('Error checking for duplicate course:', error);
+    return { isDuplicate: false, confidence: 0 };
+  }
+}
+
+// Simple title similarity helper
+function calculateTitleSimilarity(title1: string, title2: string): number {
+  const t1 = title1.toLowerCase();
+  const t2 = title2.toLowerCase();
+  
+  // Exact match
+  if (t1 === t2) return 1.0;
+  
+  // One is substring of the other
+  if (t1.includes(t2) || t2.includes(t1)) return 0.9;
+  
+  // Count matching words
+  const words1 = t1.split(/\s+/);
+  const words2 = t2.split(/\s+/);
+  
+  let matches = 0;
+  for (const w1 of words1) {
+    if (w1.length < 3) continue; // Skip short words
+    if (words2.includes(w1)) matches++;
+  }
+  
+  const similarity = matches / Math.max(words1.length, words2.length);
+  return similarity;
+}
+
+// Get duplicate stats
+export async function getDuplicateStats() {
+  try {
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('is_duplicate, scraper_source')
+      .eq('is_duplicate', true);
+    
+    if (error) throw error;
+    
+    const duplicatesBySource: Record<string, number> = {};
+    
+    data?.forEach(course => {
+      const source = course.scraper_source || 'unknown';
+      duplicatesBySource[source] = (duplicatesBySource[source] || 0) + 1;
+    });
+    
+    return { 
+      totalScraped: data?.length || 0,
+      duplicatesDetected: data?.filter(c => c.is_duplicate).length || 0,
+      duplicatesBySource
+    };
+  } catch (error) {
+    console.error('Error getting duplicate stats:', error);
+    return { 
+      totalScraped: 0,
+      duplicatesDetected: 0,
+      duplicatesBySource: {}
+    };
   }
 }
 
@@ -89,25 +165,5 @@ export async function triggerManualScrape() {
   } catch (error) {
     console.error('Error triggering manual scrape:', error);
     return { success: false, error };
-  }
-}
-
-// Get duplicate stats
-export async function getDuplicateStats() {
-  try {
-    const { data, error } = await supabase
-      .from('scraped_courses')
-      .select('is_duplicate')
-      .eq('is_duplicate', true);
-    
-    if (error) throw error;
-    
-    return { 
-      duplicateCount: data?.length || 0,
-      success: true
-    };
-  } catch (error) {
-    console.error('Error getting duplicate stats:', error);
-    return { success: false, duplicateCount: 0, error };
   }
 }

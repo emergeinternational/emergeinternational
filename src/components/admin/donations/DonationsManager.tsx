@@ -83,7 +83,6 @@ const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false })
     <div>
       <DonationStats
         donations={donations}
-        isLoading={isLoading}
       />
       
       <DonationsTable 
