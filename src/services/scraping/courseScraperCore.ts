@@ -24,6 +24,35 @@ const processScrapedData = (data: SimplifiedCourse[]): SimplifiedCourse[] => {
   return data;
 };
 
+// Submit a scraped course to the approval queue
+export const submitScrapedCourse = async (
+  course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>
+): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("scraped_courses")
+      .insert({
+        ...course,
+        is_approved: false,
+        is_reviewed: false,
+        level: course.level || 'beginner',
+        hash_identifier: course.hash_identifier
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error submitting scraped course:", error);
+      return null;
+    }
+    
+    return data?.id || null;
+  } catch (error) {
+    console.error("Error in submitScrapedCourse:", error);
+    return null;
+  }
+};
+
 // Get pending scraped courses
 export async function getPendingScrapedCourses() {
   try {
@@ -109,5 +138,24 @@ export async function getDuplicateStats() {
   } catch (error) {
     console.error('Error getting duplicate stats:', error);
     return { success: false, duplicateCount: 0, error };
+  }
+}
+
+// Get scraped courses by source
+export async function getScrapedCoursesBySource(source: string): Promise<ScrapedCourse[]> {
+  try {
+    const { data, error } = await supabase
+      .from("scraped_courses")
+      .select("*")
+      .eq("scraper_source", source);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data?.map(course => sanitizeScrapedCourse(course)) || [];
+  } catch (error) {
+    console.error("Error getting scraped courses by source:", error);
+    return [];
   }
 }

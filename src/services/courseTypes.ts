@@ -4,11 +4,21 @@ export type CourseCategory =
   | 'development'
   | 'marketing'
   | 'business'
-  | 'freelancing';
+  | 'freelancing'
+  | 'model'
+  | 'designer'
+  | 'photographer'
+  | 'videographer'
+  | 'musical_artist'
+  | 'fine_artist'
+  | 'event_planner';
 
-export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
+export type CourseLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
-export type HostingType = 'external' | 'internal';
+export type HostingType = 'external' | 'internal' | 'hosted' | 'embedded';
+
+// Alias for backward compatibility
+export type CourseHostingType = HostingType;
 
 export interface ScrapedCourse {
   id?: string;
@@ -46,6 +56,15 @@ export interface Course {
   updated_at?: string;
   is_published?: boolean;
   price?: number;
+  level?: CourseLevel;
+  // Additional properties for backward compatibility with existing code
+  source_url?: string;
+  link?: string;
+  image?: string;
+  category_id?: string;
+  content_type?: string;
+  duration?: string;
+  career_interests?: string[];
 }
 
 export interface CourseProgress {
@@ -53,16 +72,13 @@ export interface CourseProgress {
   user_id?: string;
   course_id: string;
   progress: number;
-  status: 'started' | 'completed' | 'abandoned';
+  status: 'started' | 'in_progress' | 'completed' | 'abandoned';
   date_started: string;
   date_completed?: string;
   created_at?: string;
   updated_at?: string;
   course_category?: string;
 }
-
-// Alias for backward compatibility
-export type CourseHostingType = HostingType;
 
 // Helper functions for sanitization
 export function sanitizeCourseData(data: any): Course {
@@ -78,7 +94,16 @@ export function sanitizeCourseData(data: any): Course {
     created_at: data.created_at,
     updated_at: data.updated_at,
     is_published: data.is_published,
-    price: data.price
+    price: data.price,
+    level: data.level,
+    // Map additional properties for backward compatibility
+    source_url: data.source_url || data.external_link,
+    link: data.link || data.external_link,
+    image: data.image || data.image_url,
+    category_id: data.category_id || data.category,
+    content_type: data.content_type,
+    duration: data.duration,
+    career_interests: data.career_interests
   };
 }
 

@@ -1,30 +1,29 @@
 
-// Export all certificate-related functions from the module files
-
-// Settings-related exports
-export { 
+// Re-export all certificate-related functionality
+export {
   getCertificateSettings,
-  updateCertificateSettings 
+  updateCertificateSettings
 } from './settings';
 
-// Certificate management exports
 export {
   generateCertificate,
   getUserCertificates,
   downloadCertificate
 } from './certificate';
 
-// Eligibility-related exports
 export {
+  checkUserEligibility,
+  getUsersEligibleForCertificates,
   getEligibleUsers,
   updateCertificateApproval,
   userMeetsRequirements,
   getUsersByStatus
 } from './eligibility';
 
-// Type exports
-export type { 
+export type {
   CertificateSettings,
+  CertificateEligibility,
   UserCertificate,
-  CertificateEligibility
+  CertificateStatus,
+  EligibleUser
 } from './types';

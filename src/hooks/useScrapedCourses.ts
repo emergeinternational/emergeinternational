@@ -46,8 +46,8 @@ export const useScrapedCourses = () => {
   const handleApprove = async (course: ScrapedCourse) => {
     setProcessingAction(true);
     try {
-      const courseId = await approveScrapedCourse(course.id);
-      if (courseId) {
+      const result = await approveScrapedCourse(course.id || '');
+      if (result.success) {
         toast({
           title: "Success",
           description: course.is_duplicate && course.duplicate_confidence && course.duplicate_confidence >= 90 
@@ -74,8 +74,8 @@ export const useScrapedCourses = () => {
   const handleReject = async (courseId: string, reason: string) => {
     setProcessingAction(true);
     try {
-      const success = await rejectScrapedCourse(courseId, reason);
-      if (success) {
+      const result = await rejectScrapedCourse(courseId, reason);
+      if (result.success) {
         toast({
           title: "Success",
           description: "Course rejected",
@@ -130,8 +130,13 @@ export const useScrapedCourses = () => {
   
   const fetchStats = async () => {
     try {
-      const stats = await getDuplicateStats();
-      setStats(stats);
+      const duplicateStats = await getDuplicateStats();
+      if (duplicateStats.success) {
+        setStats(prev => ({
+          ...prev,
+          duplicatesDetected: duplicateStats.duplicateCount || 0
+        }));
+      }
     } catch (error) {
       console.error("Error fetching scraper stats:", error);
     }
