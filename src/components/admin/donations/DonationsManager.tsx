@@ -10,10 +10,24 @@ interface DonationsManagerProps {
   isLocked?: boolean;
 }
 
+// Define interfaces for child components to ensure type safety
+interface Donation {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  donors?: {
+    full_name: string;
+    email: string;
+  };
+  [key: string]: any; // Allow for additional properties
+}
+
 const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false }) => {
-  const [donations, setDonations] = useState<any[]>([]);
+  const [donations, setDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -70,7 +84,7 @@ const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false })
     }
   };
 
-  const handleViewDetails = (donation: any) => {
+  const handleViewDetails = (donation: Donation) => {
     setSelectedDonation(donation);
     setIsDetailsDialogOpen(true);
   };
@@ -81,22 +95,31 @@ const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false })
 
   return (
     <div>
-      <DonationStats
-        donations={donations}
+      {/* Pass necessary props to match the expected interfaces */}
+      <DonationStats 
+        totalAmount={donations.reduce((sum, d) => sum + (d.amount || 0), 0)}
+        totalCount={donations.length}
+        recentCount={donations.filter(d => {
+          const date = new Date(d.created_at);
+          const now = new Date();
+          const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+          return date >= thirtyDaysAgo;
+        }).length}
+        pendingCount={donations.filter(d => d.status === 'pending').length}
       />
       
       <DonationsTable 
         donations={donations} 
-        isLoading={isLoading} 
-        onViewDetails={handleViewDetails} 
+        isLoading={isLoading}
         onRefresh={handleRefresh}
-        isLocked={isLocked} 
+        isLocked={isLocked}
+        onViewDetails={handleViewDetails}
       />
       
       {selectedDonation && (
         <DonationDetailsDialog
-          open={isDetailsDialogOpen}
-          onOpenChange={setIsDetailsDialogOpen}
+          isOpen={isDetailsDialogOpen}
+          onClose={() => setIsDetailsDialogOpen(false)}
           donation={selectedDonation}
           isLocked={isLocked}
         />
