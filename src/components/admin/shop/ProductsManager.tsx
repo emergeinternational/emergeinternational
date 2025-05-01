@@ -118,6 +118,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
             setSelectedProduct(null);
             setIsEditDialogOpen(false);
           }}
+          isLocked={isLocked}
         />
       )}
     </div>

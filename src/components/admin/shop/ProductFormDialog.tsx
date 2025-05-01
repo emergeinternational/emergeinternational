@@ -16,19 +16,11 @@ import { Loader2, ImagePlus, AlertCircle, Plus, Trash2, Package } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProductCategory, ProductVariation } from "@/services/productTypes";
+import { ProductCategory, ProductVariation, Product } from "@/services/productTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-export interface ProductFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  editProduct?: any;
-  product?: any;
-  isLocked?: boolean;
-}
+import { ProductFormDialogProps } from "./ProductFormDialog.d";
 
 const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   open,
@@ -53,7 +45,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
-  const [variations, setVariations] = useState<ProductVariation[]>(activeProduct?.variations || []);
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
   
   useEffect(() => {
     const productToUse = editProduct || product;
@@ -70,27 +62,43 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       setWeight(productToUse.weight?.toString() || "");
       setStockQuantity(productToUse.stock_quantity?.toString() || "0");
       
-      // Parse variations if they're stored as a string array
-      if (Array.isArray(productToUse.variations)) {
-        if (typeof productToUse.variations[0] === 'string') {
-          // Convert legacy string array to variation objects
-          const legacyVariations = productToUse.variations.map((v: string, idx: number) => ({
-            id: `temp-${idx}`,
-            product_id: productToUse.id || 'new',
-            sku: `${productToUse.sku || 'SKU'}-${idx}`,
-            size: v,
-            stock_quantity: 0
-          }));
-          setVariations(legacyVariations);
-        } else {
-          // Already in the correct format
-          setVariations(productToUse.variations);
-        }
+      // If we have a product ID, fetch the variations from the database
+      if (productToUse.id) {
+        fetchVariations(productToUse.id);
       } else {
         setVariations([]);
       }
     }
   }, [editProduct, product]);
+
+  const fetchVariations = async (productId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_variations')
+        .select('*')
+        .eq('product_id', productId);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setVariations(data as ProductVariation[]);
+      } else {
+        // Fall back to variations in the product object if database doesn't have them
+        if (activeProduct?.variations && Array.isArray(activeProduct.variations)) {
+          setVariations(activeProduct.variations);
+        } else {
+          setVariations([]);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching product variations:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load product variations",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -189,18 +197,18 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Prepare product data without variations
       const productData = {
         title,
         description,
         price: parseFloat(price),
-        category: category as ProductCategory,
+        category,
         image_url: imageUrl,
         is_published: isPublished,
         in_stock: inStock,
         sku,
         weight: weight ? parseFloat(weight) : null,
         stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
-        variations: variations,
         updated_at: new Date().toISOString()
       };
       
@@ -215,10 +223,10 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           
         if (error) throw error;
         
-        // Handle variations
+        // Handle variations - we need to manage them in a separate table now
         for (const variation of variations) {
           if (variation.id.startsWith('temp-')) {
-            // Create new variation
+            // This is a new variation, so insert it
             const { error: varError } = await supabase
               .from('product_variations')
               .insert({
@@ -229,9 +237,10 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                 sku: variation.sku,
                 price: variation.price || null
               });
+            
             if (varError) throw varError;
           } else {
-            // Update existing variation
+            // This is an existing variation, so update it
             const { error: varError } = await supabase
               .from('product_variations')
               .update({
@@ -242,6 +251,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
                 price: variation.price || null
               })
               .eq('id', variation.id);
+            
             if (varError) throw varError;
           }
         }
@@ -264,18 +274,21 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
         
         productId = data[0].id;
         
-        // Create variations
-        for (const variation of variations) {
+        // Now create all the variations
+        if (variations.length > 0) {
+          const variationsToInsert = variations.map(v => ({
+            product_id: productId,
+            size: v.size,
+            color: v.color,
+            stock_quantity: v.stock_quantity,
+            sku: v.sku,
+            price: v.price
+          }));
+          
           const { error: varError } = await supabase
             .from('product_variations')
-            .insert({
-              product_id: productId,
-              size: variation.size,
-              color: variation.color,
-              stock_quantity: variation.stock_quantity,
-              sku: variation.sku,
-              price: variation.price || null
-            });
+            .insert(variationsToInsert);
+          
           if (varError) throw varError;
         }
         

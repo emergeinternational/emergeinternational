@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,7 +16,6 @@ import {
   UserCheck,
   BookOpen,
   Package,
-  ShoppingBag
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -66,8 +64,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { icon: <Calendar size={20} />, label: "Events", path: "/admin/events", requiredRoles: ['admin', 'editor'] },
     { icon: <Heart size={20} />, label: "Donations", path: "/admin/donations", requiredRoles: ['admin', 'editor'] },
     { icon: <ShoppingCart size={20} />, label: "Orders", path: "/admin/orders", requiredRoles: ['admin', 'editor'] },
-    { icon: <ShoppingBag size={20} />, label: "Products", path: "/admin/product-management", requiredRoles: ['admin', 'editor'] },
-    { icon: <Package size={20} />, label: "Product Listing", path: "/admin/products", requiredRoles: ['admin', 'editor'] },
+    { icon: <Package size={20} />, label: "Products", path: "/admin/product-management", requiredRoles: ['admin', 'editor'] },
     { icon: <BookOpen size={20} />, label: "Courses", path: "/admin/courses", requiredRoles: ['admin', 'editor'] },
     { icon: <Settings size={20} />, label: "Settings", path: "/admin/settings", requiredRoles: ['admin'] },
   ];
