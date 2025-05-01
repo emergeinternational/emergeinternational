@@ -28,9 +28,16 @@ export const logScraperActivity = async (
 // Create a verified course directly (for manual course creation)
 export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
   try {
+    const validatedData = {
+      ...courseData,
+      category: courseData.category,
+      level: courseData.level || 'beginner',
+      hosting_type: courseData.hosting_type
+    };
+    
     const { data, error } = await supabase
       .from("courses")
-      .insert(courseData)
+      .insert(validatedData)
       .select()
       .single();
     
@@ -45,4 +52,3 @@ export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'crea
     return null;
   }
 };
-

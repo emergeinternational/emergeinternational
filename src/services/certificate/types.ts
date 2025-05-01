@@ -54,4 +54,6 @@ export interface CertificateEligibility {
   status: CertificateStatus;
   created_at?: string;
   updated_at?: string;
+  min_courses_required?: number;
+  min_workshops_required?: number;
 }
