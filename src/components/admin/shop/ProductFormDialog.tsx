@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,7 @@ import { Product, ProductCategory, ProductVariation } from "@/services/productTy
 import { Trash, Plus, Upload, Loader2 } from "lucide-react";
 import { ProductFormDialogProps } from "./ProductFormDialog.d";
 
-const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFormDialogProps) => {
+const ProductFormDialog = ({ open, onOpenChange, product, onSuccess, onProductChange }: ProductFormDialogProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -146,10 +145,10 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title) {
+    if (!title.trim() || !category || !price) {
       toast({
         title: "Missing information",
-        description: "Please provide a product title",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -158,18 +157,20 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFo
     try {
       setIsSubmitting(true);
       
-      // Prepare the product data - ensure variations is stored as JSON
+      // Prepare the product data - ensure variations is handled properly
       const productData = {
         title,
         description,
-        price,
+        price: parseFloat(price.toString()),
         category,
         image_url: imageUrl,
         is_published: isPublished,
         in_stock: inStock,
-        variations: JSON.stringify(variations), // Convert variations to JSON string
+        variations, // Store as JSON array
         updated_at: new Date().toISOString(),
       };
+
+      let result;
 
       if (product?.id) {
         // Update existing product
@@ -182,31 +183,41 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFo
         
         toast({
           title: "Product updated",
-          description: `${title} has been updated successfully.`,
+          description: "Product has been updated successfully",
         });
       } else {
+        // Add created_at for new products
+        const newProductData = {
+          ...productData,
+          created_at: new Date().toISOString(),
+        };
+        
         // Create new product
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('products')
-          .insert([{
-            ...productData,
-            created_at: new Date().toISOString(),
-          }]);
+          .insert(newProductData)
+          .select()
+          .single();
 
         if (error) throw error;
-
+        result = data;
+        
         toast({
           title: "Product created",
-          description: `${title} has been added successfully.`,
+          description: "New product has been created successfully",
         });
       }
 
-      onSuccess();
-      resetForm();
-    } catch (error: any) {
+      // Reset form
+      onOpenChange(false);
+      if (onProductChange) {
+        onProductChange(result || { ...productData, id: product?.id });
+      }
+    } catch (error) {
+      console.error('Error saving product:', error);
       toast({
         title: "Error saving product",
-        description: error.message || "Something went wrong",
+        description: error instanceof Error ? error.message : "Failed to save product",
         variant: "destructive",
       });
     } finally {
@@ -444,7 +455,7 @@ const ProductFormDialog = ({ open, onOpenChange, product, onSuccess }: ProductFo
             </Button>
             <Button 
               type="submit"
-              disabled={isSubmitting || !title}
+              disabled={isSubmitting || !title.trim() || !category || !price}
               className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
             >
               {isSubmitting ? (
