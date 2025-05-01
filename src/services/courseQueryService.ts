@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Course } from "./courseTypes";
 import { sanitizeCourseData } from "./courseTypes";
+import { validateAndUpdateCourseImage } from "@/utils/courseImageValidator";
 
 export const getCourseById = async (id: string): Promise<Course | null> => {
   try {

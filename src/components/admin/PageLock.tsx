@@ -3,16 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface PageLockProps {
   pageId: string;
@@ -28,7 +18,6 @@ const PageLock: React.FC<PageLockProps> = ({
   userRole = 'admin' // Default to admin role
 }) => {
   const [isLocked, setIsLocked] = useState(initialLockState);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
 
   // On mount, check session storage for lock status
@@ -44,7 +33,7 @@ const PageLock: React.FC<PageLockProps> = ({
     }
   }, [pageId, initialLockState, onLockStatusChange]);
 
-  const requestUnlock = () => {
+  const toggleLock = () => {
     // Only admins and editors can toggle lock
     if (userRole !== 'admin' && userRole !== 'editor') {
       toast({
@@ -55,16 +44,13 @@ const PageLock: React.FC<PageLockProps> = ({
       return;
     }
 
-    if (isLocked) {
-      // Show confirmation before unlocking
-      setShowConfirmation(true);
-    } else {
-      // Locking doesn't need confirmation
-      toggleLock(true);
-    }
-  };
+    const newLockState = !isLocked;
 
-  const toggleLock = (newLockState: boolean) => {
+    // Confirm before unlocking
+    if (isLocked && !confirm('Are you sure you want to unlock this page? This will allow editing of content.')) {
+      return;
+    }
+
     setIsLocked(newLockState);
     sessionStorage.setItem(`pageLock_${pageId}`, JSON.stringify(newLockState));
     onLockStatusChange(newLockState);
@@ -74,53 +60,29 @@ const PageLock: React.FC<PageLockProps> = ({
       description: newLockState 
         ? "The page is now locked for safety." 
         : "The page is now unlocked for editing.",
-      variant: newLockState ? "default" : "destructive",
+      variant: newLockState ? "default" : "destructive",  // Changed from "warning" to "destructive"
     });
-
-    setShowConfirmation(false);
   };
 
   return (
-    <>
-      <Button 
-        variant={isLocked ? "default" : "destructive"}
-        className="flex items-center gap-2"
-        onClick={requestUnlock}
-        title={isLocked ? "Unlock page to enable editing" : "Lock page to prevent changes"}
-      >
-        {isLocked ? (
-          <>
-            <Unlock className="h-4 w-4" />
-            Unlock Page
-          </>
-        ) : (
-          <>
-            <Lock className="h-4 w-4" />
-            Lock Page
-          </>
-        )}
-      </Button>
-
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unlock this page?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Unlocking this page will allow editing of content. This should only be done when necessary changes are needed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => toggleLock(false)}
-              className="bg-red-600 text-white hover:bg-red-700"
-            >
-              Yes, unlock page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <Button 
+      variant={isLocked ? "default" : "destructive"}  // Changed from "warning" to "destructive"
+      className="flex items-center gap-2"
+      onClick={toggleLock}
+      title={isLocked ? "Unlock page to enable editing" : "Lock page to prevent changes"}
+    >
+      {isLocked ? (
+        <>
+          <Unlock className="h-4 w-4" />
+          Unlock Page
+        </>
+      ) : (
+        <>
+          <Lock className="h-4 w-4" />
+          Lock Page
+        </>
+      )}
+    </Button>
   );
 };
 
