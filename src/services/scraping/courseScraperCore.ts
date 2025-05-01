@@ -80,38 +80,6 @@ export async function rejectScrapedCourse(courseId: string, notes: string) {
   }
 }
 
-// Submit a scraped course - adding this missing function
-export async function submitScrapedCourse(courseData: Partial<ScrapedCourse>) {
-  try {
-    // Sanitize the course data before submission
-    const sanitizedCourse = sanitizeScrapedCourse({
-      ...courseData,
-      is_reviewed: false,
-      is_approved: false,
-      created_at: new Date().toISOString()
-    } as ScrapedCourse);
-    
-    const { data, error } = await supabase
-      .from('scraped_courses')
-      .insert(sanitizedCourse)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return { 
-      success: true, 
-      courseId: data?.id 
-    };
-  } catch (error) {
-    console.error('Error submitting scraped course:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred"
-    };
-  }
-}
-
 // Trigger manual scrape
 export async function triggerManualScrape() {
   try {
