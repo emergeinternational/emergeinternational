@@ -1,6 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { CourseCategory, CourseLevel, Course } from "./courseTypes";
+import { CourseCategory, CourseLevel, Course, CourseProgress } from "./courseTypes";
+import { getStaticCourses as fetchStaticCourses } from "./staticCoursesData";
+
+// Export the getStaticCourses function from staticCoursesData
+export const getStaticCourses = fetchStaticCourses;
 
 // Get all published courses
 export const getAllCourses = async (): Promise<Course[]> => {
@@ -165,5 +169,27 @@ export const trackCourseEngagement = async (courseId: string): Promise<void> => 
     }
   } catch (error) {
     console.error("Error tracking course engagement:", error);
+  }
+};
+
+// Get course progress for a user
+export const getCourseProgress = async (courseId: string, userId: string): Promise<CourseProgress | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("user_course_progress")
+      .select("*")
+      .eq("course_id", courseId)
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching course progress:", error);
+      return null;
+    }
+
+    return data as CourseProgress;
+  } catch (error) {
+    console.error("Error in getCourseProgress:", error);
+    return null;
   }
 };

@@ -19,7 +19,7 @@ export type CourseCategory =
 
 export type CourseLevel = "beginner" | "intermediate" | "advanced" | "expert";
 
-export type CourseHostingType = "hosted" | "external";
+export type CourseHostingType = "hosted" | "external" | "embedded";
 
 export interface Course {
   id: string;
@@ -36,4 +36,41 @@ export interface Course {
   created_at?: string;
   updated_at?: string;
   scraper_source?: string;
+  source_url?: string; // Added to match usage in CourseDetail.tsx
+  content?: string; // Added to match potential usage
+  duration?: string; // Added to match usage in components
+  career_interests?: string[]; // Added to match usage
+  location?: string; // Added for potential location information
+  image?: string; // Alternative image field
+  category_id?: string; // Used in some components
+  content_type?: string; // For different types of content
+  link?: string; // Alternative URL field
+}
+
+export interface ScrapedCourse {
+  id?: string;
+  title: string;
+  summary?: string;
+  image_url?: string;
+  video_embed_url?: string;
+  external_link?: string;
+  scraper_source: string;
+  category: CourseCategory;
+  level: CourseLevel;
+  hosting_type: CourseHostingType;
+  is_approved?: boolean;
+  is_reviewed?: boolean;
+  review_notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CourseProgress {
+  id?: string;
+  user_id: string;
+  course_id: string;
+  progress: number;
+  status?: string;
+  date_started?: string;
+  date_completed?: string;
 }
