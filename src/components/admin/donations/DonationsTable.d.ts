@@ -4,5 +4,5 @@ export interface DonationsTableProps {
   isLoading: boolean;
   onViewDetails: (donation: any) => void;
   onRefresh: () => Promise<void>;
-  isLocked?: boolean;
+  isLocked: boolean;
 }

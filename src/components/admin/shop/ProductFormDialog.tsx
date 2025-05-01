@@ -1,266 +1,185 @@
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Loader2, ImagePlus, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PlusCircle, Trash2 } from "lucide-react";
-import { useFieldArray } from "react-hook-form";
-import { safeJsonStringify } from "@/utils/jsonUtils";
-import { ProductVariation } from "./ProductFormDialog.d";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProductCategory } from "@/services/productTypes";
 
-const productFormSchema = z.object({
-  title: z.string().min(2, {
-    message: "Title must be at least 2 characters.",
-  }),
-  description: z.string().min(10, {
-    message: "Description must be at least 10 characters.",
-  }),
-  price: z.string().refine((value) => {
-    try {
-      const num = parseFloat(value);
-      return !isNaN(num) && num > 0;
-    } catch (error) {
-      return false;
-    }
-  }, {
-    message: "Price must be a valid number greater than zero.",
-  }),
-  category: z.string().min(2, {
-    message: "Category must be at least 2 characters.",
-  }),
-  imageUrl: z.string().url({
-    message: "Image URL must be a valid URL.",
-  }),
-  isPublished: z.boolean().default(false),
-  inStock: z.boolean().default(true),
-});
-
-type ProductFormData = z.infer<typeof productFormSchema>;
-
-interface ProductFormDialogProps {
+export interface ProductFormDialogProps {
   open: boolean;
-  onOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
-  product?: any;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  onProductChange?: (product: any) => void;
+  editProduct?: any;
+  isLocked?: boolean;
 }
 
 const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   open,
   onOpenChange,
-  product,
   onSuccess,
-  onProductChange,
+  editProduct,
+  isLocked
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const [variations, setVariations] = useState<ProductVariation[]>([]);
-
-  const form = useForm<ProductFormData>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      title: product?.title || "",
-      description: product?.description || "",
-      price: product?.price?.toString() || "",
-      category: product?.category || "",
-      imageUrl: product?.image_url || "",
-      isPublished: product?.is_published || false,
-      inStock: product?.in_stock || true,
-    },
-  });
+  const [title, setTitle] = useState(editProduct?.title || "");
+  const [description, setDescription] = useState(editProduct?.description || "");
+  const [price, setPrice] = useState(editProduct?.price?.toString() || "");
+  const [category, setCategory] = useState<ProductCategory>(editProduct?.category || "clothing");
+  const [imageUrl, setImageUrl] = useState(editProduct?.image_url || "");
+  const [isPublished, setIsPublished] = useState(editProduct?.is_published || false);
+  const [inStock, setInStock] = useState(editProduct?.in_stock || false);
+  const [variations, setVariations] = useState(editProduct?.variations?.join(',') || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [variationsArray, setVariationsArray] = useState<string[]>(editProduct?.variations || []);
 
   useEffect(() => {
-    if (product) {
-      form.reset({
-        title: product.title || "",
-        description: product.description || "",
-        price: product.price?.toString() || "",
-        category: product.category || "",
-        imageUrl: product.image_url || "",
-        isPublished: product.is_published || false,
-        inStock: product.in_stock || true,
-      });
-
-      // Parse variations from JSON string
-      try {
-        const parsedVariations = product.variations ? JSON.parse(product.variations) : [];
-        setVariations(parsedVariations);
-      } catch (error) {
-        console.error("Error parsing variations:", error);
-        toast({
-          title: "Error",
-          description: "Failed to parse product variations",
-          variant: "destructive",
-        });
-        setVariations([]);
-      }
-    } else {
-      form.reset({
-        title: "",
-        description: "",
-        price: "",
-        category: "",
-        imageUrl: "",
-        isPublished: false,
-        inStock: true,
-      });
-      setVariations([]);
+    if (editProduct) {
+      setTitle(editProduct.title || "");
+      setDescription(editProduct.description || "");
+      setPrice(editProduct.price?.toString() || "");
+      setCategory(editProduct.category || "clothing");
+      setImageUrl(editProduct.image_url || "");
+      setIsPublished(editProduct.is_published || false);
+      setInStock(editProduct.in_stock || false);
+      setVariations(editProduct.variations?.join(',') || "");
+      setVariationsArray(editProduct.variations || []);
     }
-  }, [product, form, toast]);
+  }, [editProduct]);
 
-  const handleClose = () => {
-    onOpenChange(false);
+  const handleVariationsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVariations(e.target.value);
+    const newVariations = e.target.value.split(',').map(v => v.trim()).filter(v => v !== "");
+    setVariationsArray(newVariations);
   };
 
-  const handleVariationChange = (index: number, field: string, value: any) => {
-    const updatedVariations = [...variations];
-    if (field === 'options' || field === 'price_adjustments') {
-      updatedVariations[index][field] = value;
-    } else {
-      updatedVariations[index][field] = value;
-    }
-    setVariations(updatedVariations);
-  };
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleAddVariation = () => {
-    setVariations([
-      ...variations,
-      {
-        name: "",
-        options: [],
-        price_adjustments: [],
-      },
-    ]);
-  };
-
-  const handleRemoveVariation = (index: number) => {
-    const updatedVariations = [...variations];
-    updatedVariations.splice(index, 1);
-    setVariations(updatedVariations);
-  };
-
-  const onSubmit = async (data: ProductFormData) => {
-    if (product) {
-      handleSaveChanges();
-    } else {
-      handleCreateProduct();
-    }
-  };
-
-  // Handle save changes, update instead of create
-  const handleSaveChanges = async () => {
+    setUploading(true);
     try {
-      setIsSubmitting(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
 
-      const formValues = form.getValues();
-      const productData = {
-        title: formValues.title,
-        description: formValues.description,
-        price: parseFloat(formValues.price),
-        category: formValues.category,
-        image_url: formValues.imageUrl,
-        is_published: formValues.isPublished,
-        in_stock: formValues.inStock,
-        variations: safeJsonStringify(variations), // Stringify the variations
-        updated_at: new Date().toISOString()
-      };
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      const { error } = await supabase
-        .from("products")
-        .update(productData)
-        .eq("id", product.id);
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
+      const imageUrl = `${supabase.storageUrl}/product-images/${data.path}`;
+      setImageUrl(imageUrl);
       toast({
-        title: "Success",
-        description: "Product updated successfully",
+        title: "Image uploaded",
+        description: "The product image has been successfully uploaded"
       });
-
-      onSuccess?.();
     } catch (error) {
-      console.error("Failed to update product:", error);
+      console.error("Error uploading image:", error);
       toast({
         title: "Error",
-        description: "Failed to update product",
-        variant: "destructive",
+        description: "There was a problem uploading the image",
+        variant: "destructive"
       });
     } finally {
-      setIsSubmitting(false);
+      setUploading(false);
     }
   };
 
-  // Handle create new product
-  const handleCreateProduct = async () => {
-    try {
-      setIsSubmitting(true);
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setPrice("");
+    setCategory("clothing");
+    setImageUrl("");
+    setIsPublished(false);
+    setInStock(false);
+    setVariations("");
+    setVariationsArray([]);
+  };
 
-      const formValues = form.getValues();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isLocked) {
+      toast({
+        title: "Page is locked",
+        description: "Unable to save product while the page is locked",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
       const productData = {
-        title: formValues.title,
-        description: formValues.description,
-        price: parseFloat(formValues.price),
-        category: formValues.category,
-        image_url: formValues.imageUrl,
-        is_published: formValues.isPublished,
-        in_stock: formValues.inStock,
-        variations: safeJsonStringify(variations), // Stringify the variations
-        created_at: new Date().toISOString(),
+        title,
+        description,
+        price: parseFloat(price),
+        category: category as ProductCategory, // Cast as ProductCategory
+        image_url: imageUrl,
+        is_published: isPublished,
+        in_stock: inStock,
+        variations: variationsArray,
         updated_at: new Date().toISOString()
       };
-
-      const { data, error } = await supabase
-        .from("products")
-        .insert(productData)
-        .select();
-
-      if (error) {
-        throw error;
+      
+      if (editProduct) {
+        // Update existing product
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editProduct.id);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Product updated",
+          description: "The product has been successfully updated"
+        });
+      } else {
+        // Create new product
+        const { error } = await supabase
+          .from('products')
+          .insert({
+            ...productData,
+            created_at: new Date().toISOString()
+          });
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Product created",
+          description: "The product has been successfully created"
+        });
       }
-
-      toast({
-        title: "Success",
-        description: "Product created successfully",
-      });
-
+      
       onSuccess?.();
+      onOpenChange(false);
+      resetForm();
     } catch (error) {
-      console.error("Failed to create product:", error);
+      console.error("Error saving product:", error);
       toast({
         title: "Error",
-        description: "Failed to create product",
-        variant: "destructive",
+        description: "There was a problem saving the product",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -269,208 +188,129 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[625px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Create New Product"}</DialogTitle>
-          <DialogDescription>
-            {product
-              ? "Edit the details of the selected product."
-              : "Create a new product by entering the details below."}
-          </DialogDescription>
+          <DialogTitle>{editProduct ? "Edit Product" : "Create New Product"}</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Product Title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
             />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Product Description"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Product Price" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div>
+            <Label htmlFor="price">Price</Label>
+            <Input
+              id="price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
             />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Product Category" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="imageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Image URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Product Image URL" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">Publish</p>
-                <p className="text-sm text-muted-foreground">
-                  Set product to published.
-                </p>
-              </div>
-              <FormField
-                control={form.control}
-                name="isPublished"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
+          </div>
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select value={category} onValueChange={(value) => setCategory(value as ProductCategory)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="clothing">Clothing</SelectItem>
+                <SelectItem value="footwear">Footwear</SelectItem>
+                <SelectItem value="accessories">Accessories</SelectItem>
+                <SelectItem value="new_arrivals">New Arrivals</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="image">Image URL</Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="image"
+                type="text"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="Or upload a new image"
               />
-            </div>
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">In Stock</p>
-                <p className="text-sm text-muted-foreground">
-                  Set product to in stock.
-                </p>
-              </div>
-              <FormField
-                control={form.control}
-                name="inStock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div>
-              <FormLabel>Variations</FormLabel>
-              {variations.map((variation, index) => (
-                <div key={index} className="border p-4 rounded-md mb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <FormLabel>Variation Name</FormLabel>
-                      <Input
-                        type="text"
-                        placeholder="Variation Name"
-                        value={variation.name}
-                        onChange={(e) => handleVariationChange(index, "name", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <FormLabel>Options (comma-separated)</FormLabel>
-                      <Input
-                        type="text"
-                        placeholder="Option 1, Option 2"
-                        value={variation.options.join(",")}
-                        onChange={(e) =>
-                          handleVariationChange(
-                            index,
-                            "options",
-                            e.target.value.split(",")
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <FormLabel>Price Adjustments (comma-separated)</FormLabel>
-                      <Input
-                        type="text"
-                        placeholder="0, 5, -3"
-                        value={variation.price_adjustments.join(",")}
-                        onChange={(e) =>
-                          handleVariationChange(
-                            index,
-                            "price_adjustments",
-                            e.target.value.split(",").map(Number)
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => handleRemoveVariation(index)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove Variation
-                  </Button>
+              <Label htmlFor="upload-image" className="cursor-pointer">
+                <div className="flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md px-3 py-2 text-sm font-medium">
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="h-4 w-4" />
+                      <span>Upload</span>
+                    </>
+                  )}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleAddVariation}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Variation
-              </Button>
+                <input
+                  type="file"
+                  id="upload-image"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                />
+              </Label>
             </div>
-
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Save changes"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          </div>
+          <div>
+            <Label htmlFor="variations">Variations (comma separated)</Label>
+            <Input
+              id="variations"
+              type="text"
+              value={variations}
+              onChange={handleVariationsChange}
+              placeholder="e.g., S, M, L, XL"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="isPublished">Published</Label>
+            <Switch
+              id="isPublished"
+              checked={isPublished}
+              onCheckedChange={setIsPublished}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="inStock">In Stock</Label>
+            <Switch
+              id="inStock"
+              checked={inStock}
+              onCheckedChange={setInStock}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

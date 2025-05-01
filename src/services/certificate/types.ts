@@ -27,3 +27,21 @@ export interface CertificateStatusUpdateRequest {
   status: CertificateStatus;
   reason?: string;
 }
+
+export interface UserCertificate {
+  id?: string;
+  user_id: string;
+  course_title: string;
+  issue_date: string;
+  expiry_date?: string;
+  certificate_file?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EligibleUser extends CertificateEligibility {
+  profiles?: {
+    full_name?: string;
+    email?: string;
+  };
+}

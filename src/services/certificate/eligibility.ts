@@ -1,36 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { CertificateEligibility, CertificateStatus, CertificateSettings } from "./types";
-
-// Get certificate settings
-export const getCertificateSettings = async (): Promise<CertificateSettings> => {
-  try {
-    const { data, error } = await supabase
-      .from("certificate_settings")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error) {
-      console.error("Error fetching certificate settings:", error);
-      // Return default values if settings not found
-      return {
-        min_courses_required: 5,
-        min_workshops_required: 3
-      };
-    }
-
-    return data as CertificateSettings;
-  } catch (error) {
-    console.error("Error in getCertificateSettings:", error);
-    // Return default values on error
-    return {
-      min_courses_required: 5,
-      min_workshops_required: 3
-    };
-  }
-};
+import { CertificateEligibility, CertificateStatus, CertificateSettings, EligibleUser } from "./types";
+import { getCertificateSettings } from "./settings";
 
 // Check eligibility for a user
 export const checkEligibility = async (userId: string): Promise<CertificateEligibility> => {
@@ -187,10 +158,11 @@ export const adminUpdateEligibility = async (
   reason?: string
 ): Promise<boolean> => {
   try {
+    const status: CertificateStatus = action;
     const { error } = await supabase
       .from("certificate_eligibility")
       .update({ 
-        status: action, 
+        status, 
         admin_approved: action === 'approved',
         updated_at: new Date().toISOString()
       })
@@ -217,5 +189,105 @@ export const adminUpdateEligibility = async (
   } catch (error) {
     console.error("Error in adminUpdateEligibility:", error);
     return false;
+  }
+};
+
+// Check if user meets certificate requirements
+export const userMeetsRequirements = async (userId: string): Promise<boolean> => {
+  try {
+    const settings = await getCertificateSettings();
+    const eligibility = await getEligibilityStatus(userId);
+    
+    if (!eligibility) return false;
+    
+    return (
+      eligibility.online_courses_completed >= settings.min_courses_required &&
+      eligibility.workshops_completed >= settings.min_workshops_required
+    );
+  } catch (error) {
+    console.error("Error checking if user meets requirements:", error);
+    return false;
+  }
+};
+
+// Get users eligible for certificates
+export const getEligibleUsers = async (): Promise<EligibleUser[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("certificate_eligibility")
+      .select(`
+        *,
+        profiles:user_id (
+          full_name, 
+          email
+        )
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error("Error fetching eligible users:", error);
+      return [];
+    }
+    
+    return data as EligibleUser[];
+  } catch (error) {
+    console.error("Error in getEligibleUsers:", error);
+    return [];
+  }
+};
+
+// Update certificate approval status
+export const updateCertificateApproval = async (
+  userId: string,
+  approved: boolean
+): Promise<boolean> => {
+  try {
+    const status: CertificateStatus = approved ? 'approved' : 'rejected';
+    
+    const { error } = await supabase
+      .from("certificate_eligibility")
+      .update({
+        admin_approved: approved,
+        status,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", userId);
+      
+    if (error) {
+      console.error("Error updating certificate approval:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in updateCertificateApproval:", error);
+    return false;
+  }
+};
+
+// Get users by certificate status
+export const getUsersByStatus = async (status: CertificateStatus): Promise<EligibleUser[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("certificate_eligibility")
+      .select(`
+        *,
+        profiles:user_id (
+          full_name,
+          email
+        )
+      `)
+      .eq("status", status)
+      .order("created_at", { ascending: false });
+      
+    if (error) {
+      console.error(`Error fetching users with status ${status}:`, error);
+      return [];
+    }
+    
+    return data as EligibleUser[];
+  } catch (error) {
+    console.error(`Error in getUsersByStatus for status ${status}:`, error);
+    return [];
   }
 };
