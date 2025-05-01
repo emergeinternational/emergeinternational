@@ -1,309 +1,151 @@
-import { supabase } from "@/integrations/supabase/client";
-import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
-export interface PremiumCourse {
-  id: string;
+import { supabase } from '@/integrations/supabase/client';
+
+export interface PremiumCourseFilters {
+  category?: string | string[];
+  hasActiveStudents?: boolean;
+}
+
+export interface PremiumCourseData {
   title: string;
   summary?: string;
   category: CourseCategory;
-  level: CourseLevel;
   hosting_type: CourseHostingType;
+  level: CourseLevel;
   image_path?: string;
+  price?: number;
   start_date?: string;
   end_date?: string;
   student_capacity: number;
-  has_active_students: boolean;
   is_published: boolean;
-  created_by?: string;
-  created_at?: string;
+  has_active_students: boolean;
+  created_by: string;
 }
 
-export interface PremiumCourseEnrollment {
-  id: string;
-  course_id: string;
-  user_id: string;
-  created_at: string;
-  course?: PremiumCourse;
-}
-
-export interface PremiumEnrollment {
-  id: string;
-  course_id: string;
-  user_id: string;
-  last_activity_date: string;
-  created_at: string;
-  course?: PremiumCourse;
-  user?: {
-    email?: string;
-    full_name?: string;
-  };
-}
-
-export async function uploadPremiumCourseImage(file: File): Promise<string | null> {
+export const fetchPremiumCourses = async (filters?: PremiumCourseFilters) => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    let query = supabase.from('premium_courses').select('*');
 
-    const { error: uploadError } = await supabase.storage
-      .from('premium_course_images')
-      .upload(filePath, file);
+    if (filters) {
+      if (filters.category) {
+        if (Array.isArray(filters.category)) {
+          query = query.in('category', filters.category);
+        } else {
+          query = query.eq('category', filters.category);
+        }
+      }
 
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
-      return null;
+      if (filters.hasActiveStudents !== undefined) {
+        query = query.eq('has_active_students', filters.hasActiveStudents);
+      }
     }
 
-    const { data } = supabase.storage
-      .from('premium_course_images')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  } catch (error) {
-    console.error('Error in uploadPremiumCourseImage:', error);
-    return null;
-  }
-}
-
-export async function createPremiumCourse(data: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
-  try {
-    const { data: courseData, error } = await supabase
-      .from('premium_courses')
-      .insert([{
-        ...data,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
-        student_capacity: data.student_capacity || 20,
-        level: data.level || 'beginner'
-      }])
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error('Error creating premium course:', error);
-      return null;
-    }
-
-    return courseData.id;
-  } catch (error) {
-    console.error('Error in createPremiumCourse:', error);
-    return null;
-  }
-}
-
-export async function listPublishedPremiumCourses(): Promise<PremiumCourse[]> {
-  try {
-    const { data, error } = await supabase
-      .from('premium_courses')
-      .select('*')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false });
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching premium courses:', error);
-      return [];
+      throw error;
     }
 
-    return data as PremiumCourse[];
+    return data;
   } catch (error) {
-    console.error('Error in listPublishedPremiumCourses:', error);
-    return [];
+    console.error('Error in fetchPremiumCourses:', error);
+    throw error;
   }
-}
+};
 
-export async function getUserEnrolledCourses(): Promise<PremiumCourseEnrollment[]> {
+export const fetchPremiumCourseById = async (courseId: string) => {
   try {
     const { data, error } = await supabase
-      .from('premium_course_enrollments')
-      .select(`
-        *,
-        course:premium_courses(*)
-      `)
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching user enrolled courses:', error);
-      return [];
-    }
-
-    return data as PremiumCourseEnrollment[];
-  } catch (error) {
-    console.error('Error in getUserEnrolledCourses:', error);
-    return [];
-  }
-}
-
-export async function enrollInPremiumCourse(courseId: string): Promise<boolean> {
-  try {
-    const isAlreadyEnrolled = await isUserEnrolled(courseId);
-    if (isAlreadyEnrolled) {
-      console.log('User already enrolled in this course');
-      return true;
-    }
-    
-    const { error } = await supabase
-      .from('premium_course_enrollments')
-      .insert([{
-        course_id: courseId,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      }]);
-
-    if (error) {
-      console.error('Error enrolling in course:', error);
-      return false;
-    }
-
-    await updateCourseActiveStudentsFlag(courseId);
-    
-    return true;
-  } catch (error) {
-    console.error('Error in enrollInPremiumCourse:', error);
-    return false;
-  }
-}
-
-export async function isUserEnrolled(courseId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('premium_course_enrollments')
-      .select('id')
-      .eq('course_id', courseId)
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error checking enrollment:', error);
-      return false;
-    }
-
-    return !!data;
-  } catch (error) {
-    console.error('Error in isUserEnrolled:', error);
-    return false;
-  }
-}
-
-export async function updateCourseActiveStudentsFlag(courseId: string): Promise<boolean> {
-  try {
-    const { count, error: countError } = await supabase
-      .from('premium_course_enrollments')
-      .select('*', { count: 'exact', head: true })
-      .eq('course_id', courseId);
-    
-    if (countError) {
-      console.error('Error checking enrollments count:', countError);
-      return false;
-    }
-    
-    const { error: updateError } = await supabase
       .from('premium_courses')
-      .update({ has_active_students: count > 0 })
-      .eq('id', courseId);
-      
-    if (updateError) {
-      console.error('Error updating course has_active_students flag:', updateError);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in updateCourseActiveStudentsFlag:', error);
-    return false;
-  }
-}
+      .select('*')
+      .eq('id', courseId)
+      .single();
 
-/**
- * Triggers the generation of course expiration notifications
- * @param courseId Optional course ID to generate notifications only for a specific course (useful for testing)
- * @returns Object containing success status and any response data
- */
-export async function triggerExpirationNotifications(courseId?: string): Promise<{
-  success: boolean;
-  data?: any;
-  error?: string;
-}> {
-  try {
-    console.log('Triggering course expiration notifications' + 
-      (courseId ? ` for course ID: ${courseId}` : ''));
-    
-    const payload = courseId ? { course_id: courseId } : {};
-    const { data, error } = await supabase.functions.invoke(
-      'generate-course-expiration-notifications',
-      {
-        method: 'POST',
-        body: payload
-      }
-    );
-    
     if (error) {
-      console.error('Error triggering expiration notifications:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Unknown error'
-      };
+      console.error(`Error fetching premium course with ID ${courseId}:`, error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in fetchPremiumCourseById:', error);
+    throw error;
+  }
+};
+
+export const createPremiumCourses = async (coursesData: PremiumCourseData[]) => {
+  try {
+    // Convert custom type enums to strings for database storage
+    const coursesForDb = coursesData.map(course => ({
+      ...course,
+      category: course.category as string,
+      level: course.level as string,
+      hosting_type: course.hosting_type as string
+    }));
+
+    const { data, error } = await supabase
+      .from('premium_courses')
+      .insert(coursesForDb)
+      .select();
+
+    if (error) {
+      console.error('Error creating premium courses:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createPremiumCourses:', error);
+    throw error;
+  }
+};
+
+export const updatePremiumCourse = async (id: string, courseData: Partial<PremiumCourseData>) => {
+  try {
+    // Handle enum types by converting to strings if they exist
+    const courseForDb: Record<string, any> = { ...courseData };
+    
+    if (courseData.category) {
+      courseForDb.category = courseData.category as string;
     }
     
-    console.log('Expiration notifications triggered successfully:', data);
-    return { 
-      success: true, 
-      data 
-    };
-  } catch (error) {
-    console.error('Error in triggerExpirationNotifications:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Unknown error'
-    };
-  }
-}
+    if (courseData.level) {
+      courseForDb.level = courseData.level as string;
+    }
+    
+    if (courseData.hosting_type) {
+      courseForDb.hosting_type = courseData.hosting_type as string;
+    }
 
-export async function getAdminPremiumEnrollments({
-  page = 1, 
-  pageSize = 20, 
-  courseTitle,
-  activeFilter
-}: {
-  page?: number;
-  pageSize?: number;
-  courseTitle?: string;
-  activeFilter?: 'active' | 'inactive';
-}): Promise<{
-  enrollments: PremiumEnrollment[];
-  totalCount: number;
-}> {
+    const { error } = await supabase
+      .from('premium_courses')
+      .update(courseForDb)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating premium course:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in updatePremiumCourse:', error);
+    throw error;
+  }
+};
+
+export const deletePremiumCourse = async (id: string) => {
   try {
-    let query = supabase
-      .from('premium_course_enrollments')
-      .select(`
-        *,
-        course:premium_courses(id, title),
-        user:profiles(email, full_name)
-      `, { count: 'exact' });
+    const { error } = await supabase
+      .from('premium_courses')
+      .delete()
+      .eq('id', id);
 
-    if (courseTitle) {
-      query = query.filter('course.title', 'ilike', `%${courseTitle}%`);
+    if (error) {
+      console.error('Error deleting premium course:', error);
+      throw error;
     }
-
-    if (activeFilter === 'active') {
-      query = query.gt('last_activity_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
-    } else if (activeFilter === 'inactive') {
-      query = query.lte('last_activity_date', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString());
-    }
-
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    const { data, count, error } = await query;
-
-    if (error) throw error;
-
-    return {
-      enrollments: data as unknown as PremiumEnrollment[],
-      totalCount: count || 0
-    };
   } catch (error) {
-    console.error('Error fetching premium enrollments:', error);
-    return { enrollments: [], totalCount: 0 };
+    console.error('Error in deletePremiumCourse:', error);
+    throw error;
   }
-}
+};

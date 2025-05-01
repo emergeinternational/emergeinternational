@@ -1,54 +1,124 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { Course, CourseLevel, CourseCategory, CourseHostingType } from "../courseTypes";
+import { supabase } from '@/integrations/supabase/client';
 
-// Log scraper activity
-export const logScraperActivity = async (
-  source: string, 
-  action: string, 
-  status: 'success' | 'warning' | 'error', 
-  details: any
-): Promise<void> => {
+// Function to log scraper actions
+export const logScraperAction = async (
+  source: string,
+  action: string,
+  details?: any
+) => {
   try {
-    await supabase
-      .from("automation_logs")
-      .insert({
-        function_name: `scraper:${source}`,
-        results: {
-          action,
-          status,
-          details
-        }
-      });
+    await supabase.from('automation_logs').insert({
+      function_name: 'course_scraper',
+      results: {
+        source,
+        action,
+        details,
+        timestamp: new Date().toISOString(),
+      },
+    });
   } catch (error) {
-    console.error("Error logging scraper activity:", error);
+    console.error('Failed to log scraper action:', error);
   }
 };
 
-// Create a verified course directly (for manual course creation)
-export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; message?: string; id?: string }> => {
+// Function to save a course from external source directly into courses table
+export const saveDirectToCourse = async (courseData: {
+  title: string;
+  summary?: string;
+  image?: string;
+  link?: string;
+  category: CourseCategory;
+  level: CourseLevel;
+  hosting_type: CourseHostingType;
+  content?: string;
+  [key: string]: any;
+}) => {
   try {
-    const validatedData = {
-      ...courseData,
-      category: courseData.category as CourseCategory,
-      level: courseData.level || 'beginner' as CourseLevel,
-      hosting_type: courseData.hosting_type as CourseHostingType
+    // Format data to match the courses table
+    const formattedCourse = {
+      title: courseData.title,
+      summary: courseData.summary || '',
+      image_url: courseData.image || null,
+      external_link: courseData.link || null,
+      category: courseData.category as string,
+      level: courseData.level as string,
+      hosting_type: courseData.hosting_type as string,
+      is_published: true,
+      created_at: new Date().toISOString(),
     };
-    
+
+    // Save to database
     const { data, error } = await supabase
-      .from("courses")
-      .insert(validatedData)
-      .select()
-      .single();
-    
+      .from('courses')
+      .insert(formattedCourse)
+      .select('id');
+
     if (error) {
-      console.error("Error creating verified course:", error);
-      return { success: false, message: error.message };
+      console.error('Error saving course directly:', error);
+      throw error;
     }
-    
-    return { success: true, id: data.id };
-  } catch (error: any) {
-    console.error("Error in createVerifiedCourse:", error);
-    return { success: false, message: error.message };
+
+    return data?.[0]?.id;
+  } catch (error) {
+    console.error('Failed to save course directly:', error);
+    throw error;
+  }
+};
+
+// Parse URL parameters
+export const parseUrlParams = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    const params: Record<string, string> = {};
+
+    parsedUrl.searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    return params;
+  } catch {
+    return {};
+  }
+};
+
+// Extract domain from URL
+export const extractDomain = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.hostname;
+  } catch {
+    return null;
+  }
+};
+
+// Clean HTML content
+export const cleanHtml = (html: string) => {
+  if (!html) return '';
+
+  // Remove script tags
+  let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+  // Remove style tags
+  cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+  // Remove HTML comments
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+
+  // Remove excessive whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+  return cleaned;
+};
+
+// Format date string to ISO
+export const formatDateToIso = (dateString: string) => {
+  if (!dateString) return null;
+
+  try {
+    const date = new Date(dateString);
+    return date.toISOString();
+  } catch {
+    return null;
   }
 };

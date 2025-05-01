@@ -1,162 +1,172 @@
 
 import { useState, useEffect } from 'react';
-import { ScrapedCourse } from '@/services/courseTypes';
-import { 
-  getPendingScrapedCourses, 
-  approveScrapedCourse, 
-  rejectScrapedCourse,
-  triggerManualScrape,
-  getDuplicateStats
-} from '@/services/scraping/courseScraperCore';
-import { useToast } from './use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useScrapedCourses = () => {
-  const [courses, setCourses] = useState<ScrapedCourse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [processingAction, setProcessingAction] = useState(false);
-  const [scrapingInProgress, setScrapingInProgress] = useState(false);
-  const [stats, setStats] = useState<{
-    totalScraped: number;
-    duplicatesDetected: number;
-    duplicatesBySource: Record<string, number>;
-  }>({
-    totalScraped: 0,
-    duplicatesDetected: 0,
-    duplicatesBySource: {}
+export interface ScrapedCoursesHookOptions {
+  fetchApproved?: boolean;
+  fetchReviewed?: boolean;
+  source?: string;
+  limit?: number;
+}
+
+export const useScrapedCourses = (options?: ScrapedCoursesHookOptions) => {
+  const {
+    fetchApproved = false,
+    fetchReviewed = false,
+    source,
+    limit = 100,
+  } = options || {};
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState<{ success: boolean; message: string; courseId?: string } | null>(null);
+
+  // Query to get scraped courses
+  const {
+    data: scrapedCourses,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['scraped-courses', fetchApproved, fetchReviewed, source, limit],
+    queryFn: async () => {
+      let query = supabase.from('scraped_courses').select('*');
+
+      if (fetchApproved) {
+        query = query.eq('is_approved', true);
+      }
+
+      if (fetchReviewed) {
+        query = query.eq('is_reviewed', true);
+      }
+
+      if (source) {
+        query = query.eq('scraper_source', source);
+      }
+
+      query = query.order('created_at', { ascending: false }).limit(limit);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching scraped courses:', error);
+        throw error;
+      }
+
+      return data;
+    },
   });
-  const { toast } = useToast();
 
-  const fetchPendingCourses = async () => {
-    setLoading(true);
+  const approveCourse = async (courseId: string) => {
     try {
-      const pendingCourses = await getPendingScrapedCourses();
-      setCourses(pendingCourses);
-    } catch (error) {
-      console.error("Error fetching pending courses:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pending courses",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      setIsSubmitting(true);
+      setReviewStatus(null);
 
-  const handleApprove = async (course: ScrapedCourse) => {
-    setProcessingAction(true);
-    try {
-      const result = await approveScrapedCourse(course.id || '');
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: course.is_duplicate && course.duplicate_confidence && course.duplicate_confidence >= 90 
-            ? "Duplicate course handled successfully" 
-            : "Course approved and published",
-          variant: "default"
-        });
-        setCourses(courses.filter(c => c.id !== course.id));
-      } else {
-        throw new Error(result.message || "Failed to approve course");
-      }
-    } catch (error) {
-      console.error("Error approving course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve course",
-        variant: "destructive"
-      });
-    } finally {
-      setProcessingAction(false);
-    }
-  };
+      // First, update the course to be reviewed and approved
+      const { error: updateError } = await supabase
+        .from('scraped_courses')
+        .update({
+          is_reviewed: true,
+          is_approved: true,
+        })
+        .eq('id', courseId);
 
-  const handleReject = async (courseId: string, reason: string) => {
-    setProcessingAction(true);
-    try {
-      const result = await rejectScrapedCourse(courseId, reason);
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: "Course rejected",
-          variant: "default"
-        });
-        setCourses(courses.filter(c => c.id !== courseId));
-        return true;
-      } else {
-        throw new Error(result.message || "Failed to reject course");
+      if (updateError) {
+        throw updateError;
       }
-    } catch (error) {
-      console.error("Error rejecting course:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject course",
-        variant: "destructive"
+
+      // Get the course data
+      const { data: courseData, error: fetchError } = await supabase
+        .from('scraped_courses')
+        .select('*')
+        .eq('id', courseId)
+        .single();
+
+      if (fetchError || !courseData) {
+        throw fetchError || new Error('Course not found');
+      }
+
+      // Transform data for regular courses table
+      const { id, ...courseWithoutId } = courseData;
+
+      // Insert into courses table
+      const { data: insertedCourse, error: insertError } = await supabase
+        .from('courses')
+        .insert({
+          ...courseWithoutId,
+          is_published: true,
+        })
+        .select('id')
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      await refetch();
+
+      setReviewStatus({
+        success: true,
+        message: 'Course approved and published successfully!',
+        courseId: insertedCourse.id,
       });
-      return false;
-    } finally {
-      setProcessingAction(false);
-    }
-  };
-  
-  const runManualScrape = async () => {
-    setScrapingInProgress(true);
-    try {
-      const result = await triggerManualScrape();
-      if (result.success) {
-        toast({
-          title: "Scraper Completed",
-          description: "Course scraper completed successfully. Refreshing pending courses...",
-          variant: "default"
-        });
-        await fetchPendingCourses();
-        await fetchStats();
-        return true;
-      } else {
-        throw new Error(result.message || "Failed to run course scraper");
-      }
+
     } catch (error) {
-      console.error("Error running manual scrape:", error);
-      toast({
-        title: "Error",
-        description: "Failed to run course scraper",
-        variant: "destructive"
+      console.error('Error approving course:', error);
+      setReviewStatus({
+        success: false,
+        message: `Failed to approve course: ${error.message}`,
       });
-      return false;
     } finally {
-      setScrapingInProgress(false);
-    }
-  };
-  
-  const fetchStats = async () => {
-    try {
-      const duplicateStats = await getDuplicateStats();
-      if (duplicateStats.success) {
-        setStats(prev => ({
-          ...prev,
-          duplicatesDetected: duplicateStats.duplicateCount || 0
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching scraper stats:", error);
+      setIsSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    fetchPendingCourses();
-    fetchStats();
-  }, []);
+  const rejectCourse = async (courseId: string, notes: string) => {
+    try {
+      setIsSubmitting(true);
+      setReviewStatus(null);
+
+      const { error } = await supabase
+        .from('scraped_courses')
+        .update({
+          is_reviewed: true,
+          is_approved: false,
+          review_notes: notes,
+        })
+        .eq('id', courseId);
+
+      if (error) {
+        throw error;
+      }
+
+      await refetch();
+
+      setReviewStatus({
+        success: true,
+        message: 'Course rejected.',
+      });
+    } catch (error) {
+      console.error('Error rejecting course:', error);
+      setReviewStatus({
+        success: false,
+        message: `Failed to reject course: ${error.message}`,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return {
-    courses,
-    loading,
-    processingAction,
-    scrapingInProgress,
-    stats,
-    fetchPendingCourses,
-    handleApprove,
-    handleReject,
-    runManualScrape,
-    fetchStats
+    scrapedCourses,
+    isLoading,
+    isError,
+    isSubmitting,
+    reviewStatus,
+    approveCourse,
+    rejectCourse,
+    refetch,
   };
 };
+
+export default useScrapedCourses;

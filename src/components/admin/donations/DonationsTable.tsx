@@ -1,143 +1,48 @@
 
-import { useState } from "react";
-import { format } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import React, { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { 
-  MoreHorizontal, 
   Eye, 
   Download, 
-  FileCheck,
-  RefreshCcw,
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  AlertCircle, 
+  FileCheck, 
+  FileX 
 } from "lucide-react";
-import DonationDetailsDialog from "./DonationDetailsDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 
-const DonationsTable = ({
-  donations,
-  isLoading,
+export interface DonationsTableProps {
+  donations: any[];
+  isLoading: boolean;
+  onViewDetails: (donation: any) => void;
+  onRefresh: () => void;
+  isLocked?: boolean;
+}
+
+const DonationsTable: React.FC<DonationsTableProps> = ({ 
+  donations, 
+  isLoading, 
+  onViewDetails, 
   onRefresh,
-  onViewDetails,
-  isLocked,
+  isLocked = false 
 }) => {
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
   const { toast } = useToast();
-  const [selectedDonation, setSelectedDonation] = useState(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [isRefunding, setIsRefunding] = useState(false);
-  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [donationToRefund, setDonationToRefund] = useState(null);
-  const [isGeneratingCertificate, setIsGeneratingCertificate] = useState(false);
 
-  const handleViewDetails = (donation) => {
-    setSelectedDonation(donation);
-    setDetailsOpen(true);
-    onViewDetails(donation);
-  };
-
-  const handleRefund = (donation) => {
-    setDonationToRefund(donation);
-    setRefundDialogOpen(true);
-  };
-
-  const confirmRefund = async () => {
-    if (!donationToRefund) return;
-
-    try {
-      setIsRefunding(true);
-      
-      // Update donation status
-      const { error } = await supabase
-        .from('donations')
-        .update({ payment_status: 'refunded' })
-        .eq('id', donationToRefund.id);
-
-      if (error) throw error;
-      
-      toast({
-        title: "Donation refunded",
-        description: `The donation of ${donationToRefund.currency} ${donationToRefund.amount} has been marked as refunded.`,
-      });
-      
-      onRefresh();
-    } catch (error) {
-      toast({
-        title: "Error processing refund",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefunding(false);
-      setRefundDialogOpen(false);
-      setDonationToRefund(null);
-    }
-  };
-
-  const generateCertificate = async (donation) => {
-    try {
-      setIsGeneratingCertificate(true);
-      
-      // Here you'd generate a certificate and update the database
-      // For now, we'll simulate this with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const certificateUrl = `https://example.com/certificates/donation-${donation.id}.pdf`;
-      
-      // Update donation with certificate info
-      const { error } = await supabase
-        .from('donations')
-        .update({
-          certificate_issued: true,
-          certificate_url: certificateUrl
-        })
-        .eq('id', donation.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Certificate generated",
-        description: "The donation certificate has been generated successfully.",
-      });
-      
-      onRefresh();
-    } catch (error) {
-      toast({
-        title: "Error generating certificate",
-        description: error.message || "Something went wrong",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingCertificate(false);
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return format(new Date(dateString), "MMM dd, yyyy");
+  const handlePreviewImage = (url: string) => {
+    setImagePreviewUrl(url);
+    setPreviewOpen(true);
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -147,45 +52,48 @@ const DonationsTable = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
+        return <Badge className="bg-green-500">Completed</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Failed</Badge>;
-      case "refunded":
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Refunded</Badge>;
+        return <Badge variant="outline" className="text-amber-500 border-amber-500">Pending</Badge>;
+      case "rejected":
+        return <Badge variant="destructive">Rejected</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   if (isLoading) {
     return (
-      <div className="text-center py-10">
-        <p>Loading donations...</p>
+      <div className="flex justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>
     );
   }
 
-  if (donations.length === 0) {
+  if (!donations || donations.length === 0) {
     return (
-      <div className="text-center py-10 border rounded-lg">
+      <div className="text-center p-8">
+        <AlertCircle className="h-10 w-10 mx-auto text-gray-400 mb-2" />
         <p className="text-gray-500">No donations found</p>
+        <Button variant="outline" className="mt-4" onClick={onRefresh}>
+          Refresh
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <div className="rounded-md border overflow-hidden">
+      <div className="border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
               <TableHead>Donor</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Payment Method</TableHead>
+              <TableHead>Payment Status</TableHead>
+              <TableHead>Proof</TableHead>
               <TableHead>Certificate</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -193,67 +101,97 @@ const DonationsTable = ({
           <TableBody>
             {donations.map((donation) => (
               <TableRow key={donation.id}>
-                <TableCell className="font-medium">
-                  {donation.id.slice(0, 8)}
-                </TableCell>
                 <TableCell>
-                  {donation.profiles?.full_name || "Anonymous"}
+                  <div className="font-medium">
+                    {donation.donors?.full_name || "Anonymous"}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {donation.donors?.email || "No email"}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {formatCurrency(donation.amount, donation.currency)}
                 </TableCell>
-                <TableCell>{formatDate(donation.created_at)}</TableCell>
+                <TableCell>
+                  {new Date(donation.created_at).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{donation.payment_method || "N/A"}</TableCell>
                 <TableCell>{getStatusBadge(donation.payment_status)}</TableCell>
                 <TableCell>
-                  {donation.certificate_issued ? (
-                    <Badge variant="outline" className="bg-blue-50">Issued</Badge>
+                  {donation.payment_proof_url ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePreviewImage(donation.payment_proof_url)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" /> View
+                    </Button>
                   ) : (
-                    <Badge variant="outline">Not Issued</Badge>
+                    <span className="text-gray-500 text-sm">No proof</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {donation.certificate_issued ? (
+                    donation.certificate_url ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-green-500 hover:bg-green-50 text-green-500"
+                        onClick={() => window.open(donation.certificate_url, "_blank")}
+                      >
+                        <FileCheck className="h-4 w-4 mr-1" /> View
+                      </Button>
+                    ) : (
+                      <Badge variant="outline" className="text-green-500 border-green-500">
+                        Issued
+                      </Badge>
+                    )
+                  ) : (
+                    <Badge variant="outline" className="text-gray-500">Not Issued</Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
+                  <div className="flex justify-end items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onViewDetails(donation)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" /> Details
+                    </Button>
+                    
+                    {!isLocked && donation.payment_status === "pending" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-green-500 hover:bg-green-50 text-green-500"
+                          disabled={isLocked}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500 hover:bg-red-50 text-red-500"
+                          disabled={isLocked}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" /> Reject
+                        </Button>
+                      </>
+                    )}
+
+                    {!isLocked && donation.payment_status === "completed" && !donation.certificate_issued && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500 hover:bg-blue-50 text-blue-500"
+                        disabled={isLocked}
+                      >
+                        <FileCheck className="h-4 w-4 mr-1" /> Issue Certificate
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewDetails(donation)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      
-                      {donation.payment_status === "completed" && !donation.certificate_issued && (
-                        <DropdownMenuItem 
-                          onClick={() => generateCertificate(donation)}
-                          disabled={isGeneratingCertificate || isLocked}
-                        >
-                          <FileCheck className="mr-2 h-4 w-4" />
-                          Generate Certificate
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {donation.certificate_url && (
-                        <DropdownMenuItem 
-                          onClick={() => window.open(donation.certificate_url, "_blank")}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Certificate
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {donation.payment_status === "completed" && !isLocked && (
-                        <DropdownMenuItem 
-                          onClick={() => handleRefund(donation)}
-                          className="text-red-600"
-                        >
-                          <RefreshCcw className="mr-2 h-4 w-4" />
-                          Process Refund
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -261,38 +199,28 @@ const DonationsTable = ({
         </Table>
       </div>
 
-      {/* Donation Details Dialog */}
-      {selectedDonation && (
-        <DonationDetailsDialog
-          donation={selectedDonation}
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
-          isLocked={isLocked}
-        />
-      )}
-
-      {/* Refund Confirmation Dialog */}
-      <AlertDialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to process a refund for this donation? 
-              This will mark the donation as refunded in the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isRefunding}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmRefund}
-              disabled={isRefunding}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isRefunding ? "Processing..." : "Process Refund"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Payment Proof</DialogTitle>
+          </DialogHeader>
+          {imagePreviewUrl && (
+            <div className="flex flex-col items-center">
+              <img
+                src={imagePreviewUrl}
+                alt="Payment proof"
+                className="max-h-[70vh] object-contain"
+              />
+              <Button
+                className="mt-4"
+                onClick={() => window.open(imagePreviewUrl, "_blank")}
+              >
+                <Download className="h-4 w-4 mr-2" /> Download
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
