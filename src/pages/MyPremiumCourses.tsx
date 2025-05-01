@@ -24,10 +24,15 @@ const MyPremiumCourses = () => {
     }
 
     const fetchEnrollments = async () => {
-      const data = await getUserEnrolledCourses();
-      // Only show enrollments for published courses
-      setEnrollments(data.filter(enrollment => enrollment.course?.is_published));
-      setLoading(false);
+      try {
+        const data = await getUserEnrolledCourses();
+        // Only show enrollments for published courses
+        setEnrollments(data.filter(enrollment => enrollment.course?.is_published));
+      } catch (error) {
+        console.error("Error fetching enrollments:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchEnrollments();
