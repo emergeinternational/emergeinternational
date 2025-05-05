@@ -18,6 +18,5 @@ export {
 } from './scraping/courseScraperValidation';
 
 export {
-  logScraperActivity,
-  createVerifiedCourse
+  logScraperActivity
 } from './scraping/courseScraperHelpers';

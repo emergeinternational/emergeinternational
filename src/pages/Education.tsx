@@ -12,7 +12,7 @@ import {
 } from "../services/educationService";
 import { getWorkshops, Workshop } from "../services/workshopService";
 import { 
-  getAllCourses, 
+   
   getStaticCourses
 } from "../services/courseService";
 import { Course } from "../services/courseTypes";

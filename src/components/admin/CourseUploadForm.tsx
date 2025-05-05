@@ -14,7 +14,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { AlertCircle, Check, X } from 'lucide-react';
-import { createVerifiedCourse } from '@/services/courseScraperService';
+
 import { useStorage } from '@/hooks/useStorage';
 import { Course, CourseCategory, CourseLevel, CourseHostingType } from '@/services/courseTypes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

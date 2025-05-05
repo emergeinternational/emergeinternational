@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 // Function to log scraper actions
-export const logScraperAction = async (
+export const logScraperActivity = async (
   source: string,
   action: string,
   details?: any
