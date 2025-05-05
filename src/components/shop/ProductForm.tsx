@@ -66,7 +66,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
       if (isEditing && product) {
         await updateProduct(product.id, productData);
       } else {
-        await createProduct(productData);
+        await createProduct(productData as Omit<ShopProduct, 'id' | 'created_at' | 'updated_at'>);
       }
       
       onSuccess();
