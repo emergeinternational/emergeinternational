@@ -11,6 +11,7 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import { getAuthStatus, hasShopEditAccess } from "@/services/shopAuthService";
 import CollectionsManager from "./CollectionsManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MockupGenerator from "./recovery/MockupGenerator";
 
 interface ProductsManagerProps {
   isLocked?: boolean;
@@ -152,6 +153,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         <TabsList className="mb-4">
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="collections">Collections</TabsTrigger>
+          {isAdmin && <TabsTrigger value="tools">Tools</TabsTrigger>}
         </TabsList>
         
         <TabsContent value="products">
@@ -191,6 +193,12 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         <TabsContent value="collections">
           <CollectionsManager isLocked={isLocked} />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="tools">
+            <MockupGenerator isLocked={isLocked} onProductsGenerated={fetchProducts} />
+          </TabsContent>
+        )}
       </Tabs>
       
       {/* Form dialog for adding new products */}

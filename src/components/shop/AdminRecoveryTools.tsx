@@ -1,14 +1,19 @@
 
 import React from 'react';
+import MockupGenerator from './recovery/MockupGenerator';
 
 /**
- * Temporary stripped-down version of AdminRecoveryTools to restore stability
- * Full implementation will be re-added after app stabilization
+ * Simplified recovery tools component with just mock product generation functionality
  */
 export default function AdminRecoveryTools() {
   return (
-    <div className="text-sm text-yellow-600 p-4 border border-yellow-400 bg-yellow-100 rounded-md">
-      Recovery tools are temporarily disabled due to failed build. Snapshot tools and mock product generation will be re-added after stabilization.
+    <div className="mb-6">
+      <div className="text-sm text-yellow-600 p-4 border border-yellow-400 bg-yellow-100 rounded-md mb-4">
+        Recovery tools are temporarily disabled due to failed build. Only mock product generation is available.
+      </div>
+      
+      {/* Include only the MockupGenerator for now */}
+      <MockupGenerator />
     </div>
   );
 }

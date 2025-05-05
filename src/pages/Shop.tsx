@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -23,6 +22,7 @@ import RecoveryFallback from "@/components/shop/RecoveryFallback";
 import DeveloperNotesOverlay from "@/components/shop/DeveloperNotesOverlay";
 import AdminRecoveryTools from "@/components/shop/AdminRecoveryTools";
 import { getShopSystemSettings, toggleDiagnosticsMode } from "@/services/shopSystemService";
+import { RefreshCw } from "lucide-react";
 
 interface ShopProps {
   userRole: string | null;
@@ -512,6 +512,14 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                     className="pl-10"
                   />
                 </div>
+                <Button 
+                  variant="outline" 
+                  onClick={refreshProducts}
+                  className="ml-2"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
               </div>
             </ErrorBoundary>
 
@@ -638,10 +646,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
             {canEdit && (
               <AdminFloatingPanel 
                 onAddProduct={() => setIsAddProductDialogOpen(true)}
-                onRefresh={() => {
-                  fetchProducts();
-                  fetchCollections();
-                }}
+                onRefresh={refreshProducts}
               />
             )}
             

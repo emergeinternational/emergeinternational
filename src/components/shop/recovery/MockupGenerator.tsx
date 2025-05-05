@@ -7,13 +7,29 @@ import { useMockProducts } from "@/hooks/shop/useMockProducts";
 
 interface MockupGeneratorProps {
   isLocked?: boolean;
+  onProductsGenerated?: () => void; // Callback to refresh products after generation
 }
 
 /**
  * Component for generating mock products for testing
  */
-const MockupGenerator: React.FC<MockupGeneratorProps> = ({ isLocked = false }) => {
+const MockupGenerator: React.FC<MockupGeneratorProps> = ({ 
+  isLocked = false, 
+  onProductsGenerated 
+}) => {
   const { handleGenerateMockProducts, isMockGenerating } = useMockProducts(isLocked);
+
+  // Handle generation with callback for refresh
+  const generateProducts = async (count: number) => {
+    const products = await handleGenerateMockProducts(count);
+    
+    if (products) {
+      // If products were generated successfully, trigger refresh
+      if (onProductsGenerated) {
+        onProductsGenerated();
+      }
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -25,7 +41,7 @@ const MockupGenerator: React.FC<MockupGeneratorProps> = ({ isLocked = false }) =
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            onClick={() => handleGenerateMockProducts(5)}
+            onClick={() => generateProducts(5)}
             disabled={isMockGenerating || isLocked}
             className="flex items-center"
           >
@@ -34,14 +50,14 @@ const MockupGenerator: React.FC<MockupGeneratorProps> = ({ isLocked = false }) =
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleGenerateMockProducts(10)}
+            onClick={() => generateProducts(10)}
             disabled={isMockGenerating || isLocked}
           >
             Generate 10 Products
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleGenerateMockProducts(20)}
+            onClick={() => generateProducts(20)}
             disabled={isMockGenerating || isLocked}
           >
             Generate 20 Products
