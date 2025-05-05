@@ -18,12 +18,12 @@ const ShopPage: React.FC = () => {
       console.log("ShopPage component is rendering");
       
       const checkAuth = async () => {
+        // Get initial synchronous status
         const authStatus = getAuthStatus();
         console.log("Auth status in ShopPage:", authStatus);
         
         // If authStatus includes role, set it
         if (authStatus) {
-          // Assuming role is available from authStatus
           setUserRole(authStatus.role || null);
         }
         

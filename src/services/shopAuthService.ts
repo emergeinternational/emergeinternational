@@ -14,7 +14,7 @@ interface AuthStatus {
 export const initializeAuth = async (): Promise<AuthStatus> => {
   // This function will initialize the authentication state
   console.log("Shop auth service initialized");
-  return await getAuthStatus();
+  return getAuthStatus();
 };
 
 // Set up auth listener
@@ -70,39 +70,61 @@ export const getUserRole = async (): Promise<string | null> => {
 };
 
 // Check auth status with role information
-export const getAuthStatus = async (): Promise<AuthStatus> => {
+export const getAuthStatus = (): AuthStatus => {
   try {
-    // Get current user session
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
+    // Default to not authenticated until we check
+    let isAuthenticated = false;
+    let userId = null;
+    let role = null;
+    let isAdmin = false;
+    let isEditor = false;
     
-    // Default to not authenticated
-    const isAuthenticated = !!session;
-    const userId = session?.user?.id || null;
+    // Create a dummy status for initial state
+    // This will be updated asynchronously later
+    const status: AuthStatus = {
+      isAdmin: false,
+      isEditor: false,
+      isAuthenticated: false,
+      userId: null,
+      role: null
+    };
     
-    // If not authenticated, return with defaults
-    if (!isAuthenticated) {
-      return {
-        isAdmin: false,
-        isEditor: false,
+    // Start async check but don't wait for it
+    (async () => {
+      // Get current user session
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
+      
+      // Update authentication status
+      isAuthenticated = !!session;
+      userId = session?.user?.id || null;
+      
+      // If not authenticated, return with defaults
+      if (!isAuthenticated) {
+        return;
+      }
+      
+      // Fetch user role
+      role = await getUserRole();
+      isAdmin = role === 'admin';
+      isEditor = role === 'editor' || role === 'admin'; // Admins also have editor capabilities
+      
+      // Update the status object
+      Object.assign(status, {
+        isAdmin,
+        isEditor,
         isAuthenticated,
         userId,
-        role: null
-      };
-    }
+        role
+      });
+      
+    })().catch(err => {
+      console.error("Error in auth status check:", err);
+      toast.error("Failed to verify permissions");
+    });
     
-    // Fetch user role
-    const role = await getUserRole();
-    const isAdmin = role === 'admin';
-    const isEditor = role === 'editor' || role === 'admin'; // Admins also have editor capabilities
-    
-    return {
-      isAdmin,
-      isEditor,
-      isAuthenticated,
-      userId,
-      role
-    };
+    // Return immediately with initial values
+    return status;
   } catch (err) {
     console.error("Error checking auth status:", err);
     toast.error("Failed to verify permissions");
@@ -119,9 +141,9 @@ export const getAuthStatus = async (): Promise<AuthStatus> => {
 };
 
 // Check if the current user has permission to edit shop content
-export const hasShopEditAccess = async (): Promise<boolean> => {
+export const hasShopEditAccess = (): boolean => {
   try {
-    const authStatus = await getAuthStatus();
+    const authStatus = getAuthStatus();
     return authStatus.isEditor || authStatus.isAdmin;
   } catch (err) {
     console.error("Error checking shop edit access:", err);

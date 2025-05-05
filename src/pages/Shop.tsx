@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -10,16 +9,21 @@ import CollectionFormDialog from "../components/shop/CollectionFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import { hasShopEditAccess, getAuthStatus } from "@/services/shopAuthService";
+import { hasShopEditAccess } from "@/services/shopAuthService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/shop/ErrorBoundary";
 import FilterSidebar from "@/components/shop/FilterSidebar";
 import AdminFloatingPanel from "@/components/shop/AdminFloatingPanel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 
-const Shop = () => {
-  console.log("Shop component starting to render");
+interface ShopProps {
+  userRole: string | null;
+}
+
+const Shop: React.FC<ShopProps> = ({ userRole }) => {
+  console.log("Shop component starting to render with role:", userRole);
   
   try {
     // Wrap the entire component in a try-catch to detect any immediate errors
@@ -42,11 +46,10 @@ const Shop = () => {
     
     console.log("Shop component states initialized");
     
-    // Get auth status from isolated service - add defensive check
-    const authStatus = getAuthStatus();
-    console.log("Auth status retrieved:", authStatus);
-    const { isAdmin } = authStatus || { isAdmin: false };
-    const canEdit = hasShopEditAccess();
+    // Get auth status directly from props
+    const isAdmin = userRole === 'admin';
+    const isEditor = userRole === 'editor' || userRole === 'admin';
+    const canEdit = isEditor || isAdmin;
     console.log("Can edit:", canEdit);
 
     useEffect(() => {
@@ -322,7 +325,8 @@ const Shop = () => {
               </ErrorBoundary>
 
               {/* Products Display */}
-              <ErrorBoundary className="flex-1">
+              <ErrorBoundary fallback={<div>Error loading products</div>}>
+                <div className="flex-1">
                 {loading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {Array(8).fill(0).map((_, i) => (
@@ -391,6 +395,7 @@ const Shop = () => {
                     </Button>
                   </div>
                 )}
+                </div>
               </ErrorBoundary>
             </div>
           </div>
@@ -441,7 +446,7 @@ const Shop = () => {
         </ErrorBoundary>
 
         {/* Admin Floating Panel */}
-        {(isAdmin || canEdit) && (
+        {canEdit && (
           <AdminFloatingPanel
             productCount={products.length}
             isGridView={isGridView}
