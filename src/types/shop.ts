@@ -1,27 +1,29 @@
+
 export interface ShopProduct {
   id: string;
   title: string;
   description?: string;
   price: number;
   image_url?: string;
-  in_stock: boolean;
   category?: string;
+  status?: string;
+  in_stock?: boolean;
+  collection_id?: string;
   created_at?: string;
   updated_at?: string;
+  created_by?: string;
   variations?: ProductVariation[];
-  collection_id?: string;
   collection?: Collection;
-  status?: 'draft' | 'pending' | 'published' | 'rejected';
 }
 
 export interface ProductVariation {
-  id?: string;
-  product_id?: string;
+  id: string;
+  product_id: string;
+  sku: string;
   size?: string;
   color?: string;
-  stock_quantity: number;
-  sku: string;
   price?: number;
+  stock_quantity: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -29,68 +31,33 @@ export interface ProductVariation {
 export interface Collection {
   id: string;
   title: string;
-  description?: string;
   designer_name: string;
+  description?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface ProductFormValues {
   title: string;
-  price: number;
   description?: string;
+  price: number;
   image_url?: string;
-  in_stock: boolean;
-  category: string;
+  category?: string;
+  in_stock?: boolean;
   collection_id?: string;
   variations?: ProductVariation[];
-  status?: 'draft' | 'pending' | 'published' | 'rejected';
 }
 
-// Diagnostic types for shop module
-export type DiagnosticStatus = 'pending' | 'error' | 'running' | 'success' | 'warning';
-
-export interface DiagnosticTest {
-  name: string;
-  message: string;
-  status: DiagnosticStatus;
-  details: any;
-  runTest: () => Promise<void>;
-}
-
-export interface DiagnosticTestResult {
-  status: DiagnosticStatus;
-  details: any;
-}
-
-export interface RLSPolicy {
-  policyname: string;
-  permissive: string;
-  roles: string[];
-  cmd: string;
-  qual: string;
-  with_check: string;
-}
-
-// Shop system settings JSON
+// Basic system types for future use
 export interface ShopSystemSettings {
   recoveryMode?: boolean;
-  fallbackLevel?: 'minimal' | 'full';
-  diagnosticsEnabled?: boolean;
+  fallbackLevel?: string;
   liveSync?: boolean;
   mockupData?: {
     last_seeded?: string;
     seed_count?: number;
   };
-}
-
-// Recovery log entry interface
-export interface RecoveryLogEntry {
-  id: string;
-  timestamp: string;
-  action: string;
-  status: 'success' | 'failure' | 'pending';
-  details?: any;
+  diagnosticsEnabled?: boolean;
 }
 
 export interface ProductSnapshot {
@@ -100,4 +67,12 @@ export interface ProductSnapshot {
   productCount: number;
   createdBy: string;
   filePath: string;
+}
+
+export interface RecoveryLogEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  status: 'success' | 'failure' | 'pending';
+  details?: any;
 }

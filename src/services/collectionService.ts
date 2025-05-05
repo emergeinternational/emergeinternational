@@ -12,13 +12,13 @@ export const getCollections = async (): Promise<Collection[]> => {
       .order("created_at", { ascending: false });
 
     if (error) {
+      console.error("Error fetching collections:", error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error("Error fetching collections:", error);
-    toast.error("Failed to load collections");
+    console.error("Error in getCollections:", error);
     return [];
   }
 };
@@ -26,35 +26,26 @@ export const getCollections = async (): Promise<Collection[]> => {
 // Create a new collection
 export const createCollection = async (collectionData: Partial<Collection>): Promise<Collection | null> => {
   try {
-    // Make sure designer_name is provided even if it's partial data
-    if (!collectionData.designer_name) {
-      throw new Error("Designer name is required");
-    }
-    
     const { data, error } = await supabase
       .from("collections")
-      .insert({
-        title: collectionData.title || '',
-        designer_name: collectionData.designer_name,
-        description: collectionData.description
-      })
+      .insert(collectionData)
       .select()
       .single();
 
     if (error) {
+      console.error("Error creating collection:", error);
       throw error;
     }
 
-    toast.success("Collection created successfully");
     return data;
   } catch (error) {
-    console.error("Error creating collection:", error);
+    console.error("Error in createCollection:", error);
     toast.error("Failed to create collection");
     return null;
   }
 };
 
-// Update an existing collection
+// Update a collection
 export const updateCollection = async (id: string, updates: Partial<Collection>): Promise<Collection | null> => {
   try {
     const { data, error } = await supabase
@@ -65,13 +56,13 @@ export const updateCollection = async (id: string, updates: Partial<Collection>)
       .single();
 
     if (error) {
+      console.error("Error updating collection:", error);
       throw error;
     }
 
-    toast.success("Collection updated successfully");
     return data;
   } catch (error) {
-    console.error("Error updating collection:", error);
+    console.error("Error in updateCollection:", error);
     toast.error("Failed to update collection");
     return null;
   }
@@ -86,13 +77,13 @@ export const deleteCollection = async (id: string): Promise<boolean> => {
       .eq("id", id);
 
     if (error) {
+      console.error("Error deleting collection:", error);
       throw error;
     }
 
-    toast.success("Collection deleted successfully");
     return true;
   } catch (error) {
-    console.error("Error deleting collection:", error);
+    console.error("Error in deleteCollection:", error);
     toast.error("Failed to delete collection");
     return false;
   }
