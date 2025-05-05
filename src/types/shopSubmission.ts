@@ -18,6 +18,7 @@ export interface ProductSubmission extends ShopProduct {
   status: ProductStatus;
   created_by: string;
   rejection_reason?: string;
+  // Remove profiles reference since we're not using it and it's causing build errors
 }
 
 export interface StatusBadgeProps {

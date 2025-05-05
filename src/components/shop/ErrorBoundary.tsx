@@ -3,6 +3,7 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface Props {
   children: ReactNode;
@@ -32,6 +33,9 @@ class ErrorBoundary extends Component<Props, State> {
     // Log error to console
     console.error("ErrorBoundary caught an error:", error);
     console.error("Component stack trace:", errorInfo.componentStack);
+    
+    // Non-blocking alert via toast
+    toast.error("Something went wrong in the Shop module");
     
     // Update state to include the error info
     this.setState({ errorInfo });

@@ -4,8 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadgeProps } from "@/types/shopSubmission";
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+  // Defensive check for valid status
+  const validStatus = status && ['draft', 'pending', 'published', 'rejected'].includes(status) 
+    ? status 
+    : 'draft'; // Default fallback
+  
   const getStatusColor = () => {
-    switch (status) {
+    switch (validStatus) {
       case "draft":
         return "bg-gray-400 hover:bg-gray-500";
       case "pending":
@@ -20,7 +25,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   };
   
   const getStatusLabel = () => {
-    switch (status) {
+    switch (validStatus) {
       case "draft":
         return "Draft";
       case "pending":

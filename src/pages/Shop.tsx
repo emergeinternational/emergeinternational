@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -23,8 +24,6 @@ interface ShopProps {
 }
 
 const Shop: React.FC<ShopProps> = ({ userRole }) => {
-  console.log("Shop component starting to render with role:", userRole);
-  
   try {
     // Wrap the entire component in a try-catch to detect any immediate errors
     const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -43,17 +42,14 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]); // Default price range (0 to $1000)
     const [maxPrice, setMaxPrice] = useState(100000);
-    
-    console.log("Shop component states initialized");
+    const [dataError, setDataError] = useState<boolean>(false);
     
     // Get auth status directly from props
     const isAdmin = userRole === 'admin';
     const isEditor = userRole === 'editor' || userRole === 'admin';
     const canEdit = isEditor || isAdmin;
-    console.log("Can edit:", canEdit);
 
     useEffect(() => {
-      console.log("Shop component useEffect running");
       try {
         fetchProducts();
         fetchCollections();
@@ -116,45 +112,58 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
         };
       } catch (error) {
         console.error("Error in Shop useEffect:", error);
+        setDataError(true);
       }
     }, []);
 
     const fetchProducts = async () => {
-      console.log("Fetching products");
       setLoading(true);
       try {
         const data = await getProducts();
-        console.log("Products fetched:", data);
-        setProducts(data);
         
-        // Extract unique categories
-        const uniqueCategories = Array.from(
-          new Set(data.filter(product => product?.category).map(product => product.category))
-        ) as string[];
-        
-        setCategories(uniqueCategories);
-        
-        // Set max price based on products
-        const highestPrice = Math.max(
-          ...data.map(product => product.price || 0),
-          ...data.flatMap(p => (p.variations || []).map(v => v.price || 0))
-        );
-        setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
-        setPriceRange([0, Math.max(highestPrice, 100000)]);
+        // Defensive check for valid data
+        if (!data || !Array.isArray(data)) {
+          console.error("Invalid products data received:", data);
+          setDataError(true);
+          setProducts([]);
+        } else {
+          setProducts(data);
+          
+          // Extract unique categories with null checks
+          const uniqueCategories = Array.from(
+            new Set(data.filter(product => product && product.category).map(product => product.category))
+          ) as string[];
+          
+          setCategories(uniqueCategories);
+          
+          // Set max price based on products with defensive checks
+          const highestPrice = Math.max(
+            ...data.map(product => (product && product.price) ? product.price : 0),
+            ...data.flatMap(p => (p && p.variations) 
+              ? p.variations.map(v => (v && v.price) ? v.price : 0) 
+              : [0])
+          );
+          setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
+          setPriceRange([0, Math.max(highestPrice, 100000)]);
+        }
       } catch (error) {
         console.error("Error fetching products:", error);
         toast.error("Failed to load products. Please try again.");
+        setDataError(true);
       } finally {
         setLoading(false);
       }
     };
 
     const fetchCollections = async () => {
-      console.log("Fetching collections");
       try {
         const data = await getCollections();
-        console.log("Collections fetched:", data);
-        setCollections(data);
+        if (!data || !Array.isArray(data)) {
+          console.error("Invalid collections data received:", data);
+          setCollections([]);
+        } else {
+          setCollections(data);
+        }
       } catch (error) {
         console.error("Error fetching collections:", error);
         toast.error("Failed to load collections. Please try again.");
@@ -167,11 +176,16 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
         return;
       }
       
+      if (!id) {
+        toast.error("Invalid product ID");
+        return;
+      }
+      
       try {
         const success = await deleteProduct(id);
         if (success) {
           // Optimistic UI update
-          setProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+          setProducts(prevProducts => prevProducts.filter(product => product && product.id !== id));
           toast.success("Product deleted successfully");
         }
       } catch (error) {
@@ -187,11 +201,19 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
         toast.error("You don't have permission to edit products");
         return;
       }
+      
+      if (!product || !product.id) {
+        toast.error("Invalid product selected for editing");
+        return;
+      }
+      
       setSelectedProduct(product);
       setIsEditDialogOpen(true);
     };
 
     const handleSizeChange = (size: string) => {
+      if (!size) return; // Defensive check
+      
       setSelectedSizes(prev => 
         prev.includes(size)
           ? prev.filter(s => s !== size)
@@ -200,6 +222,8 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
     };
 
     const handleColorChange = (color: string) => {
+      if (!color) return; // Defensive check
+      
       setSelectedColors(prev => 
         prev.includes(color)
           ? prev.filter(c => c !== color)
@@ -221,29 +245,56 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       if (!product) return false;
       
       const matchesSearch = !searchTerm || (
-        (product.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+        ((product.title ?? '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (product.description ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
       );
       
       const matchesCategory = !selectedCategory || product.category === selectedCategory;
       
       const matchesCollection = !selectedCollection || product.collection_id === selectedCollection;
       
-      const matchesPrice = (product.price || 0) >= priceRange[0] && (product.price || 0) <= priceRange[1];
+      const matchesPrice = (product.price ?? 0) >= priceRange[0] && (product.price ?? 0) <= priceRange[1];
       
       const matchesSize = selectedSizes.length === 0 || (
-        product.variations?.some(v => v.size && selectedSizes.includes(v.size))
+        product.variations?.some(v => v?.size && selectedSizes.includes(v.size))
       );
       
       const matchesColor = selectedColors.length === 0 || (
-        product.variations?.some(v => v.color && selectedColors.includes(v.color))
+        product.variations?.some(v => v?.color && selectedColors.includes(v.color))
       );
       
       return matchesSearch && matchesCategory && matchesCollection && matchesPrice && matchesSize && matchesColor;
     });
 
+    // Show error state if data failed to load
+    if (dataError) {
+      return (
+        <MainLayout>
+          <div className="container mx-auto p-8">
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-bold mb-4">Unable to load shop data</h2>
+              <p className="mb-6 text-gray-600">
+                We're experiencing technical difficulties loading the shop. Please try again later.
+              </p>
+              <Button 
+                onClick={() => {
+                  setDataError(false);
+                  fetchProducts();
+                  fetchCollections();
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </MainLayout>
+      );
+    }
+
     // Group products by collection for better display
     const groupedProducts = filteredProducts.reduce((acc, product) => {
+      if (!product) return acc;
+      
       const collectionId = product.collection_id || 'uncategorized';
       if (!acc[collectionId]) {
         acc[collectionId] = [];
@@ -253,7 +304,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
     }, {} as Record<string, ShopProduct[]>);
 
     const collectionEntries = Object.entries(groupedProducts).map(([collectionId, products]) => {
-      const collection = collections.find(c => c.id === collectionId);
+      const collection = collections.find(c => c && c.id === collectionId);
       return {
         id: collectionId,
         title: collection ? collection.title : 'Other Products',
@@ -267,8 +318,6 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       return a.title.localeCompare(b.title);
     });
 
-    console.log("Shop component rendering UI");
-    
     return (
       <MainLayout>
         <ErrorBoundary>
@@ -321,7 +370,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
               </ErrorBoundary>
 
               {/* Products Display */}
-              <ErrorBoundary fallback={<div>Error loading products</div>}>
+              <ErrorBoundary fallback={<div className="flex-1 p-4 bg-red-50 rounded-lg border border-red-100">Error loading products. Please refresh the page and try again.</div>}>
                 <div className="flex-1">
                 {loading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -420,7 +469,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
               onSuccess={(updatedProduct) => {
                 if (updatedProduct) {
                   setProducts(prev => prev.map(product => 
-                    product.id === updatedProduct.id ? updatedProduct : product
+                    product && product.id === updatedProduct.id ? updatedProduct : product
                   ));
                 }
                 setSelectedProduct(null);
