@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Course } from '../courseTypes';
 
 // Function to log scraper actions
 export const logScraperAction = async (
@@ -19,6 +20,49 @@ export const logScraperAction = async (
     });
   } catch (error) {
     console.error('Failed to log scraper action:', error);
+  }
+};
+
+// Alias for backward compatibility
+export const logScraperActivity = logScraperAction;
+
+// Function to create a verified course from data
+export const createVerifiedCourse = async (courseData: Partial<Course>): Promise<string | null> => {
+  try {
+    // Format data to match the courses table
+    const formattedCourse = {
+      title: courseData.title || 'Untitled Course',
+      summary: courseData.summary || '',
+      image_url: courseData.image_url || null,
+      external_link: courseData.external_link || null,
+      video_embed_url: courseData.video_embed_url || null,
+      category: courseData.category as string,
+      level: courseData.level as string,
+      hosting_type: courseData.hosting_type as string,
+      is_published: courseData.is_published || false,
+      created_at: new Date().toISOString(),
+    };
+
+    // Save to database
+    const { data, error } = await supabase
+      .from('courses')
+      .insert(formattedCourse)
+      .select('id');
+
+    if (error) {
+      console.error('Error creating verified course:', error);
+      throw error;
+    }
+
+    await logScraperActivity('course_creation', 'course_verified', {
+      course_id: data?.[0]?.id,
+      title: courseData.title
+    });
+
+    return data?.[0]?.id || null;
+  } catch (error) {
+    console.error('Failed to create verified course:', error);
+    return null;
   }
 };
 

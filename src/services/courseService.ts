@@ -1,5 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { Course } from './courseTypes';
+import { getStaticCourses } from './education/staticCoursesService';
 
 export interface CourseFilters {
   category?: CourseCategory | CourseCategory[];
@@ -18,6 +19,122 @@ export interface CourseData {
   video_embed_url?: string;
   is_published: boolean;
 }
+
+// Export static courses for backward compatibility
+export { getStaticCourses };
+
+// Add missing functions referenced in CourseDetail.tsx
+export const getCourse = async (courseId: string): Promise<Course | null> => {
+  try {
+    // First check in database
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', courseId)
+      .single();
+
+    if (error) {
+      // If not in database, check static courses
+      const staticCourse = getStaticCourses().find(course => course.id === courseId);
+      return staticCourse || null;
+    }
+
+    return data as Course;
+  } catch (error) {
+    console.error('Error fetching course:', error);
+    return null;
+  }
+};
+
+export const getCourseProgress = async (courseId: string) => {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return null;
+    
+    const { data, error } = await supabase
+      .from('user_course_progress')
+      .select('*')
+      .eq('user_id', user.user.id)
+      .eq('course_id', courseId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching course progress:', error);
+      throw error;
+    }
+
+    return data || null;
+  } catch (error) {
+    console.error('Error in getCourseProgress:', error);
+    return null;
+  }
+};
+
+export const markCourseAsCompleted = async (courseId: string) => {
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) throw new Error('User not authenticated');
+
+    // Check if progress entry exists
+    const { data: existingProgress } = await supabase
+      .from('user_course_progress')
+      .select('id')
+      .eq('user_id', user.user.id)
+      .eq('course_id', courseId)
+      .single();
+
+    if (existingProgress) {
+      // Update existing progress
+      const { error } = await supabase
+        .from('user_course_progress')
+        .update({
+          status: 'completed',
+          progress: 100,
+          date_completed: new Date().toISOString()
+        })
+        .eq('id', existingProgress.id);
+
+      if (error) throw error;
+    } else {
+      // Create new progress entry
+      const { error } = await supabase
+        .from('user_course_progress')
+        .insert({
+          user_id: user.user.id,
+          course_id: courseId,
+          progress: 100,
+          status: 'completed',
+          date_completed: new Date().toISOString()
+        });
+
+      if (error) throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error marking course as completed:', error);
+    return false;
+  }
+};
+
+export const getAllCourses = async (): Promise<Course[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('is_published', true);
+
+    if (error) {
+      console.error('Error fetching courses:', error);
+      return getStaticCourses(); // Fallback to static courses
+    }
+
+    return data as Course[];
+  } catch (error) {
+    console.error('Error in getAllCourses:', error);
+    return getStaticCourses(); // Fallback to static courses
+  }
+};
 
 export const fetchCourses = async (filters?: CourseFilters) => {
   try {
