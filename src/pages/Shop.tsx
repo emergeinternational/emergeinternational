@@ -7,9 +7,10 @@ import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Trash2 } from "lucide-react";
-import { getAuthStatus } from "@/services/shopAuthService"; // Changed to local shopAuthService
+import { Search, PlusCircle, Trash2, Edit } from "lucide-react";
+import { hasShopEditAccess, getAuthStatus } from "@/services/shopAuthService";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -29,13 +30,76 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   // Get auth status from isolated service
   const { isAdmin } = getAuthStatus();
+  const canEdit = hasShopEditAccess();
 
   useEffect(() => {
     fetchProducts();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel('shop_product_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shop_products'
+        },
+        (payload) => {
+          console.log('Product change detected:', payload);
+          
+          // Update UI based on the type of change
+          if (payload.eventType === 'INSERT') {
+            const newProduct = payload.new as ShopProduct;
+            setProducts(prev => [newProduct, ...prev]);
+            
+            // Extract unique categories again
+            setCategories(prevCategories => {
+              if (newProduct.category && !prevCategories.includes(newProduct.category)) {
+                return [...prevCategories, newProduct.category];
+              }
+              return prevCategories;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedProduct = payload.new as ShopProduct;
+            setProducts(prev => prev.map(product => 
+              product.id === updatedProduct.id ? updatedProduct : product
+            ));
+            
+            // Refresh categories
+            const uniqueCategories = Array.from(
+              new Set(
+                [...products.map(p => p.id === updatedProduct.id ? updatedProduct : p)]
+                  .map(product => product.category).filter(Boolean)
+              )
+            ) as string[];
+            setCategories(uniqueCategories);
+          } else if (payload.eventType === 'DELETE') {
+            const deletedProductId = payload.old.id;
+            setProducts(prev => {
+              const filtered = prev.filter(product => product.id !== deletedProductId);
+              
+              // Refresh categories with remaining products
+              const remainingCategories = Array.from(
+                new Set(filtered.map(product => product.category).filter(Boolean))
+              ) as string[];
+              setCategories(remainingCategories);
+              
+              return filtered;
+            });
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -58,18 +122,30 @@ const Shop = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
+    if (!canEdit) {
+      toast.error("You don't have permission to delete products");
+      return;
+    }
+    
     try {
       const success = await deleteProduct(id);
       if (success) {
-        fetchProducts();
+        setProducts(products.filter(product => product.id !== id));
         toast.success("Product deleted successfully");
       }
     } catch (error) {
       console.error("Error deleting product:", error);
       toast.error("Failed to delete product");
-    } finally {
-      setProductToDelete(null);
     }
+  };
+
+  const handleEditProduct = (product: ShopProduct) => {
+    if (!canEdit) {
+      toast.error("You don't have permission to edit products");
+      return;
+    }
+    setSelectedProduct(product);
+    setIsEditDialogOpen(true);
   };
 
   const filteredProducts = products.filter(product => {
@@ -109,7 +185,7 @@ const Shop = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              {isAdmin && (
+              {canEdit && (
                 <Button 
                   onClick={() => setIsAddDialogOpen(true)}
                   className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
@@ -155,17 +231,25 @@ const Shop = () => {
             {filteredProducts.map(product => (
               <div key={product.id} className="relative">
                 <ProductCard product={product} />
-                {isAdmin && (
-                  <div className="absolute top-2 right-2 z-10">
+                {canEdit && (
+                  <div className="absolute top-2 right-2 z-10 flex gap-1">
+                    <Button 
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditProduct(product);
+                      }}
+                      className="bg-white/80 hover:bg-white"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button 
                           variant="destructive" 
                           size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setProductToDelete(product.id);
-                          }}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -213,8 +297,29 @@ const Shop = () => {
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         product={null}
-        onSuccess={fetchProducts}
+        onSuccess={(newProduct) => {
+          if (newProduct) {
+            setProducts(prev => [newProduct, ...prev]);
+          }
+        }}
       />
+      
+      {/* Form dialog for editing existing products */}
+      {selectedProduct && (
+        <ProductFormDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          product={selectedProduct}
+          onSuccess={(updatedProduct) => {
+            if (updatedProduct) {
+              setProducts(prev => prev.map(product => 
+                product.id === updatedProduct.id ? updatedProduct : product
+              ));
+            }
+            setSelectedProduct(null);
+          }}
+        />
+      )}
     </MainLayout>
   );
 };

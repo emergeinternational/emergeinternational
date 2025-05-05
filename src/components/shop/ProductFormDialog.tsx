@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Dialog,
@@ -11,8 +12,8 @@ import { ShopProduct } from "@/types/shop";
 interface ProductFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product?: ShopProduct | null;
-  onSuccess: () => void;
+  product: ShopProduct | null;
+  onSuccess: (product: ShopProduct | null) => void;
 }
 
 const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
@@ -21,8 +22,8 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   product,
   onSuccess,
 }) => {
-  const handleSuccess = () => {
-    onSuccess();
+  const handleSuccess = (updatedProduct: ShopProduct | null) => {
+    onSuccess(updatedProduct);
     onOpenChange(false);
   };
 
@@ -35,7 +36,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
         <ProductForm 
-          product={product ?? undefined} 
+          product={product} 
           onSuccess={handleSuccess} 
         />
       </DialogContent>

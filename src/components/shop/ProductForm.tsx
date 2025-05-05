@@ -32,8 +32,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface ProductFormProps {
-  product?: ShopProduct;
-  onSuccess: () => void;
+  product?: ShopProduct | null;
+  onSuccess: (product: ShopProduct | null) => void;
 }
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
@@ -68,19 +68,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
         category: data.category,
       };
 
+      let savedProduct: ShopProduct | null = null;
+      
       if (isEditing && product) {
-        await updateProduct(product.id, productData);
-        toast.success("Product updated successfully");
+        savedProduct = await updateProduct(product.id, productData);
+        if (savedProduct) {
+          toast.success("Product updated successfully");
+        }
       } else {
-        await createProduct(productData);
-        toast.success("Product created successfully");
+        savedProduct = await createProduct(productData);
+        if (savedProduct) {
+          toast.success("Product created successfully");
+        }
       }
       
-      onSuccess();
+      onSuccess(savedProduct);
       form.reset(defaultValues);
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error("Failed to save product");
+      onSuccess(null); // Pass null to indicate failure
     } finally {
       setIsSubmitting(false);
     }

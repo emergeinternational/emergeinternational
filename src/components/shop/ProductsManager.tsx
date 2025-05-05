@@ -8,7 +8,7 @@ import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw } from "lucide-react";
-import { getAuthStatus } from "@/services/shopAuthService";
+import { getAuthStatus, hasShopEditAccess } from "@/services/shopAuthService";
 
 interface ProductsManagerProps {
   isLocked?: boolean;
@@ -22,6 +22,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = getAuthStatus();
+  const canEdit = !isLocked && hasShopEditAccess();
 
   // Fetch products on component mount
   useEffect(() => {
@@ -39,7 +40,20 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         },
         (payload) => {
           console.log('Product change detected:', payload);
-          fetchProducts();
+          
+          // Update UI based on the type of change
+          if (payload.eventType === 'INSERT') {
+            const newProduct = payload.new as ShopProduct;
+            setProducts(prev => [newProduct, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedProduct = payload.new as ShopProduct;
+            setProducts(prev => prev.map(product => 
+              product.id === updatedProduct.id ? updatedProduct : product
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedProductId = payload.old.id;
+            setProducts(prev => prev.filter(product => product.id !== deletedProductId));
+          }
         }
       )
       .subscribe();
@@ -67,15 +81,33 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
   };
 
   const handleEdit = (product: ShopProduct) => {
+    if (!canEdit) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to edit products",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
 
   const handleDelete = async (productId: string) => {
+    if (!canEdit) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to delete products",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (confirm("Are you sure you want to delete this product?")) {
       const success = await deleteProduct(productId);
       if (success) {
-        fetchProducts();
+        setProducts(prev => prev.filter(product => product.id !== productId));
       }
     }
   };
@@ -103,14 +135,15 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
             Refresh
           </Button>
           
-          <Button 
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-            disabled={isLocked}
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add New Product
-          </Button>
+          {canEdit && (
+            <Button 
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add New Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -119,7 +152,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         isLoading={isLoading} 
         onEdit={handleEdit} 
         onDelete={handleDelete}
-        isLocked={isLocked} 
+        isLocked={!canEdit} 
       />
       
       {/* Form dialog for adding new products */}
@@ -127,7 +160,11 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
         product={null}
-        onSuccess={fetchProducts}
+        onSuccess={(newProduct) => {
+          if (newProduct) {
+            setProducts(prev => [newProduct, ...prev]);
+          }
+        }}
       />
       
       {/* Form dialog for editing existing products */}
@@ -136,8 +173,12 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           product={selectedProduct}
-          onSuccess={() => {
-            fetchProducts();
+          onSuccess={(updatedProduct) => {
+            if (updatedProduct) {
+              setProducts(prev => prev.map(product => 
+                product.id === updatedProduct.id ? updatedProduct : product
+              ));
+            }
             setSelectedProduct(null);
           }}
         />

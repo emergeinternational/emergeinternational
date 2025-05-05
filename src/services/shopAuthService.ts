@@ -7,6 +7,7 @@ export interface ShopAuthStatus {
   isAdmin: boolean;
   isAuthenticated: boolean;
   userId: string | null;
+  role: string;
 }
 
 // Default auth status (fallback when no real auth is available)
@@ -14,6 +15,7 @@ const defaultAuthStatus: ShopAuthStatus = {
   isAdmin: true, // Setting default to true for development convenience
   isAuthenticated: true,
   userId: 'mock-user-id',
+  role: 'admin', // Default role for development
 };
 
 let currentAuthStatus = defaultAuthStatus;
@@ -29,6 +31,12 @@ export const getAuthStatus = (): ShopAuthStatus => {
     console.warn('Using mock auth data for Shop module (Auth module not available)');
     return defaultAuthStatus;
   }
+};
+
+// Function to check if current user has shop edit access
+export const hasShopEditAccess = (): boolean => {
+  const { role } = getAuthStatus();
+  return ['admin', 'editor'].includes(role);
 };
 
 // Optional: Add methods to update status for testing different user states

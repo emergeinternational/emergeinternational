@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ShopProduct, ProductFormValues } from "@/types/shop";
 import { toast } from "sonner";
+import { getAuthStatus, hasShopEditAccess } from "./shopAuthService";
 
 // Get all products
 export const getProducts = async (): Promise<ShopProduct[]> => {
@@ -45,49 +46,71 @@ export const getProductById = async (id: string): Promise<ShopProduct | null> =>
 };
 
 // Create a new product
-export const createProduct = async (productData: ProductFormValues): Promise<boolean> => {
+export const createProduct = async (productData: ProductFormValues): Promise<ShopProduct | null> => {
   try {
-    const { error } = await supabase
+    // Check if user has edit access
+    if (!hasShopEditAccess()) {
+      toast.error("You don't have permission to create products");
+      return null;
+    }
+
+    const { data, error } = await supabase
       .from("shop_products")
-      .insert(productData);
+      .insert(productData)
+      .select("*")
+      .single();
 
     if (error) {
       throw error;
     }
 
     toast.success("Product created successfully");
-    return true;
+    return data;
   } catch (error) {
     console.error("Error creating product:", error);
     toast.error("Failed to create product");
-    return false;
+    return null;
   }
 };
 
 // Update an existing product
-export const updateProduct = async (id: string, updates: Partial<ProductFormValues>): Promise<boolean> => {
+export const updateProduct = async (id: string, updates: Partial<ProductFormValues>): Promise<ShopProduct | null> => {
   try {
-    const { error } = await supabase
+    // Check if user has edit access
+    if (!hasShopEditAccess()) {
+      toast.error("You don't have permission to update products");
+      return null;
+    }
+    
+    const { data, error } = await supabase
       .from("shop_products")
       .update(updates)
-      .eq("id", id);
+      .eq("id", id)
+      .select("*")
+      .single();
 
     if (error) {
       throw error;
     }
 
     toast.success("Product updated successfully");
-    return true;
+    return data;
   } catch (error) {
     console.error("Error updating product:", error);
     toast.error("Failed to update product");
-    return false;
+    return null;
   }
 };
 
 // Delete a product
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
+    // Check if user has edit access
+    if (!hasShopEditAccess()) {
+      toast.error("You don't have permission to delete products");
+      return false;
+    }
+    
     const { error } = await supabase
       .from("shop_products")
       .delete()
