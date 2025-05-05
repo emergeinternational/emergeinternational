@@ -1,19 +1,29 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
 import { Toaster } from "sonner";
-import { useAuth } from './hooks/useAuth';
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import AdminLayout from "./layouts/AdminLayout";
+import { initializeAuth, setupAuthListener, getAuthStatus } from './services/authService';
 
 const App: React.FC = () => {
-  const { user, userRole } = useAuth();
-  const isAuthenticated = !!user;
+  // Initialize auth state at app startup
+  useEffect(() => {
+    initializeAuth();
+    const cleanup = setupAuthListener();
+    
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  // Get current auth status
+  const { isAuthenticated } = getAuthStatus();
 
   const router = createBrowserRouter([
     {

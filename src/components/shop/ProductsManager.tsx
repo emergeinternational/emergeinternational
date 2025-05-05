@@ -7,6 +7,7 @@ import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw } from "lucide-react";
+import { getAuthStatus } from "@/services/authService";
 
 interface ProductsManagerProps {
   isLocked?: boolean;
@@ -19,6 +20,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = getAuthStatus();
 
   // Fetch products on component mount
   useEffect(() => {
@@ -76,6 +78,15 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       }
     }
   };
+
+  // If user doesn't have permission, don't render the component
+  if (!isAdmin && !isLocked) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">You don't have permission to access this page</p>
+      </div>
+    );
+  }
 
   return (
     <div>

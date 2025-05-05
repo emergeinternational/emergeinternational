@@ -6,9 +6,8 @@ import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, Filter, PlusCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { Search, PlusCircle } from "lucide-react";
+import { getAuthStatus } from "@/services/authService";
 
 const Shop = () => {
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -17,8 +16,9 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const { user, userRole } = useAuth();
-  const isAdmin = userRole === "admin" || userRole === "editor";
+  
+  // Get auth status from isolated service
+  const { isAdmin } = getAuthStatus();
 
   useEffect(() => {
     fetchProducts();
