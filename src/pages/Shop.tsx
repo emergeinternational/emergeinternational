@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -18,6 +17,7 @@ import FilterSidebar from "@/components/shop/FilterSidebar";
 import AdminFloatingPanel from "@/components/shop/AdminFloatingPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import ShopDiagnosticPanel from "@/components/shop/ShopDiagnosticPanel";
 
 interface ShopProps {
   userRole: string | null;
@@ -25,6 +25,11 @@ interface ShopProps {
 
 const Shop: React.FC<ShopProps> = ({ userRole }) => {
   try {
+    // Add diagnostic mode state
+    const [showDiagnostics, setShowDiagnostics] = useState<boolean>(
+      new URLSearchParams(window.location.search).get('diagnostics') === 'true'
+    );
+    
     // Wrap the entire component in a try-catch to detect any immediate errors
     const [products, setProducts] = useState<ShopProduct[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -53,6 +58,14 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       try {
         fetchProducts();
         fetchCollections();
+
+        // Add diagnostics parameter tracking
+        const handlePopState = () => {
+          const showDiag = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
+          setShowDiagnostics(showDiag);
+        };
+        
+        window.addEventListener('popstate', handlePopState);
 
         // Subscribe to product changes
         const productsChannel = supabase
@@ -109,6 +122,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
           supabase.removeChannel(productsChannel);
           supabase.removeChannel(variationsChannel);
           supabase.removeChannel(collectionsChannel);
+          window.removeEventListener('popstate', handlePopState);
         };
       } catch (error) {
         console.error("Error in Shop useEffect:", error);
@@ -322,6 +336,15 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       <MainLayout>
         <ErrorBoundary>
           <div className="container mx-auto px-4 py-8">
+            {/* Shop Diagnostic Panel - only shown when diagnostics is enabled */}
+            {showDiagnostics && (
+              <ErrorBoundary 
+                fallback={<div className="bg-red-100 p-4 mb-6 rounded-lg">Error loading diagnostics panel</div>}
+              >
+                <ShopDiagnosticPanel />
+              </ErrorBoundary>
+            )}
+            
             {/* Text center heading section */}
             <div className="text-center mb-8">
               <h1 className="text-3xl md:text-4xl font-bold mb-2">Shop Our Collection</h1>
