@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
-import { initializeAuth, setupAuthListener } from './services/authService';
+import { initializeAuth, setupAuthListener } from './services/shopAuthService'; // Changed to local shopAuthService
 
 const App: React.FC = () => {
   // Initialize auth state at app startup

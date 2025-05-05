@@ -8,7 +8,7 @@ import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, PlusCircle, Trash2 } from "lucide-react";
-import { getAuthStatus } from "@/services/authService";
+import { getAuthStatus } from "@/services/shopAuthService"; // Changed to local shopAuthService
 import { toast } from "sonner";
 import { 
   AlertDialog,
