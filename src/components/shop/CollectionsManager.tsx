@@ -1,22 +1,15 @@
 
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Collection } from "@/types/shop";
 import { getCollections, deleteCollection } from "@/services/collectionService";
-import { getAuthStatus, hasShopEditAccess } from "@/services/shopAuthService";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash, AlertTriangle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle, Edit, Trash2, RefreshCw } from "lucide-react";
+import { getAuthStatus, hasShopEditAccess } from "@/services/shopAuthService";
 import CollectionFormDialog from "./CollectionFormDialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
+import { supabase } from "@/integrations/supabase/client";
+import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -25,7 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
 
 interface CollectionsManagerProps {
@@ -42,11 +35,12 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
   const { isAdmin } = getAuthStatus();
   const canEdit = !isLocked && hasShopEditAccess();
 
+  // Fetch collections on component mount
   useEffect(() => {
     fetchCollections();
-
+    
     // Subscribe to changes
-    const channel = supabase
+    const collectionsChannel = supabase
       .channel('collections_changes')
       .on(
         'postgres_changes',
@@ -61,23 +55,23 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
         }
       )
       .subscribe();
-
+      
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(collectionsChannel);
     };
   }, []);
 
   const fetchCollections = async () => {
-    setIsLoading(true);
     try {
-      const data = await getCollections();
-      setCollections(data);
+      setIsLoading(true);
+      const collectionsData = await getCollections();
+      setCollections(collectionsData);
     } catch (error) {
-      console.error("Error fetching collections:", error);
+      console.error('Error fetching collections:', error);
       toast({
         title: "Error loading collections",
-        description: "Failed to load collections",
-        variant: "destructive",
+        description: error instanceof Error ? error.message : "Failed to load collections",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -89,10 +83,11 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
       toast({
         title: "Access Denied",
         description: "You don't have permission to edit collections",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
+    
     setSelectedCollection(collection);
     setIsEditDialogOpen(true);
   };
@@ -102,18 +97,18 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
       toast({
         title: "Access Denied",
         description: "You don't have permission to delete collections",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
+    
     try {
       const success = await deleteCollection(collectionId);
       if (success) {
-        setCollections(collections.filter((c) => c.id !== collectionId));
+        setCollections(prev => prev.filter(collection => collection.id !== collectionId));
         toast({
-          title: "Success",
-          description: "Collection deleted successfully",
+          title: "Collection deleted",
+          description: "Collection has been successfully deleted"
         });
       }
     } catch (error) {
@@ -121,95 +116,109 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
       toast({
         title: "Error",
         description: "Failed to delete collection",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
+  // If user doesn't have permission, don't render the component
+  if (!isAdmin && !isLocked) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">You don't have permission to access this page</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Designer Collections</h2>
-        {canEdit && (
-          <Button
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+        <h2 className="text-xl font-semibold">Collections</h2>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={fetchCollections} 
+            className="flex items-center gap-1"
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add New Collection
+            <RefreshCw className="h-4 w-4" />
+            Refresh
           </Button>
-        )}
+          
+          {canEdit && (
+            <Button 
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Collection
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-md border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Collection Title</TableHead>
-              <TableHead>Designer</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center h-24">
-                  Loading collections...
-                </TableCell>
-              </TableRow>
-            ) : collections.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center h-24">
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <AlertTriangle className="h-8 w-8 text-amber-500" />
-                    <p className="text-muted-foreground">No collections found</p>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : collections.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-gray-500">No collections found</p>
+            {canEdit && (
+              <Button 
+                variant="link" 
+                onClick={() => setIsAddDialogOpen(true)}
+              >
+                Add your first collection
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {collections.map(collection => (
+            <Card key={collection.id} className="relative">
+              <CardHeader>
+                <CardTitle className="flex justify-between items-start">
+                  <div>
+                    {collection.title}
+                    <div className="text-sm font-normal text-gray-500">
+                      Designer: {collection.designer_name}
+                    </div>
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              collections.map((collection) => (
-                <TableRow key={collection.id}>
-                  <TableCell className="font-medium">{collection.title}</TableCell>
-                  <TableCell>{collection.designer_name}</TableCell>
-                  <TableCell className="max-w-sm truncate">
-                    {collection.description || "No description"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                  
+                  {canEdit && (
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
                         onClick={() => handleEdit(collection)}
-                        disabled={isLocked}
+                        className="h-8 w-8 p-0"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={isLocked}
-                            className="text-red-500 hover:text-red-700"
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Collection</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete "{collection.title}"? Products
-                              in this collection will not be deleted but they will no longer
-                              be associated with this collection.
+                              Are you sure you want to delete "{collection.title}"? This will not delete products in this collection.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
                               onClick={() => handleDelete(collection.id)}
+                              className="bg-red-600 hover:bg-red-700"
                             >
                               Delete
                             </AlertDialogAction>
@@ -217,14 +226,21 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {collection.description ? (
+                  <p className="text-sm text-gray-500">{collection.description}</p>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No description</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      
       {/* Form dialog for adding new collections */}
       <CollectionFormDialog
         open={isAddDialogOpen}
@@ -232,11 +248,12 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
         collection={null}
         onSuccess={(newCollection) => {
           if (newCollection) {
-            setCollections((prev) => [newCollection, ...prev]);
+            setCollections(prev => [newCollection, ...prev]);
           }
+          setIsAddDialogOpen(false);
         }}
       />
-
+      
       {/* Form dialog for editing existing collections */}
       {selectedCollection && (
         <CollectionFormDialog
@@ -245,15 +262,12 @@ const CollectionsManager: React.FC<CollectionsManagerProps> = ({ isLocked = fals
           collection={selectedCollection}
           onSuccess={(updatedCollection) => {
             if (updatedCollection) {
-              setCollections((prev) =>
-                prev.map((collection) =>
-                  collection.id === updatedCollection.id
-                    ? updatedCollection
-                    : collection
-                )
-              );
+              setCollections(prev => prev.map(collection => 
+                collection.id === updatedCollection.id ? updatedCollection : collection
+              ));
             }
             setSelectedCollection(null);
+            setIsEditDialogOpen(false);
           }}
         />
       )}

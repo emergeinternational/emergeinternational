@@ -2,125 +2,153 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ProductVariation } from "@/types/shop";
-import { X, Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Package } from "lucide-react";
 
 interface ProductVariationFormProps {
   variations: ProductVariation[];
   onVariationsChange: (variations: ProductVariation[]) => void;
 }
 
-const ProductVariationForm: React.FC<ProductVariationFormProps> = ({ 
-  variations, 
-  onVariationsChange 
+const ProductVariationForm: React.FC<ProductVariationFormProps> = ({
+  variations,
+  onVariationsChange
 }) => {
   const addVariation = () => {
-    onVariationsChange([
-      ...variations, 
-      { 
-        sku: `SKU-${Date.now()}`, 
-        stock_quantity: 0,
-        size: '',
-        color: '',
-        price: undefined
-      }
-    ]);
+    const newVariation: ProductVariation = {
+      stock_quantity: 0,
+      sku: `VAR-${variations.length + 1}`,
+    };
+    
+    onVariationsChange([...variations, newVariation]);
   };
 
   const removeVariation = (index: number) => {
-    const newVariations = [...variations];
-    newVariations.splice(index, 1);
-    onVariationsChange(newVariations);
+    const updatedVariations = [...variations];
+    updatedVariations.splice(index, 1);
+    onVariationsChange(updatedVariations);
   };
 
-  const updateVariation = (index: number, field: keyof ProductVariation, value: any) => {
-    const newVariations = [...variations];
-    newVariations[index] = { ...newVariations[index], [field]: value };
-    onVariationsChange(newVariations);
+  const handleVariationChange = (index: number, field: keyof ProductVariation, value: any) => {
+    const updatedVariations = [...variations];
+    updatedVariations[index] = {
+      ...updatedVariations[index],
+      [field]: field === 'stock_quantity' || field === 'price' 
+        ? (value === '' || isNaN(Number(value)) ? 0 : Number(value)) 
+        : value
+    };
+    onVariationsChange(updatedVariations);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Product Variations</h3>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
+        <Label className="text-base">Product Variations</Label>
+        <Button 
+          type="button" 
+          size="sm" 
+          variant="outline" 
           onClick={addVariation}
-          className="flex items-center gap-1"
+          className="flex items-center"
         >
-          <Plus className="h-4 w-4" /> Add Variation
+          <Plus className="h-4 w-4 mr-1" />
+          Add Variation
         </Button>
       </div>
-
-      {variations.length > 0 ? (
+      
+      {variations.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
+            <Package className="h-8 w-8 mb-2 text-muted-foreground" />
+            <p>No variations added yet</p>
+            <p className="text-sm">Add size, color or other variations for this product</p>
+          </CardContent>
+        </Card>
+      ) : (
         <div className="space-y-4">
           {variations.map((variation, index) => (
-            <div 
-              key={index} 
-              className="grid grid-cols-12 gap-2 items-center border p-3 rounded-md"
-            >
-              <div className="col-span-2">
-                <label className="text-xs">Size</label>
-                <Input
-                  value={variation.size || ''}
-                  onChange={(e) => updateVariation(index, 'size', e.target.value)}
-                  placeholder="Size"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs">Color</label>
-                <Input
-                  value={variation.color || ''}
-                  onChange={(e) => updateVariation(index, 'color', e.target.value)}
-                  placeholder="Color"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs">Stock</label>
-                <Input
-                  type="number"
-                  value={variation.stock_quantity}
-                  onChange={(e) => updateVariation(index, 'stock_quantity', parseInt(e.target.value))}
-                  placeholder="Stock"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs">Price</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={variation.price || ''}
-                  onChange={(e) => updateVariation(index, 'price', e.target.value ? parseFloat(e.target.value) * 100 : undefined)}
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="col-span-3">
-                <label className="text-xs">SKU</label>
-                <Input
-                  value={variation.sku}
-                  onChange={(e) => updateVariation(index, 'sku', e.target.value)}
-                  placeholder="SKU"
-                />
-              </div>
-              <div className="col-span-1 flex items-end justify-end h-full">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => removeVariation(index)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <Card key={index} className="relative">
+              <CardContent className="p-4">
+                <div className="absolute top-2 right-2">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => removeVariation(index)}
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor={`variation-size-${index}`}>Size</Label>
+                    <Input
+                      id={`variation-size-${index}`}
+                      value={variation.size || ''}
+                      onChange={(e) => handleVariationChange(index, 'size', e.target.value)}
+                      placeholder="Size (e.g. S, M, L)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`variation-color-${index}`}>Color</Label>
+                    <Input
+                      id={`variation-color-${index}`}
+                      value={variation.color || ''}
+                      onChange={(e) => handleVariationChange(index, 'color', e.target.value)}
+                      placeholder="Color (e.g. Red, Blue)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`variation-sku-${index}`}>SKU</Label>
+                    <Input
+                      id={`variation-sku-${index}`}
+                      value={variation.sku || ''}
+                      onChange={(e) => handleVariationChange(index, 'sku', e.target.value)}
+                      placeholder="Variation SKU"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`variation-stock-${index}`}>Stock</Label>
+                    <Input
+                      id={`variation-stock-${index}`}
+                      type="number"
+                      value={variation.stock_quantity === undefined ? 0 : variation.stock_quantity}
+                      onChange={(e) => handleVariationChange(index, 'stock_quantity', e.target.value)}
+                      placeholder="Available stock"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`variation-price-${index}`}>Price Override (Optional)</Label>
+                    <Input
+                      id={`variation-price-${index}`}
+                      type="number"
+                      step="0.01"
+                      value={variation.price || ''}
+                      onChange={(e) => handleVariationChange(index, 'price', e.target.value)}
+                      placeholder="Leave empty to use product price"
+                    />
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  {variation.size && (
+                    <Badge variant="outline">{variation.size}</Badge>
+                  )}
+                  {variation.color && (
+                    <Badge variant="outline" className="bg-gray-100">{variation.color}</Badge>
+                  )}
+                  <Badge variant="secondary">Stock: {variation.stock_quantity || 0}</Badge>
+                  {variation.price && (
+                    <Badge variant="secondary">Price: ${variation.price}</Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </div>
-      ) : (
-        <div className="text-center py-4 border rounded-md bg-muted/20">
-          <p className="text-sm text-muted-foreground">No variations added yet</p>
         </div>
       )}
     </div>

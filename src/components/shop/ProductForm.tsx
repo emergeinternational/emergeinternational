@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -199,7 +198,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
               <FormLabel>Collection</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
-                defaultValue={field.value}
+                value={field.value || ""}
               >
                 <FormControl>
                   <SelectTrigger>
