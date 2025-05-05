@@ -25,7 +25,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   image_url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   in_stock: z.boolean().default(true),
-  category: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
 });
 
 type ProductFormValues = z.infer<typeof formSchema>;
@@ -65,11 +65,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
 
       if (isEditing && product) {
         await updateProduct(product.id, productData);
+        toast.success("Product updated successfully");
       } else {
         await createProduct(productData as Omit<ShopProduct, 'id' | 'created_at' | 'updated_at'>);
+        toast.success("Product created successfully");
       }
       
       onSuccess();
+      form.reset(defaultValues);
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error("Failed to save product");

@@ -3,10 +3,12 @@ import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, ShopProduct } from "../services/shopService";
 import ProductCard from "../components/shop/ProductCard";
+import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, PlusCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Shop = () => {
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -14,6 +16,9 @@ const Shop = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { isLoggedIn, userRole } = useAuth();
+  const isAdmin = userRole === "admin" || userRole === "editor";
 
   useEffect(() => {
     fetchProducts();
@@ -63,7 +68,7 @@ const Shop = () => {
 
         {/* Search and Filter Section */}
         <div className="mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -73,27 +78,40 @@ const Shop = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button 
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
+              onClick={() => setSelectedCategory(null)}
+            >
+              All
+            </Button>
+            {categories.map(category => (
               <Button
+                key={category}
                 variant="outline"
                 size="sm"
-                className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
-                onClick={() => setSelectedCategory(null)}
+                className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
+                onClick={() => handleCategorySelect(category)}
               >
-                All
+                {category.charAt(0).toUpperCase() + category.slice(1)}
               </Button>
-              {categories.map(category => (
-                <Button
-                  key={category}
-                  variant="outline"
-                  size="sm"
-                  className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
-                  onClick={() => handleCategorySelect(category)}
-                >
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </Button>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
 
@@ -124,6 +142,14 @@ const Shop = () => {
           </div>
         )}
       </div>
+      
+      {/* Form dialog for adding new products */}
+      <ProductFormDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        product={null}
+        onSuccess={fetchProducts}
+      />
     </MainLayout>
   );
 };
