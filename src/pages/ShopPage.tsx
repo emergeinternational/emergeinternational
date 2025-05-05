@@ -14,7 +14,6 @@ const ShopPage: React.FC = () => {
   // Check auth status on component mount
   useEffect(() => {
     try {
-      // Add this console log to detect if the component renders at all
       console.log("ShopPage component is rendering");
       
       const checkAuth = async () => {
@@ -68,11 +67,6 @@ const ShopPage: React.FC = () => {
         </div>
       }
     >
-      {/* Debug indicator */}
-      <div style={{ background: 'red', color: 'white', padding: '8px', textAlign: 'center' }}>
-        ShopPage loaded - User Role: {userRole || 'Not authenticated'}
-      </div>
-      
       {/* Pass user role to Shop component */}
       <Shop userRole={userRole} />
     </ErrorBoundary>

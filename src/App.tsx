@@ -18,7 +18,7 @@ const App: React.FC = () => {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Shop />,
+      element: <Shop userRole={null} />,
     },
     {
       path: "/shop",

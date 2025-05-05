@@ -273,10 +273,6 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       <MainLayout>
         <ErrorBoundary>
           <div className="container mx-auto px-4 py-8">
-            <div style={{ background: 'blue', color: 'white', padding: '8px', textAlign: 'center', marginBottom: '16px' }}>
-              Shop component rendered
-            </div>
-            
             {/* Text center heading section */}
             <div className="text-center mb-8">
               <h1 className="text-3xl md:text-4xl font-bold mb-2">Shop Our Collection</h1>
