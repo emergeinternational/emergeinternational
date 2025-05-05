@@ -1,282 +1,223 @@
 
 import React, { useState } from 'react';
-import {
-  RefreshCw,
-  Database,
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  DatabaseZap, 
+  Loader2,
   Download,
-  Server,
-  AlertTriangle,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-  CardDescription
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+  Upload,
+  AlertTriangle
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthStatus } from "@/services/shopAuthService";
+import { generateMockProducts, toggleRecoveryMode } from "@/services/shopSystemService";
+import { supabase } from "@/integrations/supabase/client";
 
-import { validateShopAction } from '@/services/shopAuthService';
-import {
-  generateMockProducts,
-  toggleRecoveryMode,
-  getProductSnapshots,
-  createProductSnapshot,
-  getShopSystemSettings
-} from '@/services/shopSystemService';
-
+/**
+ * Admin-only component that provides recovery tools for the shop
+ * including data seeding and recovery mode controls
+ */
 const AdminRecoveryTools: React.FC = () => {
-  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
-  const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
-  const [productCount, setProductCount] = useState(5);
-  const [loading, setLoading] = useState(false);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [systemSettings, setSystemSettings] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [seedCount, setSeedCount] = useState(5);
+  const { toast } = useToast();
+  const { isAdmin } = getAuthStatus();
   
-  // Check if user has admin access
-  const canAccessRecoveryTools = validateShopAction('admin', 'view_recovery_tools');
-  
-  if (!canAccessRecoveryTools) {
+  // If not admin, don't render anything
+  if (!isAdmin) {
     return null;
   }
   
+  // Handle generating mock products
   const handleGenerateMockProducts = async () => {
-    setLoading(true);
     try {
-      await generateMockProducts(productCount);
-      setIsGenerateDialogOpen(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const loadSnapshots = async () => {
-    setLoading(true);
-    try {
-      const data = await getProductSnapshots();
-      const settings = await getShopSystemSettings();
-      setSnapshots(data);
-      setSystemSettings(settings);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleViewSnapshots = async () => {
-    await loadSnapshots();
-    setIsSnapshotDialogOpen(true);
-  };
-  
-  const handleCreateSnapshot = async () => {
-    setLoading(true);
-    try {
-      await createProductSnapshot();
-      await loadSnapshots();
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleToggleRecoveryMode = async (enabled: boolean) => {
-    setLoading(true);
-    try {
-      await toggleRecoveryMode(enabled);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Shop Recovery Tools</CardTitle>
-          <CardDescription>Recover from data loss or rendering issues</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button
-              variant="outline"
-              className="flex items-center justify-center gap-2"
-              onClick={() => setIsGenerateDialogOpen(true)}
-            >
-              <Database className="h-4 w-4" />
-              Generate Mock Products
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="flex items-center justify-center gap-2"
-              onClick={handleViewSnapshots}
-            >
-              <Download className="h-4 w-4" />
-              Product Snapshots
-            </Button>
-            
-            <Button
-              variant={systemSettings?.recoveryMode ? "destructive" : "outline"}
-              className="flex items-center justify-center gap-2"
-              onClick={() => handleToggleRecoveryMode(!systemSettings?.recoveryMode)}
-            >
-              <AlertTriangle className="h-4 w-4" />
-              {systemSettings?.recoveryMode ? "Disable Recovery Mode" : "Enable Recovery Mode"}
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="flex items-center justify-center gap-2"
-              onClick={handleCreateSnapshot}
-            >
-              <Server className="h-4 w-4" />
-              Create Manual Snapshot
-            </Button>
-          </div>
-        </CardContent>
-        <CardFooter className="pt-2">
-          <p className="text-xs text-gray-500">
-            These tools are only available to admin users
-          </p>
-        </CardFooter>
-      </Card>
+      setIsLoading(true);
       
-      {/* Generate Mock Products Dialog */}
-      <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Generate Mock Products</DialogTitle>
-            <DialogDescription>
-              Create sample products to populate the shop
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
+      // Validate seed count
+      if (seedCount < 1 || seedCount > 50) {
+        toast({
+          title: "Invalid count",
+          description: "Please enter a value between 1 and 50",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const success = await generateMockProducts(seedCount);
+      
+      if (success) {
+        toast({
+          title: "Mock products generated",
+          description: `Successfully created ${seedCount} mock products`,
+        });
+      } else {
+        throw new Error("Failed to generate mock products");
+      }
+    } catch (error) {
+      console.error("Error generating mock products:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate mock products",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle enabling emergency recovery mode
+  const handleEnableEmergencyRecovery = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Enable recovery mode with 'full' fallback level
+      const success = await toggleRecoveryMode(true, 'full');
+      
+      if (success) {
+        toast({
+          title: "Emergency Recovery Mode",
+          description: "Full recovery mode has been enabled",
+        });
+      } else {
+        throw new Error("Failed to enable emergency recovery mode");
+      }
+    } catch (error) {
+      console.error("Error enabling emergency recovery:", error);
+      toast({
+        title: "Error",
+        description: "Failed to enable emergency recovery",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Create a product snapshot
+  const handleCreateSnapshot = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Call the RPC function to create a snapshot
+      const { data, error } = await supabase.rpc('create_product_snapshot');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Snapshot Created",
+        description: "Successfully created product snapshot",
+      });
+    } catch (error) {
+      console.error("Error creating snapshot:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create product snapshot",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4 border border-yellow-300 bg-yellow-50">
+      <CardContent className="p-4">
+        <div className="flex items-center mb-2">
+          <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2" />
+          <h3 className="font-medium text-yellow-800">Admin Shop Recovery Tools</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* Mock Data Generator */}
+          <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+            <h4 className="text-sm font-medium flex items-center">
+              <DatabaseZap className="h-4 w-4 mr-1 text-blue-500" />
+              Mockup Data Generator
+            </h4>
             <div className="flex items-center space-x-2">
-              <div className="grid flex-1 gap-2">
-                <label htmlFor="product-count" className="text-sm">
-                  Number of products
-                </label>
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="seedCount" className="text-xs">Number of products</Label>
                 <Input
+                  id="seedCount"
                   type="number"
-                  id="product-count"
-                  value={productCount}
-                  onChange={(e) => setProductCount(Number(e.target.value))}
                   min={1}
-                  max={20}
+                  max={50}
+                  value={seedCount}
+                  onChange={(e) => setSeedCount(parseInt(e.target.value) || 5)}
+                  className="h-8"
                 />
               </div>
+              <Button 
+                size="sm" 
+                onClick={handleGenerateMockProducts}
+                disabled={isLoading}
+                className="mt-5"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : "Generate"}
+              </Button>
             </div>
+            <p className="text-xs text-gray-500">
+              Generates mock products to populate the shop
+            </p>
           </div>
           
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsGenerateDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleGenerateMockProducts}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                'Generate Products'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Product Snapshots Dialog */}
-      <Dialog open={isSnapshotDialogOpen} onOpenChange={setIsSnapshotDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Product Snapshots</DialogTitle>
-            <DialogDescription>
-              View and manage product backup snapshots
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-              </div>
-            ) : snapshots.length > 0 ? (
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {snapshots.map(snapshot => (
-                  <Card key={snapshot.id} className="p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-sm font-medium">Version {snapshot.version}</h4>
-                        <p className="text-xs text-gray-500">
-                          {new Date(snapshot.createdAt).toLocaleString()}
-                        </p>
-                        <div className="flex items-center mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {snapshot.productCount} products
-                          </Badge>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-3 w-3 mr-1" />
-                        Export
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Database className="h-8 w-8 mb-2 mx-auto text-gray-300" />
-                <p>No snapshots available</p>
-              </div>
-            )}
+          {/* Create Product Snapshot */}
+          <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+            <h4 className="text-sm font-medium flex items-center">
+              <Download className="h-4 w-4 mr-1 text-green-500" />
+              Create Product Snapshot
+            </h4>
+            <div className="flex justify-end">
+              <Button 
+                size="sm" 
+                onClick={handleCreateSnapshot}
+                disabled={isLoading}
+                variant="outline"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : "Backup Now"}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Creates a JSON backup of all products
+            </p>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSnapshotDialogOpen(false)}>
-              Close
-            </Button>
-            <Button 
-              onClick={handleCreateSnapshot}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Snapshot'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          {/* Emergency Recovery Mode */}
+          <div className="space-y-2 bg-white p-3 rounded-md border border-gray-200 shadow-sm">
+            <h4 className="text-sm font-medium flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />
+              Emergency Recovery
+            </h4>
+            <div className="flex justify-end">
+              <Button 
+                size="sm" 
+                onClick={handleEnableEmergencyRecovery}
+                disabled={isLoading}
+                variant="destructive"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : "Enable Recovery"}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Activates full fallback rendering mode
+            </p>
+          </div>
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-3">
+          These tools are only visible to administrators. They help recover from data loss or UI rendering issues.
+        </p>
+      </CardContent>
+    </Card>
   );
 };
 

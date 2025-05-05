@@ -4,7 +4,7 @@ import { validateShopAction } from "./shopAuthService";
 import { toast } from "sonner";
 
 // Types
-interface ShopSystemSettings {
+export interface ShopSystemSettings {
   diagnosticsEnabled: boolean;
   recoveryMode: boolean;
   fallbackLevel: string;
@@ -14,7 +14,7 @@ interface ShopSystemSettings {
   pollingInterval: number;
 }
 
-interface ProductSnapshot {
+export interface ProductSnapshot {
   id: string;
   snapshotFilePath: string;
   createdAt: string;

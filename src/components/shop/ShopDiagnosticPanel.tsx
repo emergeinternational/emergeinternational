@@ -1,661 +1,634 @@
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { ShopProduct } from "@/types/shop";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { AlertCircle, CheckCircle, XCircle, RefreshCw, Lock } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Progress } from "@/components/ui/progress";
-import { getAuthStatus, validateShopAction } from "@/services/shopAuthService";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from "@/integrations/supabase/client";
+import { toggleDiagnosticsMode, toggleRecoveryMode, getShopSystemSettings } from "@/services/shopSystemService";
+import { getAuthStatus } from "@/services/shopAuthService";
 
-interface DiagnosticResult {
-  status: "success" | "error" | "warning" | "pending";
-  message: string;
-  details?: string[];
+interface DiagnosticTest {
+  name: string;
+  status: 'pending' | 'running' | 'success' | 'error' | 'warning';
+  message?: string;
+  details?: any;
+  runTest: () => Promise<void>;
 }
 
-interface DiagnosticSummary {
-  productLoad: DiagnosticResult;
-  formFunctionality: DiagnosticResult;
-  accessControl: DiagnosticResult;
-  liveSync: DiagnosticResult;
-  errorCapture: DiagnosticResult;
-}
-
-const ShopDiagnosticPanel: React.FC = () => {
-  const [results, setResults] = useState<DiagnosticSummary>({
-    productLoad: { status: "pending", message: "Waiting to run check..." },
-    formFunctionality: { status: "pending", message: "Waiting to run check..." },
-    accessControl: { status: "pending", message: "Waiting to run check..." },
-    liveSync: { status: "pending", message: "Waiting to run check..." },
-    errorCapture: { status: "pending", message: "Waiting to run check..." },
-  });
+const ShopDiagnosticPanel = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState("tests");
+  const [systemSettings, setSystemSettings] = useState<any>(null);
+  const [tests, setTests] = useState<DiagnosticTest[]>([]);
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const { toast } = useToast();
   
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const auth = useAuth();
-  
-  // Verify that only authorized users can access diagnostics
+  // Load system settings on component mount
   useEffect(() => {
-    const isAuthorized = validateShopAction('admin', 'view_diagnostics');
-    
-    if (!isAuthorized) {
-      console.error("Unauthorized attempt to access Shop Diagnostic Panel");
-      // Silently fail - don't show error messages that might reveal the diagnostics feature
-      return;
-    }
+    loadSystemSettings();
   }, []);
   
-  // Function to update a specific diagnostic result
-  const updateResult = (
-    key: keyof DiagnosticSummary, 
-    status: DiagnosticResult["status"], 
-    message: string,
-    details?: string[]
-  ) => {
-    setResults(prev => ({
-      ...prev,
-      [key]: { status, message, details }
-    }));
-  };
-
-  // 1. Product Load Check
-  const checkProductLoad = async (): Promise<void> => {
+  // Initialize tests
+  useEffect(() => {
+    initializeDiagnosticTests();
+  }, [systemSettings]);
+  
+  const loadSystemSettings = async () => {
     try {
-      updateResult("productLoad", "pending", "Checking product loading...");
-      
-      // Fetch products from Supabase
-      const { data: products, error } = await supabase
-        .from("shop_products")
-        .select("*, variations:product_variations(*), collection:collections(*)");
-      
-      if (error) {
-        updateResult(
-          "productLoad", 
-          "error", 
-          "Failed to fetch products from database", 
-          [error.message]
-        );
-        return;
-      }
-      
-      if (!products || products.length === 0) {
-        updateResult(
-          "productLoad", 
-          "warning", 
-          "No products found in database", 
-          ["The shop_products table appears to be empty"]
-        );
-        return;
-      }
-      
-      // Check for potential rendering issues
-      const issues = products.map(product => {
-        const issues = [];
-        
-        if (!product.title) issues.push(`Product ID ${product.id}: Missing title`);
-        if (!product.price && product.price !== 0) issues.push(`Product ID ${product.id}: Missing price`);
-        if (!product.image_url) issues.push(`Product ID ${product.id}: Missing image URL`);
-        if (product.image_url && !product.image_url.startsWith('http')) {
-          issues.push(`Product ID ${product.id}: Image URL format may be invalid: ${product.image_url}`);
-        }
-        
-        return issues;
-      }).flat();
-      
-      if (issues.length > 0) {
-        updateResult(
-          "productLoad", 
-          "warning", 
-          `Found ${products.length} products with ${issues.length} potential rendering issues`, 
-          issues
-        );
-      } else {
-        updateResult(
-          "productLoad", 
-          "success", 
-          `Successfully loaded ${products.length} products without issues`
-        );
-      }
-      
-      // Log to console for debugging
-      console.log("Shop Diagnostic - Products:", products);
-      
+      setIsLoadingSettings(true);
+      const settings = await getShopSystemSettings();
+      setSystemSettings(settings);
     } catch (error) {
-      console.error("Product load check error:", error);
-      updateResult(
-        "productLoad", 
-        "error", 
-        "Error during product load check", 
-        [(error as Error).message]
-      );
+      console.error("Error loading system settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load system settings",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingSettings(false);
     }
   };
 
-  // 2. Form Functionality Check
-  const checkFormFunctionality = async (): Promise<void> => {
+  // Toggle diagnostics mode
+  const handleToggleDiagnostics = async () => {
+    if (!systemSettings) return;
+    
     try {
-      updateResult("formFunctionality", "pending", "Checking form functionality...");
+      const newValue = !systemSettings.diagnosticsEnabled;
+      const success = await toggleDiagnosticsMode(newValue);
       
-      // Check image upload bucket exists
-      const { data: buckets, error: bucketsError } = await supabase
-        .storage
-        .listBuckets();
+      if (success) {
+        setSystemSettings(prev => ({
+          ...prev,
+          diagnosticsEnabled: newValue
+        }));
         
-      if (bucketsError) {
-        updateResult(
-          "formFunctionality", 
-          "error", 
-          "Failed to access storage buckets", 
-          [bucketsError.message]
-        );
-        return;
+        toast({
+          title: newValue ? "Diagnostics Enabled" : "Diagnostics Disabled",
+          description: newValue ? 
+            "Shop diagnostics are now active" : 
+            "Shop diagnostics are now disabled",
+        });
       }
+    } catch (error) {
+      console.error("Error toggling diagnostics:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle diagnostic mode",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Toggle recovery mode
+  const handleToggleRecovery = async () => {
+    if (!systemSettings) return;
+    
+    try {
+      const newValue = !systemSettings.recoveryMode;
+      const level = systemSettings.fallbackLevel || 'minimal';
+      const success = await toggleRecoveryMode(newValue, level);
       
-      const productImageBucket = buckets?.find(bucket => 
-        bucket.name === 'product-images' || bucket.name.includes('product')
-      );
-      
-      if (!productImageBucket) {
-        updateResult(
-          "formFunctionality", 
-          "warning", 
-          "No product image bucket found", 
-          ["Storage bucket 'product-images' not found. Image uploads may not work correctly."]
-        );
-      } else {
-        console.log("Shop Diagnostic - Image bucket found:", productImageBucket.name);
-      }
-      
-      // Check product variations structure
-      const { data: variations, error: variationsError } = await supabase
-        .from("product_variations")
-        .select("*")
-        .limit(5);
+      if (success) {
+        setSystemSettings(prev => ({
+          ...prev,
+          recoveryMode: newValue
+        }));
         
-      if (variationsError) {
-        updateResult(
-          "formFunctionality", 
-          "error", 
-          "Failed to access product variations", 
-          [variationsError.message]
-        );
-        return;
+        toast({
+          title: newValue ? "Recovery Mode Enabled" : "Recovery Mode Disabled",
+          description: newValue ? 
+            `Shop is now in ${level} recovery mode` : 
+            "Shop is now in normal mode",
+        });
       }
+    } catch (error) {
+      console.error("Error toggling recovery mode:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle recovery mode",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Set fallback level
+  const setFallbackLevel = async (level: string) => {
+    try {
+      const success = await toggleRecoveryMode(systemSettings.recoveryMode, level);
       
-      // Check for all expected fields in variations
-      if (variations && variations.length > 0) {
-        const missingFields = [];
-        const requiredFields = ['product_id', 'size', 'color', 'stock_quantity', 'sku'];
+      if (success) {
+        setSystemSettings(prev => ({
+          ...prev,
+          fallbackLevel: level
+        }));
         
-        for (const field of requiredFields) {
-          if (!variations.some(v => v[field] !== undefined)) {
-            missingFields.push(`Field '${field}' missing from product variations`);
+        toast({
+          title: "Fallback Level Updated",
+          description: `Recovery fallback level set to ${level}`,
+        });
+      }
+    } catch (error) {
+      console.error("Error setting fallback level:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update fallback level",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Initialize diagnostic tests
+  const initializeDiagnosticTests = () => {
+    const diagnosticTests: DiagnosticTest[] = [
+      {
+        name: "Database Connection",
+        status: "pending",
+        runTest: async () => {
+          try {
+            const test = tests.find(t => t.name === "Database Connection");
+            if (test) test.status = "running";
+            setTests([...tests]);
+            
+            const { data, error } = await supabase.from("shop_products").select("id").limit(1);
+            
+            if (error) throw error;
+            
+            const updatedTests = tests.map(t => {
+              if (t.name === "Database Connection") {
+                return { 
+                  ...t, 
+                  status: "success",
+                  details: { connectionSuccessful: true },
+                  message: "Connection to shop_products table successful"
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          } catch (error) {
+            console.error("Database connection test failed:", error);
+            const updatedTests = tests.map(t => {
+              if (t.name === "Database Connection") {
+                return { 
+                  ...t, 
+                  status: "error",
+                  details: { error },
+                  message: `Connection failed: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
           }
         }
-        
-        if (missingFields.length > 0) {
-          updateResult(
-            "formFunctionality", 
-            "warning", 
-            "Product variations may be missing required fields", 
-            missingFields
-          );
-        } else {
-          console.log("Shop Diagnostic - Variations have all required fields");
+      },
+      {
+        name: "Authentication Status",
+        status: "pending",
+        runTest: async () => {
+          try {
+            const test = tests.find(t => t.name === "Authentication Status");
+            if (test) test.status = "running";
+            setTests([...tests]);
+            
+            const authStatus = getAuthStatus();
+            
+            const updatedTests = tests.map(t => {
+              if (t.name === "Authentication Status") {
+                return { 
+                  ...t, 
+                  status: "success",
+                  details: { ...authStatus },
+                  message: authStatus.isAuthenticated ? 
+                    `Authenticated (Role: ${authStatus.role})` : 
+                    "Not authenticated"
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          } catch (error) {
+            console.error("Auth status test failed:", error);
+            const updatedTests = tests.map(t => {
+              if (t.name === "Authentication Status") {
+                return { 
+                  ...t, 
+                  status: "error",
+                  details: { error },
+                  message: `Auth check failed: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          }
         }
-      }
-      
-      // Check product form components exist
-      const productFormExists = document.querySelector('[data-testid="product-form"]') !== null;
-      
-      updateResult(
-        "formFunctionality", 
-        "success", 
-        "Form functionality check completed", 
-        [
-          productImageBucket 
-            ? `Image storage bucket found: ${productImageBucket.name}` 
-            : "No product image bucket found - image uploads may not work",
-          variations && variations.length > 0
-            ? `Product variations schema contains ${variations.length} test entries`
-            : "No product variations found in database",
-          productFormExists
-            ? "Product form component detected in DOM"
-            : "Product form component not found in current view"
-        ]
-      );
-      
-    } catch (error) {
-      console.error("Form functionality check error:", error);
-      updateResult(
-        "formFunctionality", 
-        "error", 
-        "Error during form functionality check", 
-        [(error as Error).message]
-      );
-    }
-  };
-
-  // 3. Access Control Check
-  const checkAccessControl = async (): Promise<void> => {
-    try {
-      updateResult("accessControl", "pending", "Checking access control permissions...");
-      
-      // Get current auth status
-      const { isAdmin, isEditor } = getAuthStatus();
-      const currentUserRole = auth.userRole || 'anonymous';
-      
-      // Check for admin UI elements that should only be visible to admins/editors
-      const adminElements = document.querySelectorAll('[data-admin-only="true"]');
-      const editButtons = document.querySelectorAll('[data-edit-product="true"]');
-      
-      // Check if RLS policies are in place for shop_products table
-      try {
-        const { data: policies, error } = await supabase
-          .rpc('get_policies_for_table', { table_name: 'shop_products' });
-          
-        let policyDetails: string[] = [];
-        
-        if (error) {
-          console.warn("Unable to check RLS policies:", error.message);
-          policyDetails.push("Unable to verify RLS policies programmatically: " + error.message);
-        } else if (policies) {
-          policyDetails.push(`Found ${policies.length} RLS policies for shop_products table`);
-          
-          // Add details about each policy
-          policies.forEach((policy: any, index: number) => {
-            policyDetails.push(`Policy ${index + 1}: ${policy.policyname} (${policy.cmd})`);
-          });
+      },
+      {
+        name: "Row-Level Security",
+        status: "pending",
+        runTest: async () => {
+          try {
+            const test = tests.find(t => t.name === "Row-Level Security");
+            if (test) test.status = "running";
+            setTests([...tests]);
+            
+            // Use the new function to get RLS policies
+            const { data, error } = await supabase.rpc('get_policies_for_table', { 
+              table_name: 'shop_products' 
+            });
+            
+            if (error) throw error;
+            
+            // Check if we received policies
+            const hasRlsPolicies = Array.isArray(data) && data.length > 0;
+            
+            // Update test status based on result
+            const updatedTests = tests.map(t => {
+              if (t.name === "Row-Level Security") {
+                if (hasRlsPolicies) {
+                  return { 
+                    ...t, 
+                    status: "success",
+                    details: { policies: data },
+                    message: `Found ${data.length} RLS policies on shop_products table`
+                  };
+                } else {
+                  return { 
+                    ...t, 
+                    status: "warning",
+                    details: { policies: [] },
+                    message: "No RLS policies found for shop_products table"
+                  };
+                }
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          } catch (error) {
+            console.error("RLS test failed:", error);
+            const updatedTests = tests.map(t => {
+              if (t.name === "Row-Level Security") {
+                return { 
+                  ...t, 
+                  status: "error",
+                  details: { error },
+                  message: `RLS check failed: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          }
         }
-        
-        // Test accessing admin routes
-        try {
-          const canSeeManagementUI = document.querySelector('[data-admin-products-manager="true"]') !== null;
-          policyDetails.push(`Admin UI visibility: ${canSeeManagementUI ? 'Visible' : 'Not visible'}`);
-        } catch (e) {
-          policyDetails.push("Error checking admin UI visibility");
+      },
+      {
+        name: "System Settings",
+        status: "pending",
+        runTest: async () => {
+          try {
+            const test = tests.find(t => t.name === "System Settings");
+            if (test) test.status = "running";
+            setTests([...tests]);
+            
+            // Try to load system settings
+            const settings = await getShopSystemSettings();
+            
+            const updatedTests = tests.map(t => {
+              if (t.name === "System Settings") {
+                return { 
+                  ...t, 
+                  status: "success",
+                  details: settings,
+                  message: "System settings loaded successfully"
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          } catch (error) {
+            console.error("System settings test failed:", error);
+            const updatedTests = tests.map(t => {
+              if (t.name === "System Settings") {
+                return { 
+                  ...t, 
+                  status: "error",
+                  details: { error },
+                  message: `Settings check failed: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
+              return t;
+            });
+            
+            setTests(updatedTests);
+            setLastUpdated(new Date());
+          }
         }
-        
-        policyDetails.push(`Current user role: ${currentUserRole}`);
-        policyDetails.push(`Admin status: ${isAdmin ? 'Yes' : 'No'}`);
-        policyDetails.push(`Editor status: ${isEditor ? 'Yes' : 'No'}`);
-        policyDetails.push(`Edit buttons visible: ${editButtons.length > 0 ? 'Yes' : 'No'}`);
-        policyDetails.push(`Admin elements found: ${adminElements.length}`);
-        
-        if ((isAdmin || isEditor) && editButtons.length === 0 && window.location.pathname.includes('/shop')) {
-          updateResult(
-            "accessControl", 
-            "warning", 
-            "User has admin/editor role but edit controls aren't visible", 
-            policyDetails
-          );
-        } else if (!(isAdmin || isEditor) && editButtons.length > 0) {
-          updateResult(
-            "accessControl", 
-            "error", 
-            "Non-admin user can see edit controls", 
-            policyDetails
-          );
-        } else {
-          updateResult(
-            "accessControl", 
-            "success", 
-            "Access control appears to be correctly configured", 
-            policyDetails
-          );
-        }
-      } catch (error) {
-        console.error("RPC call error:", error);
-        updateResult(
-          "accessControl", 
-          "warning",
-          "Could not verify RLS policies programmatically",
-          [(error as Error).message]
-        );
-      }
-      
-    } catch (error) {
-      console.error("Access control check error:", error);
-      updateResult(
-        "accessControl", 
-        "error", 
-        "Error during access control check", 
-        [(error as Error).message]
-      );
-    }
-  };
-
-  // 4. Live Sync Check
-  const checkLiveSync = async (): Promise<void> => {
-    try {
-      updateResult("liveSync", "pending", "Checking real-time data synchronization...");
-      
-      // Check for Supabase realtime subscription setup
-      const hasRealtimeSubscription = (() => {
-        const shopCode = document.querySelector('script[data-shop-module="true"]')?.textContent || '';
-        return shopCode.includes('.channel(') && 
-               shopCode.includes('postgres_changes') && 
-               shopCode.includes('subscribe()');
-      })();
-      
-      // Look for realtime channel in React dev tools (experimental, may not work in all browsers)
-      const hasRealtimeChannelInState = (() => {
-        try {
-          // This is a heuristic - we can't directly access React fiber
-          return Object.keys(window).some(key => 
-            key.startsWith('__REACT') && 
-            JSON.stringify(window[key]).includes('supabaseClient:channel')
-          );
-        } catch (e) {
-          return false;
-        }
-      })();
-      
-      const syncDetails = [
-        `Realtime subscription code detected: ${hasRealtimeSubscription ? 'Yes' : 'No'}`,
-        `Realtime channel in component state: ${hasRealtimeChannelInState ? 'Yes' : 'Unknown'}`,
-      ];
-      
-      // Test inserting a temporary subscription to verify realtime is working
-      try {
-        let realtimeReceived = false;
-        const channel = supabase
-          .channel('diagnostic-shop-test')
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'shop_products'
-            },
-            (payload) => {
-              console.log('Diagnostic realtime test received:', payload);
-              realtimeReceived = true;
-            }
-          )
-          .subscribe();
-          
-        // Wait a bit to ensure subscription is active
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        syncDetails.push(`Temporary realtime channel created: ${channel ? 'Yes' : 'No'}`);
-        syncDetails.push(`Note: Full realtime test would require making a test product change`);
-        
-        // Clean up test channel
-        supabase.removeChannel(channel);
-      } catch (e) {
-        syncDetails.push(`Error testing realtime: ${(e as Error).message}`);
-      }
-      
-      if (hasRealtimeSubscription) {
-        updateResult(
-          "liveSync", 
-          "success", 
-          "Realtime synchronization appears to be configured", 
-          syncDetails
-        );
-      } else {
-        updateResult(
-          "liveSync", 
-          "warning", 
-          "Realtime synchronization might not be fully implemented", 
-          syncDetails
-        );
-      }
-      
-    } catch (error) {
-      console.error("Live sync check error:", error);
-      updateResult(
-        "liveSync", 
-        "error", 
-        "Error during live sync check", 
-        [(error as Error).message]
-      );
-    }
-  };
-
-  // 5. Error Capture Validation
-  const checkErrorCapture = async (): Promise<void> => {
-    try {
-      updateResult("errorCapture", "pending", "Checking error handling mechanisms...");
-      
-      // Check for presence of error boundaries
-      const hasErrorBoundaries = (() => {
-        try {
-          // Look for ErrorBoundary components in the rendered HTML
-          const html = document.documentElement.innerHTML;
-          return html.includes('ErrorBoundary');
-        } catch (e) {
-          return false;
-        }
-      })();
-      
-      // Check for toast notifications setup
-      const hasToastSetup = (() => {
-        try {
-          // Look for toast setup in the DOM
-          return document.querySelector('.sonner-toast-container') !== null;
-        } catch (e) {
-          return false;
-        }
-      })();
-      
-      // Check for try-catch patterns in shop code
-      const hasTryCatch = (() => {
-        const shopCode = document.querySelector('script[data-shop-module="true"]')?.textContent || '';
-        return shopCode.includes('try {') && shopCode.includes('catch');
-      })();
-      
-      const errorHandlingDetails = [
-        `Error boundaries detected: ${hasErrorBoundaries ? 'Yes' : 'No'}`,
-        `Toast notification system set up: ${hasToastSetup ? 'Yes' : 'No'}`,
-        `Try-catch error handling detected: ${hasTryCatch ? 'Yes' : 'No'}`
-      ];
-      
-      // Try to simulate a non-critical error to see if it's handled
-      try {
-        const testError = new Error('Shop diagnostic test error');
-        console.error('Diagnostic test error - please ignore:', testError);
-        
-        // Check if window.onerror or similar global handlers are defined
-        const hasGlobalErrorHandler = typeof window.onerror === 'function';
-        errorHandlingDetails.push(`Global error handler detected: ${hasGlobalErrorHandler ? 'Yes' : 'No'}`);
-        
-        // Check if there's a Fallback UI component available
-        const hasFallbackUI = document.querySelectorAll('[data-testid="error-fallback"]').length > 0;
-        errorHandlingDetails.push(`Fallback UI components found: ${hasFallbackUI ? 'Yes' : 'No'}`);
-      } catch (e) {
-        errorHandlingDetails.push(`Error during error simulation test: ${(e as Error).message}`);
-      }
-      
-      if (hasErrorBoundaries && hasToastSetup) {
-        updateResult(
-          "errorCapture", 
-          "success", 
-          "Error handling mechanisms are in place", 
-          errorHandlingDetails
-        );
-      } else {
-        updateResult(
-          "errorCapture", 
-          "warning", 
-          "Error handling might be incomplete", 
-          errorHandlingDetails
-        );
-      }
-      
-    } catch (error) {
-      console.error("Error capture check error:", error);
-      updateResult(
-        "errorCapture", 
-        "error", 
-        "Error during error capture validation", 
-        [(error as Error).message]
-      );
-    }
-  };
-
-  // Function to run all checks
-  const runAllChecks = async () => {
-    // Only allow authorized users to run checks
-    if (!validateShopAction('admin', 'run_diagnostics')) {
-      return;
-    }
+      },
+    ];
     
-    setLoading(true);
-    setProgress(0);
+    setTests(diagnosticTests);
+  };
+  
+  // Run all diagnostic tests
+  const runAllTests = async () => {
+    setIsRunningTests(true);
     
     try {
-      await checkProductLoad();
-      setProgress(20);
+      // Reset tests
+      const resetTests = tests.map(test => ({
+        ...test,
+        status: 'pending',
+        message: undefined,
+        details: undefined
+      }));
       
-      await checkFormFunctionality();
-      setProgress(40);
+      setTests(resetTests);
       
-      await checkAccessControl();
-      setProgress(60);
-      
-      await checkLiveSync();
-      setProgress(80);
-      
-      await checkErrorCapture();
-      setProgress(100);
-      
-      toast.success("Shop diagnostic completed");
-      console.log("Shop Diagnostic - Full results:", results);
-      
+      // Run each test in sequence
+      for (const test of resetTests) {
+        await test.runTest();
+      }
     } catch (error) {
-      console.error("Diagnostic error:", error);
-      toast.error("Error running shop diagnostics");
+      console.error("Error running tests:", error);
+      toast({
+        title: "Error",
+        description: "Failed to run all diagnostic tests",
+        variant: "destructive"
+      });
     } finally {
-      setLoading(false);
+      setIsRunningTests(false);
+      setLastUpdated(new Date());
     }
   };
-
-  // Run checks on mount - but only for authorized users
-  useEffect(() => {
-    if (validateShopAction('admin', 'run_diagnostics')) {
-      runAllChecks();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Helper to render status icon
-  const renderStatusIcon = (status: DiagnosticResult["status"]) => {
+  
+  // Status icon component
+  const StatusIcon = ({ status }: { status: string }) => {
     switch (status) {
-      case "success":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "error":
+      case 'success':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'error':
         return <XCircle className="h-5 w-5 text-red-500" />;
-      case "warning":
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-      case "pending":
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+      case 'running':
+        return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
       default:
-        return <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />;
+        return <Info className="h-5 w-5 text-gray-400" />;
     }
   };
-
-  // Only show to authorized users
-  if (!validateShopAction('admin', 'view_diagnostics')) {
-    return null;
+  
+  if (isLoadingSettings) {
+    return (
+      <Card className="mb-6 bg-white border-emerge-gold/30">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin text-emerge-gold mr-2" />
+            <span>Loading diagnostic tools...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="bg-white border rounded-lg p-4 shadow-md mb-6" data-testid="shop-diagnostic-panel">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Lock className="h-4 w-4" /> Shop Diagnostic Log
-        </h2>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={runAllChecks} 
-          disabled={loading}
-          className="flex items-center gap-1"
-        >
-          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Run Diagnostics
-        </Button>
-      </div>
-      
-      {loading && (
-        <div className="mb-4">
-          <Progress value={progress} className="h-2" />
+    <Card className="mb-6 bg-white border-emerge-gold/30">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-6">
+        <CardTitle className="text-md font-medium flex items-center text-emerge-gold">
+          <Info className="h-5 w-5 mr-2" />
+          Shop Diagnostic Panel
+        </CardTitle>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-xs h-8"
+          >
+            {isExpanded ? "Minimize" : "Expand"}
+          </Button>
         </div>
-      )}
+      </CardHeader>
       
-      <Accordion type="multiple" defaultValue={["summary"]}>
-        <AccordionItem value="summary">
-          <AccordionTrigger>Summary Results</AccordionTrigger>
-          <AccordionContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-              {Object.entries(results).map(([key, result]) => (
-                <div 
-                  key={key}
-                  className={`flex items-center p-2 rounded ${
-                    result.status === "success" ? "bg-green-50" :
-                    result.status === "error" ? "bg-red-50" :
-                    result.status === "warning" ? "bg-yellow-50" :
-                    "bg-blue-50"
-                  }`}
-                >
-                  {renderStatusIcon(result.status)}
-                  <div className="ml-2 flex-1">
-                    <div className="font-medium">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</div>
-                    <div className="text-xs">{result.message}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        
-        {Object.entries(results).map(([key, result]) => (
-          <AccordionItem key={key} value={key}>
-            <AccordionTrigger>
-              <div className="flex items-center">
-                {renderStatusIcon(result.status)}
-                <span className="ml-2">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="text-sm">
-                <div className="font-medium mb-2">{result.message}</div>
-                {result.details && result.details.length > 0 ? (
-                  <ul className="list-disc pl-5 space-y-1">
-                    {result.details.map((detail, i) => (
-                      <li key={i}>{detail}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-500 italic">No additional details available</p>
+      {isExpanded && (
+        <CardContent className="px-6 pb-4">
+          <div className="mb-4 flex justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">System Status</p>
+              <div className="flex items-center space-x-2">
+                <Badge variant={systemSettings?.recoveryMode ? "destructive" : "default"}>
+                  {systemSettings?.recoveryMode ? "Recovery Mode" : "Normal Mode"}
+                </Badge>
+                {systemSettings?.diagnosticsEnabled && (
+                  <Badge variant="outline">Diagnostics Active</Badge>
+                )}
+                {lastUpdated && (
+                  <span className="text-xs text-gray-500">
+                    Last check: {lastUpdated.toLocaleTimeString()}
+                  </span>
                 )}
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-        
-        <AccordionItem value="console">
-          <AccordionTrigger>Console Output</AccordionTrigger>
-          <AccordionContent>
-            <p className="text-sm text-gray-600 mb-2">
-              Full diagnostic results are available in the browser console. 
-              Open developer tools and check for "Shop Diagnostic" prefixed logs.
-            </p>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => console.log("Shop Diagnostic - Full results:", results)}
-            >
-              Log Results to Console
-            </Button>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleToggleDiagnostics}
+                className="text-xs h-8"
+              >
+                {systemSettings?.diagnosticsEnabled ? "Disable" : "Enable"} Diagnostics
+              </Button>
+              <Button 
+                variant={systemSettings?.recoveryMode ? "destructive" : "outline"}
+                size="sm" 
+                onClick={handleToggleRecovery}
+                className="text-xs h-8"
+              >
+                {systemSettings?.recoveryMode ? "Exit" : "Enter"} Recovery Mode
+              </Button>
+            </div>
+          </div>
+          
+          {systemSettings?.recoveryMode && (
+            <div className="mb-4 p-3 border rounded-md bg-red-50 border-red-200">
+              <p className="text-sm font-medium text-red-800">Recovery Mode Settings</p>
+              <div className="flex items-center space-x-2 mt-2">
+                <Button 
+                  variant={systemSettings?.fallbackLevel === 'minimal' ? "secondary" : "outline"} 
+                  size="sm" 
+                  onClick={() => setFallbackLevel('minimal')}
+                  className="text-xs h-7"
+                >
+                  Minimal
+                </Button>
+                <Button 
+                  variant={systemSettings?.fallbackLevel === 'medium' ? "secondary" : "outline"} 
+                  size="sm" 
+                  onClick={() => setFallbackLevel('medium')}
+                  className="text-xs h-7"
+                >
+                  Medium
+                </Button>
+                <Button 
+                  variant={systemSettings?.fallbackLevel === 'full' ? "secondary" : "outline"} 
+                  size="sm" 
+                  onClick={() => setFallbackLevel('full')}
+                  className="text-xs h-7"
+                >
+                  Full
+                </Button>
+                <span className="text-xs text-gray-600">
+                  Current level: <strong>{systemSettings?.fallbackLevel}</strong>
+                </span>
+              </div>
+            </div>
+          )}
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="tests">Diagnostic Tests</TabsTrigger>
+              <TabsTrigger value="info">System Info</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="tests" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">Shop Diagnostic Tests</h3>
+                <Button 
+                  size="sm" 
+                  onClick={runAllTests}
+                  disabled={isRunningTests}
+                  className="text-xs h-8"
+                >
+                  {isRunningTests ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Running...
+                    </>
+                  ) : "Run All Tests"}
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {tests.map((test, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center justify-between p-3 border rounded-md bg-white"
+                  >
+                    <div className="flex items-center">
+                      <StatusIcon status={test.status} />
+                      <span className="ml-2 font-medium text-sm">
+                        {test.name}
+                      </span>
+                      {test.message && (
+                        <span className="ml-3 text-xs text-gray-500">
+                          {test.message}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => test.runTest()}
+                      disabled={test.status === 'running'}
+                      className="text-xs h-7"
+                    >
+                      {test.status === 'running' ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : "Run"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="info">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium">Shop System Information</h3>
+                  <div className="mt-2 border rounded-md overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <tbody className="divide-y divide-gray-200 text-sm">
+                        <tr>
+                          <td className="px-4 py-2 font-medium bg-gray-50 w-1/3">Diagnostics Mode</td>
+                          <td className="px-4 py-2">
+                            {systemSettings?.diagnosticsEnabled ? (
+                              <span className="text-green-600 font-medium">Enabled</span>
+                            ) : (
+                              <span className="text-gray-600">Disabled</span>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium bg-gray-50">Recovery Mode</td>
+                          <td className="px-4 py-2">
+                            {systemSettings?.recoveryMode ? (
+                              <span className="text-red-600 font-medium">Active ({systemSettings.fallbackLevel})</span>
+                            ) : (
+                              <span className="text-green-600">Inactive</span>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium bg-gray-50">Live Sync</td>
+                          <td className="px-4 py-2">
+                            {systemSettings?.liveSync ? (
+                              <span className="text-green-600">Enabled</span>
+                            ) : (
+                              <span className="text-gray-600">Disabled</span>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium bg-gray-50">Last Data Seed</td>
+                          <td className="px-4 py-2">
+                            {systemSettings?.lastSeededDate ? (
+                              <span>{new Date(systemSettings.lastSeededDate).toLocaleString()}</span>
+                            ) : (
+                              <span className="text-gray-500">Never</span>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 font-medium bg-gray-50">Auth Status</td>
+                          <td className="px-4 py-2">
+                            {getAuthStatus().isAuthenticated ? (
+                              <span className="text-green-600">Authenticated (Role: {getAuthStatus().role})</span>
+                            ) : (
+                              <span className="text-yellow-600">Not authenticated</span>
+                            )}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      )}
+    </Card>
   );
 };
 

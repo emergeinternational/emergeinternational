@@ -12,6 +12,7 @@ export interface ShopProduct {
   variations?: ProductVariation[];
   collection_id?: string;
   collection?: Collection;
+  status?: 'draft' | 'pending' | 'published' | 'rejected';
 }
 
 export interface ProductVariation {
@@ -44,4 +45,5 @@ export interface ProductFormValues {
   category: string;
   collection_id?: string;
   variations?: ProductVariation[];
+  status?: 'draft' | 'pending' | 'published' | 'rejected';
 }

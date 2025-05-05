@@ -1,32 +1,88 @@
 
-import { useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
+import { getShopSystemSettings, toggleRecoveryMode } from '@/services/shopSystemService';
+import { getAuthStatus } from '@/services/shopAuthService';
 
 /**
- * SafeGuard hook that monitors Shop module dependencies and reports issues
- * without breaking the UI rendering
+ * Hook that monitors shop dependencies and automatically
+ * activates recovery mode if critical errors are detected
  */
 export const useShopSafeguard = () => {
-  const auth = useAuth();
+  const [isMonitoring, setIsMonitoring] = useState(false);
+  const [recoveryActivated, setRecoveryActivated] = useState(false);
+  const { isAdmin } = getAuthStatus();
   
   useEffect(() => {
-    try {
-      // Check if auth provider is properly initialized
-      if (!auth) {
-        console.warn("Shop module safeguard: Missing AuthProvider");
-      }
+    // Only admins get the full monitoring capability
+    if (isAdmin) {
+      setIsMonitoring(true);
       
-      // Check if basic auth properties are available
-      if (auth && typeof auth.isAuthenticated === 'undefined') {
-        console.warn("Shop module safeguard: Auth provider is missing isAuthenticated property");
-      }
+      const monitorErrorRate = () => {
+        try {
+          // Get any existing error info from session storage
+          const errorCountStr = sessionStorage.getItem('shop_error_count') || '0';
+          const errorCount = parseInt(errorCountStr);
+          
+          // If error count is high, check if we should activate recovery mode
+          if (errorCount > 5 && !recoveryActivated) {
+            checkAndActivateRecovery();
+          }
+          
+          // Create error listener for global errors
+          const errorHandler = () => {
+            const currentCount = parseInt(sessionStorage.getItem('shop_error_count') || '0');
+            const newCount = currentCount + 1;
+            sessionStorage.setItem('shop_error_count', newCount.toString());
+            
+            if (newCount > 5 && !recoveryActivated) {
+              checkAndActivateRecovery();
+            }
+          };
+          
+          // Attach to global error event
+          window.addEventListener('error', errorHandler);
+          
+          return () => {
+            window.removeEventListener('error', errorHandler);
+          };
+        } catch (err) {
+          console.error("Error in shop safeguard:", err);
+        }
+      };
       
-      if (auth && !auth.user && auth.isAuthenticated) {
-        console.warn("Shop module safeguard: Auth state inconsistent - authenticated but no user");
-      }
-    } catch (error) {
-      // Never let this hook break the UI
-      console.error("Shop module safeguard: Error checking dependencies", error);
+      const monitorId = setTimeout(monitorErrorRate, 1000);
+      
+      return () => {
+        clearTimeout(monitorId);
+      };
     }
-  }, [auth]);
+  }, [isAdmin, recoveryActivated]);
+  
+  // Check if recovery mode should be activated
+  const checkAndActivateRecovery = async () => {
+    try {
+      // Get current system settings
+      const settings = await getShopSystemSettings();
+      
+      // If recovery mode is already active, don't activate again
+      if (settings.recoveryMode) {
+        return;
+      }
+      
+      // Activate recovery mode
+      const success = await toggleRecoveryMode(true, 'minimal');
+      
+      if (success) {
+        setRecoveryActivated(true);
+        console.log("Recovery mode automatically activated due to high error rate");
+        
+        // Clear error count to prevent rapid toggling
+        sessionStorage.setItem('shop_error_count', '0');
+      }
+    } catch (err) {
+      console.error("Error activating recovery mode:", err);
+    }
+  };
+  
+  return { isMonitoring, recoveryActivated };
 };

@@ -1349,6 +1349,74 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_metadata: {
+        Row: {
+          action_type: string
+          created_at: string
+          field_name: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          product_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_metadata_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_snapshots: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          product_count: number
+          snapshot_file_path: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          product_count: number
+          snapshot_file_path: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          product_count?: number
+          snapshot_file_path?: string
+          version?: number
+        }
+        Relationships: []
+      }
       shop_products: {
         Row: {
           category: string | null
@@ -1404,6 +1472,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shop_system_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       talent_applications: {
         Row: {
@@ -1701,6 +1793,24 @@ export type Database = {
       }
     }
     Functions: {
+      generate_mock_products: {
+        Args: { count?: number }
+        Returns: {
+          category: string | null
+          collection_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean | null
+          price: number
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at: string | null
+        }[]
+      }
       get_current_user_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1740,6 +1850,17 @@ export type Database = {
           created_at: string
           profiles: Json
           events: Json
+        }[]
+      }
+      get_policies_for_table: {
+        Args: { table_name: string }
+        Returns: {
+          policyname: unknown
+          permissive: string
+          roles: unknown[]
+          cmd: string
+          qual: string
+          with_check: string
         }[]
       }
       log_user_action: {

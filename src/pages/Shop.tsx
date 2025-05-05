@@ -590,18 +590,22 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                                     <RecoveryFallback products={[product]} level="minimal" />
                                   </div>
                                 ) : (
-                                  <div className="border border-red-300 rounded-md p-4">
-                                    <p className="text-red-500">Failed to render product</p>
-                                  </div>
+                                  <Card className="overflow-hidden">
+                                    <CardHeader className="pb-2">
+                                      <h3 className="font-medium truncate">{product.title || 'Untitled Product'}</h3>
+                                    </CardHeader>
+                                    <CardFooter>
+                                      <span className="font-semibold">${product.price?.toFixed(2) || '0.00'}</span>
+                                    </CardFooter>
+                                  </Card>
                                 )
                               }
                             >
                               <ProductCard 
-                                product={product}
-                                onEdit={handleEditProduct}
-                                onDelete={handleDeleteProduct}
+                                product={product} 
+                                onEdit={handleEditProduct} 
+                                onDelete={handleDeleteProduct} 
                                 canEdit={canEdit}
-                                listView={!isGridView}
                               />
                             </ErrorBoundary>
                           ))}
@@ -611,118 +615,88 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">No products found matching your criteria</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-500">
+                      Try adjusting your filters or search terms
+                    </p>
                     <Button 
-                      variant="link" 
+                      variant="outline" 
                       onClick={handleClearFilters}
+                      className="mt-4"
                     >
-                      Clear filters
+                      Clear all filters
                     </Button>
                   </div>
                 )}
                 </div>
               </ErrorBoundary>
             </div>
-          </div>
-        </ErrorBoundary>
-        
-        {/* Admin developer notes overlay - only visible to admins */}
-        {isAdmin && (
-          <DeveloperNotesOverlay 
-            products={products} 
-            lastUpdated={lastUpdated}
-          />
-        )}
-        
-        {/* Form dialogs wrapped with ErrorBoundary */}
-        <ErrorBoundary>
-          {/* Form dialog for adding new products */}
-          <ProductFormDialog
-            open={isAddProductDialogOpen}
-            onOpenChange={setIsAddProductDialogOpen}
-            product={null}
-            onSuccess={(newProduct) => {
-              if (newProduct) {
-                setProducts(prev => [newProduct, ...prev]);
-                setLastUpdated(new Date());
-              }
-            }}
-          />
-          
-          {/* Form dialog for editing existing products */}
-          {selectedProduct && (
+            
+            {/* Admin floating panel for actions */}
+            {canEdit && (
+              <AdminFloatingPanel 
+                onAddProduct={() => setIsAddProductDialogOpen(true)}
+                onAddCollection={() => setIsAddCollectionDialogOpen(true)}
+                onRefresh={() => {
+                  fetchProducts();
+                  fetchCollections();
+                }}
+              />
+            )}
+            
+            {/* Form dialogs */}
             <ProductFormDialog
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              product={selectedProduct}
-              onSuccess={(updatedProduct) => {
-                if (updatedProduct) {
-                  setProducts(prev => prev.map(product => 
-                    product && product.id === updatedProduct.id ? updatedProduct : product
-                  ));
-                  setLastUpdated(new Date());
+              open={isAddProductDialogOpen}
+              onOpenChange={setIsAddProductDialogOpen}
+              product={null}
+              onSuccess={(newProduct) => {
+                if (newProduct) {
+                  setProducts(prev => [newProduct, ...prev]);
                 }
-                setSelectedProduct(null);
+                setIsAddProductDialogOpen(false);
               }}
             />
-          )}
-          
-          {/* Form dialog for adding new collections */}
-          <CollectionFormDialog
-            open={isAddCollectionDialogOpen}
-            onOpenChange={setIsAddCollectionDialogOpen}
-            collection={null}
-            onSuccess={(newCollection) => {
-              if (newCollection) {
-                setCollections(prev => [newCollection, ...prev]);
-              }
-            }}
-          />
+            
+            {selectedProduct && (
+              <ProductFormDialog
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                product={selectedProduct}
+                onSuccess={(updatedProduct) => {
+                  if (updatedProduct) {
+                    setProducts(prev => prev.map(product => 
+                      product.id === updatedProduct.id ? updatedProduct : product
+                    ));
+                  }
+                  setSelectedProduct(null);
+                  setIsEditDialogOpen(false);
+                }}
+              />
+            )}
+            
+            <CollectionFormDialog
+              open={isAddCollectionDialogOpen}
+              onOpenChange={setIsAddCollectionDialogOpen}
+              collection={null}
+              onSuccess={(newCollection) => {
+                if (newCollection) {
+                  setCollections(prev => [newCollection, ...prev]);
+                }
+                setIsAddCollectionDialogOpen(false);
+              }}
+            />
+            
+            {/* Developer Notes Overlay - only visible to admin and activated via Alt+D */}
+            <DeveloperNotesOverlay products={products} />
+          </div>
         </ErrorBoundary>
-
-        {/* Admin Floating Panel */}
-        {canEdit && (
-          <AdminFloatingPanel
-            productCount={products.length}
-            isGridView={isGridView}
-            toggleViewMode={() => setIsGridView(!isGridView)}
-            onAddProduct={() => {
-              if (validateShopAction('editor', 'add_product')) {
-                setIsAddProductDialogOpen(true);
-              } else {
-                toast.error("You don't have permission to add products");
-              }
-            }}
-            onManageCollections={() => {
-              if (validateShopAction('editor', 'manage_collections')) {
-                setIsAddCollectionDialogOpen(true);
-              } else {
-                toast.error("You don't have permission to manage collections");
-              }
-            }}
-          />
-        )}
       </MainLayout>
     );
   } catch (error) {
-    console.error("Fatal error in Shop component:", error);
+    console.error("Critical error in Shop component:", error);
     return (
       <MainLayout>
-        <div className="container mx-auto p-8">
-          <div className="bg-red-600 text-white p-4 mb-4 rounded-md">
-            <h2 className="text-lg font-bold">Critical Shop Error</h2>
-            <p>A critical error occurred while rendering the Shop page.</p>
-            <pre className="mt-2 bg-red-700 p-2 rounded overflow-auto max-h-48 text-xs">
-              {error instanceof Error ? error.stack : String(error)}
-            </pre>
-          </div>
-          <button 
-            className="px-4 py-2 bg-blue-500 text-white rounded-md"
-            onClick={() => window.location.reload()}
-          >
-            Reload Page
-          </button>
-        </div>
+        <RecoveryFallback products={[]} error={error as Error} level="full" />
       </MainLayout>
     );
   }
