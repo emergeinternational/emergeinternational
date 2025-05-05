@@ -3,27 +3,21 @@ import React, { useState, useEffect } from 'react';
 import Shop from './Shop';
 import ErrorBoundary from '@/components/shop/ErrorBoundary';
 import { toast } from 'sonner';
-import { getAuthStatus, hasShopAdminAccess } from '@/services/shopAuthService';
-import { getShopSystemSettings } from '@/services/shopSystemService';
+import { getAuthStatus } from '@/services/shopAuthService';
 import { Loader2 } from 'lucide-react';
-import { useShopSafeguard } from '@/hooks/useShopSafeguard';
 
 const ShopPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
   
-  // Activate the safeguard hook to monitor dependencies
-  useShopSafeguard();
-  
-  // Check auth status and system settings on component mount
+  // Check auth status on component mount
   useEffect(() => {
     try {
       console.log("ShopPage component is rendering");
       
-      const checkAuthAndSettings = async () => {
+      const checkAuth = async () => {
         // Get initial synchronous status
         const authStatus = getAuthStatus();
         console.log("Auth status in ShopPage:", authStatus);
@@ -37,53 +31,11 @@ const ShopPage: React.FC = () => {
         }
         
         setUserRole(role);
-        
-        // Check if diagnostics should be shown
-        const enableDiagnostics = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
-        
-        if (enableDiagnostics) {
-          // Only show diagnostics if user is admin, otherwise ignore the parameter
-          const canAccessDiagnostics = hasShopAdminAccess();
-          
-          if (canAccessDiagnostics) {
-            setShowDiagnostics(true);
-          } else {
-            console.warn("Non-admin user attempted to access diagnostics mode");
-            // Don't show error to user to avoid revealing that diagnostics exist
-          }
-        } else {
-          // If no URL parameter, check system settings for admins
-          if (authStatus.isAdmin) {
-            try {
-              const settings = await getShopSystemSettings();
-              setShowDiagnostics(settings.diagnosticsEnabled || false);
-            } catch (settingsError) {
-              console.error("Error loading system settings:", settingsError);
-              // Default to not showing diagnostics if settings can't be loaded
-            }
-          }
-        }
-        
         setAuthChecked(true);
         setIsLoading(false);
       };
       
-      checkAuthAndSettings();
-      
-      // Add diagnostics parameter tracking
-      const handlePopState = () => {
-        const diagnosticsParam = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
-        const canAccessDiagnostics = hasShopAdminAccess();
-        
-        if (diagnosticsParam && canAccessDiagnostics) {
-          setShowDiagnostics(true);
-        }
-      };
-      
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
+      checkAuth();
     } catch (error) {
       console.error("Error checking auth status:", error);
       setAuthChecked(true);
@@ -136,7 +88,7 @@ const ShopPage: React.FC = () => {
         </div>
       }
     >
-      {/* Pass user role and diagnostics flag to Shop component */}
+      {/* Pass user role to Shop component */}
       {hasError ? (
         <div className="container mx-auto p-8">
           <h2 className="text-xl font-bold mb-4">Shop is temporarily unavailable</h2>
@@ -149,10 +101,7 @@ const ShopPage: React.FC = () => {
           </button>
         </div>
       ) : (
-        <Shop 
-          userRole={userRole} 
-          showDiagnostics={showDiagnostics}
-        />
+        <Shop userRole={userRole} />
       )}
     </ErrorBoundary>
   );

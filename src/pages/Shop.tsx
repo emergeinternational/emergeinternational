@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { getProducts, deleteProduct } from "../services/shopService";
+import { getProducts } from "../services/shopService";
 import { getCollections } from "../services/collectionService";
 import { ShopProduct, Collection } from "../types/shop";
 import ProductCard from "../components/shop/ProductCard";
@@ -15,15 +14,24 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/shop/ErrorBoundary";
 import FilterSidebar from "@/components/shop/FilterSidebar";
-import AdminFloatingPanel from "@/components/shop/AdminFloatingPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import ShopDiagnosticPanel from "@/components/shop/ShopDiagnosticPanel";
-import RecoveryFallback from "@/components/shop/RecoveryFallback";
-import DeveloperNotesOverlay from "@/components/shop/DeveloperNotesOverlay";
-import AdminRecoveryTools from "@/components/shop/AdminRecoveryTools";
-import { getShopSystemSettings, toggleDiagnosticsMode } from "@/services/shopSystemService";
 import { RefreshCw } from "lucide-react";
+
+// Import AdminFloatingPanel with bare minimum props
+interface AdminFloatingPanelProps {
+  onAddProduct: () => void;
+}
+
+const AdminFloatingPanel: React.FC<AdminFloatingPanelProps> = ({ onAddProduct }) => {
+  return (
+    <div className="fixed bottom-6 right-6 flex gap-2">
+      <Button onClick={onAddProduct}>
+        Add Product
+      </Button>
+    </div>
+  );
+};
 
 interface ShopProps {
   userRole: string | null;
@@ -36,7 +44,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
     const [products, setProducts] = useState<ShopProduct[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [loading, setLoading] = useState(true);
-    const [dataError, setDataError] = useState<boolean>(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     
     // State for filters
@@ -56,78 +63,18 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
 
-    // State for system settings
-    const [systemSettings, setSystemSettings] = useState<any>({
+    // Simplified system settings
+    const [systemSettings] = useState({
       recoveryMode: false,
-      fallbackLevel: 'minimal',
-      diagnosticsEnabled: showDiagnostics
+      diagnosticsEnabled: false
     });
-
-    // State for recovery errors 
-    const [recoveryError, setRecoveryError] = useState<Error | null>(null);
     
     // Get auth status directly from props
     const isAdmin = userRole === 'admin';
     const isEditor = userRole === 'editor' || userRole === 'admin';
     const canEdit = isEditor || isAdmin;
 
-    // Load system settings for admins
-    useEffect(() => {
-      if (isAdmin) {
-        loadSystemSettings();
-      }
-    }, [isAdmin]);
-    
-    const loadSystemSettings = async () => {
-      try {
-        const settings = await getShopSystemSettings();
-        setSystemSettings({
-          recoveryMode: settings.recoveryMode,
-          fallbackLevel: settings.fallbackLevel || 'minimal',
-          diagnosticsEnabled: settings.diagnosticsEnabled,
-          liveSync: settings.liveSync
-        });
-      } catch (error) {
-        console.error("Error loading system settings:", error);
-      }
-    };
-
-    // Handle diagnostics toggle
-    const handleToggleDiagnostics = async () => {
-      if (hasShopAdminAccess()) {
-        const newValue = !systemSettings.diagnosticsEnabled;
-        const success = await toggleDiagnosticsMode(newValue);
-        
-        if (success) {
-          setSystemSettings(prev => ({
-            ...prev,
-            diagnosticsEnabled: newValue
-          }));
-          
-          toast.success(`Diagnostics ${newValue ? 'enabled' : 'disabled'}`);
-          
-          // Update URL if turning diagnostics on
-          if (newValue) {
-            // Add the diagnostics parameter if not already present
-            const url = new URL(window.location.href);
-            if (!url.searchParams.has('diagnostics')) {
-              url.searchParams.set('diagnostics', 'true');
-              window.history.pushState({}, '', url.toString());
-            }
-          } else {
-            // Remove the diagnostics parameter if present
-            const url = new URL(window.location.href);
-            if (url.searchParams.has('diagnostics')) {
-              url.searchParams.delete('diagnostics');
-              window.history.pushState({}, '', url.toString());
-            }
-          }
-        }
-      } else {
-        toast.error("You don't have permission to toggle diagnostics mode");
-      }
-    };
-
+    // Load products and collections
     useEffect(() => {
       try {
         fetchProducts();
@@ -187,49 +134,16 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
           )
           .subscribe();
         
-        // Subscribe to system settings changes for admins
-        let settingsChannel;
-        if (isAdmin) {
-          settingsChannel = supabase
-            .channel('shop_system_settings_changes')
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'shop_system_settings'
-              },
-              (payload) => {
-                console.log('System settings changed:', payload);
-                loadSystemSettings();
-              }
-            )
-            .subscribe();
-        }
-        
         return () => {
           supabase.removeChannel(productsChannel);
           supabase.removeChannel(variationsChannel);
           supabase.removeChannel(collectionsChannel);
-          if (settingsChannel) {
-            supabase.removeChannel(settingsChannel);
-          }
         };
       } catch (error) {
         console.error("Error in Shop useEffect:", error);
-        handleRecoveryMode(error as Error);
+        setLoading(false);
       }
     }, []);
-
-    const handleRecoveryMode = (error: Error) => {
-      setRecoveryError(error);
-      setDataError(true);
-      
-      // If system is in recovery mode, don't show the error toast
-      if (!systemSettings.recoveryMode) {
-        toast.error("Shop encountered an error and is attempting to recover");
-      }
-    };
 
     const fetchProducts = async () => {
       setLoading(true);
@@ -239,7 +153,8 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
         // Defensive check for valid data
         if (!data || !Array.isArray(data)) {
           console.error("Invalid products data received:", data);
-          throw new Error("Invalid products data format");
+          setProducts([]);
+          return;
         }
         
         setProducts(data);
@@ -261,13 +176,9 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
         );
         setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
         setPriceRange([0, Math.max(highestPrice, 100000)]);
-        
-        // Clear any previous data error state
-        setDataError(false);
-        setRecoveryError(null);
       } catch (error) {
         console.error("Error fetching products:", error);
-        handleRecoveryMode(error as Error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -284,6 +195,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
         }
       } catch (error) {
         console.error("Error fetching collections:", error);
+        setCollections([]);
       }
     };
 
@@ -384,24 +296,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
       return matchesSearch && matchesCategory && matchesCollection && matchesPrice && matchesSize && matchesColor;
     });
 
-    // If we should render in recovery mode
-    const shouldUseRecoveryMode = systemSettings.recoveryMode || dataError;
-
-    // If in full recovery mode, render the RecoveryFallback component
-    if (shouldUseRecoveryMode && systemSettings.fallbackLevel === 'full') {
-      return (
-        <MainLayout>
-          <RecoveryFallback 
-            products={products} 
-            error={recoveryError} 
-            level="full"
-            onRefresh={fetchProducts}
-          />
-          {isAdmin && <AdminRecoveryTools />}
-        </MainLayout>
-      );
-    }
-
     // Group products by collection for better display
     const groupedProducts = filteredProducts.reduce((acc, product) => {
       if (!product) return acc;
@@ -429,53 +323,15 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
       return a.title.localeCompare(b.title);
     });
 
-    // If we should show the diagnostic panel
-    const showDiagnosticsPanel = (showDiagnostics || systemSettings.diagnosticsEnabled) && isAdmin;
-
     return (
       <MainLayout>
         <ErrorBoundary>
           <div className="container mx-auto px-4 py-8">
-            {/* AdminRecoveryTools component - only visible to admins */}
-            {isAdmin && <AdminRecoveryTools />}
-            
-            {/* Shop Diagnostic Panel - only shown when diagnostics is enabled for admins */}
-            {showDiagnosticsPanel && (
-              <ErrorBoundary 
-                fallback={<div className="bg-red-100 p-4 mb-6 rounded-lg">Error loading diagnostics panel</div>}
-              >
-                <ShopDiagnosticPanel />
-              </ErrorBoundary>
-            )}
-            
-            {/* Recovery mode notice - only when using partial recovery mode */}
-            {shouldUseRecoveryMode && systemSettings.fallbackLevel !== 'full' && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      Shop Recovery Mode Active
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        Some features may be limited while the shop is in recovery mode. 
-                        {isAdmin && (
-                          <Button 
-                            variant="link" 
-                            onClick={() => loadSystemSettings()}
-                            className="p-0 h-auto text-yellow-800 underline"
-                          >
-                            Refresh status
-                          </Button>
-                        )}
-                      </p>
-                    </div>
-                  </div>
+            {/* Replaced AdminRecoveryTools with simple message */}
+            {isAdmin && (
+              <div className="mb-6">
+                <div className="text-yellow-500 text-sm p-4 border border-yellow-200 bg-yellow-50 rounded-md">
+                  Recovery features temporarily disabled. Admin tools will return in the next update.
                 </div>
               </div>
             )}
@@ -486,20 +342,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Discover our curated selection of fashion and accessories from emerging designers
               </p>
-              
-              {/* Admin diagnostics toggle - only visible to admins */}
-              {isAdmin && (
-                <div className="flex justify-center mt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleToggleDiagnostics}
-                    className="text-xs"
-                  >
-                    {systemSettings.diagnosticsEnabled ? 'Disable' : 'Enable'} Diagnostics
-                  </Button>
-                </div>
-              )}
             </div>
 
             {/* Search and Filter Section */}
@@ -550,12 +392,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
               </ErrorBoundary>
 
               {/* Products Display */}
-              <ErrorBoundary fallback={
-                // Fall back to minimal recovery view if product section fails
-                <div className="flex-1">
-                  <RecoveryFallback products={products} level="minimal" onRefresh={fetchProducts} />
-                </div>
-              }>
+              <ErrorBoundary>
                 <div className="flex-1">
                 {loading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -593,26 +430,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                           : "space-y-4"
                         }>
                           {products.map(product => (
-                            <ErrorBoundary 
-                              key={product.id}
-                              fallback={
-                                // Fall back to minimal product card if individual card fails
-                                shouldUseRecoveryMode ? (
-                                  <div className="border rounded-md overflow-hidden">
-                                    <RecoveryFallback products={[product]} level="minimal" />
-                                  </div>
-                                ) : (
-                                  <Card className="overflow-hidden">
-                                    <CardHeader className="pb-2">
-                                      <h3 className="font-medium truncate">{product.title || 'Untitled Product'}</h3>
-                                    </CardHeader>
-                                    <CardFooter>
-                                      <span className="font-semibold">${product.price?.toFixed(2) || '0.00'}</span>
-                                    </CardFooter>
-                                  </Card>
-                                )
-                              }
-                            >
+                            <ErrorBoundary key={product.id}>
                               <ProductCard 
                                 product={product} 
                                 onEdit={handleEditProduct} 
@@ -692,9 +510,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                 setIsAddCollectionDialogOpen(false);
               }}
             />
-            
-            {/* Developer Notes Overlay - only visible to admin and activated via Alt+D */}
-            <DeveloperNotesOverlay products={products} />
           </div>
         </ErrorBoundary>
       </MainLayout>
@@ -703,7 +518,13 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
     console.error("Critical error in Shop component:", error);
     return (
       <MainLayout>
-        <RecoveryFallback products={[]} error={error as Error} level="full" />
+        <div className="container mx-auto p-4">
+          <div className="p-4 border rounded-md bg-yellow-50">
+            <div className="text-yellow-600">
+              An error occurred loading the Shop. Please refresh the page to try again.
+            </div>
+          </div>
+        </div>
       </MainLayout>
     );
   }
