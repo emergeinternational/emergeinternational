@@ -65,7 +65,7 @@ export const createProduct = async (productData: ProductFormValues): Promise<boo
 };
 
 // Update an existing product
-export const updateProduct = async (id: string, updates: Partial<ShopProduct>): Promise<boolean> => {
+export const updateProduct = async (id: string, updates: Partial<ProductFormValues>): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from("shop_products")

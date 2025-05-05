@@ -29,7 +29,7 @@ const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
 });
 
-type ProductFormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema>;
 
 interface ProductFormProps {
   product?: ShopProduct;
@@ -40,7 +40,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!product;
 
-  const defaultValues: Partial<ProductFormValues> = {
+  const defaultValues: Partial<FormValues> = {
     title: product?.title || "",
     price: product ? product.price / 100 : undefined,
     description: product?.description || "",
@@ -49,12 +49,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
     category: product?.category || "",
   };
 
-  const form = useForm<ProductFormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
-  const onSubmit = async (data: ProductFormValues) => {
+  const onSubmit = async (data: FormValues) => {
     try {
       setIsSubmitting(true);
       
@@ -68,7 +68,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
         await updateProduct(product.id, productData);
         toast.success("Product updated successfully");
       } else {
-        await createProduct(productData as Omit<ShopProduct, 'id' | 'created_at' | 'updated_at'>);
+        await createProduct(productData);
         toast.success("Product created successfully");
       }
       
