@@ -14,6 +14,7 @@ interface ProductFormDialogProps {
   onOpenChange: (open: boolean) => void;
   product: ShopProduct | null;
   onSuccess: (product: ShopProduct | null) => void;
+  submitType?: 'draft' | 'pending';
 }
 
 const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
@@ -21,6 +22,7 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
   onOpenChange,
   product,
   onSuccess,
+  submitType = 'pending'
 }) => {
   const handleSuccess = (updatedProduct: ShopProduct | null) => {
     onSuccess(updatedProduct);
@@ -32,12 +34,17 @@ const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {product ? "Edit Product" : "Add New Product"}
+            {product 
+              ? "Edit Product" 
+              : submitType === 'draft' 
+                ? "Create Draft Product" 
+                : "Submit New Product"}
           </DialogTitle>
         </DialogHeader>
         <ProductForm 
           product={product} 
-          onSuccess={handleSuccess} 
+          onSuccess={handleSuccess}
+          submitType={submitType}
         />
       </DialogContent>
     </Dialog>

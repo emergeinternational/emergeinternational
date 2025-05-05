@@ -5,7 +5,9 @@ import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
 import ShopPage from "./pages/ShopPage";
 import ProductDetail from "./pages/ProductDetail";
-import { getAuthStatus } from './services/shopAuthService'; // Fix imports to use only what exists
+import MyProductsPage from "./pages/MyProductsPage";
+import ProductApprovalsPage from "./pages/ProductApprovalsPage";
+import { getAuthStatus } from './services/shopAuthService';
 
 const App: React.FC = () => {
   // Initialize auth state at app startup
@@ -27,6 +29,14 @@ const App: React.FC = () => {
     {
       path: "/shop/product/:id",
       element: <ProductDetail />,
+    },
+    {
+      path: "/my-products",
+      element: <MyProductsPage />,
+    },
+    {
+      path: "/admin/product-approvals",
+      element: <ProductApprovalsPage />,
     },
     {
       path: "/admin/product-management",

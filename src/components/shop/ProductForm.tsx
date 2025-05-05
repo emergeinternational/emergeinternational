@@ -1,265 +1,303 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { toast } from "sonner";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue 
-} from "@/components/ui/select";
-import { ShopProduct, ProductFormValues, Collection } from "@/types/shop";
-import { createProduct, updateProduct, uploadProductImage } from "@/services/shopService";
-import { getCollections } from "@/services/collectionService";
-import { DialogClose } from "@/components/ui/dialog";
-import ProductVariationForm from "./ProductVariationForm";
-import { Upload, ImageIcon, Loader2, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-
-const formSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters").max(100, "Title must be less than 100 characters"),
-  price: z.coerce.number().positive("Price must be a positive number"),
-  description: z.string().optional(),
-  image_url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
-  in_stock: z.boolean().default(true),
-  category: z.string().min(1, "Category is required"),
-  collection_id: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Plus, ImagePlus, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { getCollections } from "@/services/collectionService";
+import { ShopProduct, ProductFormValues, Collection, ProductVariation } from "@/types/shop";
+import { createProductSubmission, updateProductSubmission, saveProductDraft } from "@/services/designerProductService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductFormProps {
-  product?: ShopProduct | null;
+  product: ShopProduct | null;
   onSuccess: (product: ShopProduct | null) => void;
+  submitType: 'draft' | 'pending';
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [previewImage, setPreviewImage] = useState<string | null>(product?.image_url || null);
-  const [variations, setVariations] = useState(product?.variations || []);
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [newCollection, setNewCollection] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState('');
-  const [newCollectionDesigner, setNewCollectionDesigner] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const isEditing = !!product;
+const productFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  price: z.coerce.number().min(0, "Price must be a positive number"),
+  image_url: z.string().optional(),
+  in_stock: z.boolean().default(true),
+  category: z.string().optional(),
+  collection_id: z.string().optional(),
+  variations: z.array(
+    z.object({
+      id: z.string().optional(),
+      size: z.string().optional(),
+      color: z.string().optional(),
+      stock_quantity: z.coerce.number().min(0),
+      sku: z.string().min(1, "SKU is required"),
+      price: z.coerce.number().optional(),
+    })
+  ).optional(),
+});
 
-  useEffect(() => {
+type ProductFormType = z.infer<typeof productFormSchema>;
+
+const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitType }) => {
+  const { toast } = useToast();
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
+
+  const form = useForm<ProductFormType>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      title: product?.title || "",
+      description: product?.description || "",
+      price: product?.price || 0,
+      image_url: product?.image_url || "",
+      in_stock: product?.in_stock !== false,
+      category: product?.category || "",
+      collection_id: product?.collection_id || undefined,
+      variations: product?.variations || [],
+    },
+  });
+
+  // Fetch collections on component mount
+  React.useEffect(() => {
+    const fetchCollections = async () => {
+      const collectionsData = await getCollections();
+      setCollections(collectionsData);
+    };
     fetchCollections();
   }, []);
 
-  const fetchCollections = async () => {
+  const handleSubmit = async (data: ProductFormType) => {
+    setIsSubmitting(true);
     try {
-      const data = await getCollections();
-      setCollections(data);
-    } catch (error) {
-      console.error("Failed to fetch collections:", error);
-      toast.error("Could not load collections");
-    }
-  };
-
-  const defaultValues: Partial<FormValues> = {
-    title: product?.title || "",
-    price: product ? product.price / 100 : undefined, // Convert cents to dollars for display
-    description: product?.description || "",
-    image_url: product?.image_url || "",
-    in_stock: product?.in_stock ?? true,
-    category: product?.category || "",
-    collection_id: product?.collection_id || undefined,
-  };
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-  });
-
-  // For simple file upload simulation
-  const simulateProgress = () => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  };
-
-  const handleImageUpload = async (file: File) => {
-    if (!file) return;
-
-    try {
-      setIsUploading(true);
-      setUploadProgress(0);
-      
-      // Create an object URL for immediate preview
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewImage(objectUrl);
-      
-      // Start progress simulation
-      const stopSimulation = simulateProgress();
-      
-      // Upload the image
-      const imageUrl = await uploadProductImage(file);
-      
-      // Clean up simulation
-      stopSimulation();
-      setUploadProgress(100);
-      
-      if (imageUrl) {
-        form.setValue('image_url', imageUrl);
-        toast.success('Image uploaded successfully');
-      }
-    } catch (error) {
-      console.error('Image upload error:', error);
-      toast.error('Failed to upload image');
-      // Reset preview on error
-      setPreviewImage(product?.image_url || null);
-    } finally {
-      setIsUploading(false);
-      setTimeout(() => setUploadProgress(0), 1000); // Reset progress after a delay
-    }
-  };
-
-  const onSubmit = async (data: FormValues) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Handle new collection creation if needed
-      let collectionId = data.collection_id;
-      if (newCollection && newCollectionName && newCollectionDesigner) {
-        // Create a new collection via API call
-        const response = await fetch('/api/collections', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: newCollectionName,
-            designer_name: newCollectionDesigner
-          })
-        });
-        
-        if (response.ok) {
-          const newCollectionData = await response.json();
-          collectionId = newCollectionData.id;
-          await fetchCollections(); // Refresh collections
-        } else {
-          toast.error('Failed to create new collection');
-          return;
+      if (submitType === 'draft') {
+        // Save as draft
+        const result = await saveProductDraft(data as ProductFormValues, product?.id);
+        if (result) {
+          onSuccess(result);
+          toast({
+            title: "Draft saved",
+            description: "Your product has been saved as a draft"
+          });
         }
-      }
-      
-      // Convert price to cents for storage
-      const productData: ProductFormValues = {
-        title: data.title,
-        price: Math.round(data.price * 100), // Convert dollars to cents for storage
-        description: data.description,
-        image_url: data.image_url,
-        in_stock: data.in_stock,
-        category: data.category,
-        collection_id: collectionId || undefined,
-        variations: variations,
-      };
-
-      let savedProduct: ShopProduct | null = null;
-      
-      if (isEditing && product) {
-        // Update existing product with optimistic UI update
-        const updatedProduct = {
-          ...product,
-          ...productData,
-        };
-        
-        // Optimistic update
-        onSuccess(updatedProduct);
-        
-        savedProduct = await updateProduct(product.id, productData);
-        
-        if (savedProduct) {
-          toast.success("Product updated successfully");
-        } else {
-          // If update fails, revert the optimistic update
-          onSuccess(product);
-          toast.error("Failed to update product");
+      } else if (product) {
+        // Update existing product
+        const result = await updateProductSubmission(product.id, data as ProductFormValues);
+        if (result) {
+          onSuccess(result);
+          toast({
+            title: "Product updated",
+            description: "Your product has been updated and resubmitted for approval"
+          });
         }
       } else {
         // Create new product
-        savedProduct = await createProduct(productData);
-        
-        if (savedProduct) {
-          toast.success("Product created successfully");
+        const result = await createProductSubmission(data as ProductFormValues);
+        if (result) {
+          onSuccess(result);
+          toast({
+            title: "Product submitted",
+            description: "Your product has been submitted for approval"
+          });
         }
       }
-      
-      onSuccess(savedProduct);
-      form.reset(defaultValues);
     } catch (error) {
-      console.error("Form submission error:", error);
-      toast.error("Failed to save product");
-      onSuccess(null); // Pass null to indicate failure
+      console.error("Error saving product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save product",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const removeImage = () => {
-    form.setValue('image_url', '');
-    setPreviewImage(null);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(data.path);
+
+      form.setValue("image_url", publicUrl);
+      toast({
+        title: "Image uploaded",
+        description: "Your image has been uploaded successfully"
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addVariation = () => {
+    const variations = form.getValues("variations") || [];
+    const newVariation: ProductVariation = {
+      id: `temp-${Date.now()}`,
+      size: "",
+      color: "",
+      stock_quantity: 1,
+      sku: `${form.getValues("title").substring(0, 3).toUpperCase() || "SKU"}-${variations.length + 1}`,
+    };
+    form.setValue("variations", [...variations, newVariation]);
+  };
+
+  const removeVariation = (index: number) => {
+    const variations = form.getValues("variations") || [];
+    const updatedVariations = [...variations];
+    updatedVariations.splice(index, 1);
+    form.setValue("variations", updatedVariations);
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Product name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="general">General</TabsTrigger>
+              <TabsTrigger value="variations">Variations</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="general" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="price"
+                name="image_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Base Price (USD)</FormLabel>
+                    <FormLabel>Image</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0.00" 
-                        step="0.01" 
-                        {...field} 
-                      />
+                      <div className="space-y-2">
+                        {field.value && (
+                          <div className="relative w-full h-40 bg-gray-100 rounded-md overflow-hidden">
+                            <img
+                              src={field.value}
+                              alt="Product preview"
+                              className="w-full h-full object-contain"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                              onClick={() => form.setValue("image_url", "")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="url"
+                            placeholder="Enter image URL or upload"
+                            {...field}
+                            className="flex-1"
+                          />
+                          <div className="relative">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={uploading}
+                              className="w-[120px]"
+                            >
+                              {uploading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Uploading
+                                </>
+                              ) : (
+                                <>
+                                  <ImagePlus className="mr-2 h-4 w-4" />
+                                  Upload
+                                </>
+                              )}
+                            </Button>
+                            <Input
+                              type="file"
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              disabled={uploading}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </FormControl>
+                    <FormDescription>
+                      Upload or paste a URL to your product image
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -267,249 +305,301 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
 
               <FormField
                 control={form.control}
-                name="category"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input placeholder="E.g. clothing, accessories" {...field} />
+                      <Textarea
+                        placeholder="Enter product description"
+                        className="resize-none min-h-[120px]"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-            
-            <div>
-              <FormLabel>Collection</FormLabel>
-              {!newCollection ? (
-                <div className="flex items-center gap-2">
-                  <FormField
-                    control={form.control}
-                    name="collection_id"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a collection" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="">None</SelectItem>
-                            {collections.map((collection) => (
-                              <SelectItem key={collection.id} value={collection.id}>
-                                {collection.title} ({collection.designer_name})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setNewCollection(true)}
-                    size="sm"
-                  >
-                    + New
-                  </Button>
-                </div>
-              ) : (
-                <Card className="mt-2 mb-4">
-                  <CardContent className="p-4 space-y-3">
-                    <div>
-                      <label className="text-sm font-medium">Collection Name</label>
-                      <Input
-                        placeholder="Collection name"
-                        value={newCollectionName}
-                        onChange={(e) => setNewCollectionName(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Designer Name</label>
-                      <Input
-                        placeholder="Designer name"
-                        value={newCollectionDesigner}
-                        onChange={(e) => setNewCollectionDesigner(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 pt-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setNewCollection(false)}
-                        className="flex-1"
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
                       >
-                        Cancel
-                      </Button>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="clothing">Clothing</SelectItem>
+                          <SelectItem value="accessories">Accessories</SelectItem>
+                          <SelectItem value="footwear">Footwear</SelectItem>
+                          <SelectItem value="jewelry">Jewelry</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="collection_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Collection</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select collection" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {collections.map(collection => (
+                            <SelectItem key={collection.id} value={collection.id}>
+                              {collection.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="in_stock"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>In Stock</FormLabel>
+                      <FormDescription>
+                        Mark this product as available for purchase
+                      </FormDescription>
                     </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+
+            <TabsContent value="variations" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Product Variations</h4>
+                  <p className="text-sm text-gray-500">Add size, color and other variations</p>
+                </div>
+                <Button type="button" onClick={addVariation} variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Variation
+                </Button>
+              </div>
+
+              {form.watch("variations")?.length === 0 ? (
+                <Card>
+                  <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                    <div className="rounded-full bg-gray-100 p-3 mb-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-gray-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
+                    <h4 className="font-medium">No variations added</h4>
+                    <p className="text-sm text-gray-500 max-w-md mt-1">
+                      Add variations like sizes and colors to give customers more options
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={addVariation}
+                      className="mt-4"
+                      variant="outline"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Your First Variation
+                    </Button>
                   </CardContent>
                 </Card>
-              )}
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Product description" 
-                      {...field} 
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="in_stock"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">In Stock</FormLabel>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="image_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Image</FormLabel>
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleImageUpload(e.target.files[0]);
-                        }
-                      }}
-                    />
-                    
-                    {/* Hidden input for storing the URL */}
-                    <input type="hidden" {...field} />
-                    
-                    {previewImage ? (
-                      <div className="relative aspect-square rounded-md border overflow-hidden">
-                        <img 
-                          src={previewImage}
-                          alt="Product preview"
-                          className="object-cover w-full h-full"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = "/placeholder.svg";
-                          }}
-                        />
-                        
-                        {!isUploading && (
-                          <Button 
+              ) : (
+                <div className="space-y-4">
+                  {form.watch("variations")?.map((variation, index) => (
+                    <Card key={variation.id || index}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <h5 className="font-medium">Variation {index + 1}</h5>
+                          <Button
                             type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                            onClick={removeImage}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVariation(index)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
                           >
-                            <X size={16} />
+                            <X className="h-4 w-4" />
                           </Button>
-                        )}
-                        
-                        {isUploading && (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
-                            <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                            <span className="text-sm">{uploadProgress}%</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <FormLabel>Size</FormLabel>
+                            <Input
+                              value={(form.watch("variations") || [])[index]?.size || ""}
+                              onChange={(e) => {
+                                const updatedVariations = [...(form.getValues("variations") || [])];
+                                updatedVariations[index] = {
+                                  ...updatedVariations[index],
+                                  size: e.target.value,
+                                };
+                                form.setValue("variations", updatedVariations);
+                              }}
+                              placeholder="e.g. S, M, L, XL"
+                            />
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full h-40 flex flex-col items-center justify-center border-dashed"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                            <span>Uploading... {uploadProgress}%</span>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-8 w-8 mb-2" />
-                            <span>Click to upload product image</span>
-                            <span className="text-xs text-muted-foreground mt-1">
-                              JPG, PNG or GIF, max 5MB
-                            </span>
-                          </>
-                        )}
-                      </Button>
-                    )}
-                    
-                    <FormMessage />
-                  </div>
-                </FormItem>
+
+                          <div className="space-y-2">
+                            <FormLabel>Color</FormLabel>
+                            <Input
+                              value={(form.watch("variations") || [])[index]?.color || ""}
+                              onChange={(e) => {
+                                const updatedVariations = [...(form.getValues("variations") || [])];
+                                updatedVariations[index] = {
+                                  ...updatedVariations[index],
+                                  color: e.target.value,
+                                };
+                                form.setValue("variations", updatedVariations);
+                              }}
+                              placeholder="e.g. Red, Blue, Green"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <FormLabel>SKU</FormLabel>
+                            <Input
+                              value={(form.watch("variations") || [])[index]?.sku || ""}
+                              onChange={(e) => {
+                                const updatedVariations = [...(form.getValues("variations") || [])];
+                                updatedVariations[index] = {
+                                  ...updatedVariations[index],
+                                  sku: e.target.value,
+                                };
+                                form.setValue("variations", updatedVariations);
+                              }}
+                              placeholder="Stock Keeping Unit"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <FormLabel>Stock Quantity</FormLabel>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={(form.watch("variations") || [])[index]?.stock_quantity || 0}
+                              onChange={(e) => {
+                                const updatedVariations = [...(form.getValues("variations") || [])];
+                                updatedVariations[index] = {
+                                  ...updatedVariations[index],
+                                  stock_quantity: parseInt(e.target.value) || 0,
+                                };
+                                form.setValue("variations", updatedVariations);
+                              }}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <FormLabel>Price Override (Optional)</FormLabel>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Leave empty to use main price"
+                              value={(form.watch("variations") || [])[index]?.price || ""}
+                              onChange={(e) => {
+                                const updatedVariations = [...(form.getValues("variations") || [])];
+                                updatedVariations[index] = {
+                                  ...updatedVariations[index],
+                                  price: e.target.value ? parseFloat(e.target.value) : undefined,
+                                };
+                                form.setValue("variations", updatedVariations);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1 mt-3">
+                          {(form.watch("variations") || [])[index]?.size && (
+                            <Badge variant="outline">
+                              Size: {(form.watch("variations") || [])[index]?.size}
+                            </Badge>
+                          )}
+                          {(form.watch("variations") || [])[index]?.color && (
+                            <Badge variant="outline">
+                              Color: {(form.watch("variations") || [])[index]?.color}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary">
+                            Stock: {(form.watch("variations") || [])[index]?.stock_quantity}
+                          </Badge>
+                          {(form.watch("variations") || [])[index]?.price && (
+                            <Badge variant="secondary">
+                              Price: ${(form.watch("variations") || [])[index]?.price}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               )}
-            />
-            
-            {/* Product Variations */}
-            <div className="pt-4">
-              <ProductVariationForm 
-                variations={variations}
-                onVariationsChange={setVariations}
-              />
-            </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : product ? (
+                submitType === 'draft' ? "Save Draft" : "Update Product"
+              ) : (
+                submitType === 'draft' ? "Save as Draft" : "Submit for Approval"
+              )}
+            </Button>
           </div>
-        </div>
-        
-        <div className="flex justify-end gap-2 pt-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || isUploading}
-            className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isEditing ? "Updating..." : "Creating..."}
-              </>
-            ) : (
-              isEditing ? "Update Product" : "Create Product"
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 };
 

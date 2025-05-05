@@ -1025,6 +1025,44 @@ export type Database = {
         }
         Relationships: []
       }
+      product_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          product_id: string
+          status: Database["public"]["Enums"]["product_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          product_id: string
+          status: Database["public"]["Enums"]["product_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          product_id?: string
+          status?: Database["public"]["Enums"]["product_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variations: {
         Row: {
           color: string | null
@@ -1316,11 +1354,14 @@ export type Database = {
           category: string | null
           collection_id: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           id: string
           image_url: string | null
           in_stock: boolean | null
           price: number
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["product_status"]
           title: string
           updated_at: string | null
         }
@@ -1328,11 +1369,14 @@ export type Database = {
           category?: string | null
           collection_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
           price: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
           title: string
           updated_at?: string | null
         }
@@ -1340,11 +1384,14 @@ export type Database = {
           category?: string | null
           collection_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           in_stock?: boolean | null
           price?: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
           title?: string
           updated_at?: string | null
         }
@@ -1751,6 +1798,7 @@ export type Database = {
       event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
       product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
+      product_status: "draft" | "pending" | "published" | "rejected"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
       user_role_type: "admin" | "editor" | "viewer" | "user"
     }
@@ -1915,6 +1963,7 @@ export const Constants = {
       event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
       product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
+      product_status: ["draft", "pending", "published", "rejected"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
       user_role_type: ["admin", "editor", "viewer", "user"],
     },
