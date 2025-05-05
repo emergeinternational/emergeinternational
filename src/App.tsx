@@ -1,19 +1,14 @@
 
-import React, { useEffect } from 'react';
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import React from 'react';
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
-import ProductManagementPage from "./pages/admin/ProductManagementPage";
-import AdminLayout from "./layouts/AdminLayout";
-import { initializeAuth, setupAuthListener, getAuthStatus } from './services/authService';
+import { initializeAuth, setupAuthListener } from './services/authService';
 
 const App: React.FC = () => {
   // Initialize auth state at app startup
-  useEffect(() => {
+  React.useEffect(() => {
     initializeAuth();
     const cleanup = setupAuthListener();
     
@@ -22,9 +17,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Get current auth status
-  const { isAuthenticated } = getAuthStatus();
-
+  // Only include Shop module routes
   const router = createBrowserRouter([
     {
       path: "/",
@@ -38,16 +31,8 @@ const App: React.FC = () => {
       path: "/shop/product/:id",
       element: <ProductDetail />,
     },
-    {
-      path: "/admin/product-management",
-      element: isAuthenticated ? (
-        <AdminLayout>
-          <ProductManagementPage />
-        </AdminLayout>
-      ) : (
-        <Shop />
-      ),
-    },
+    // All other routes are commented out to maintain module isolation
+    // Admin routes, talent routes, etc. are removed
   ]);
 
   return (
