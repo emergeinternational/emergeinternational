@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts } from "../services/shopService";
@@ -211,6 +212,8 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
       }
       
       try {
+        // Import locally to avoid global reference
+        const { deleteProduct } = await import("../services/shopService");
         const success = await deleteProduct(id);
         if (success) {
           // Optimistic UI update
