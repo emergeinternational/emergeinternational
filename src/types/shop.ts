@@ -72,3 +72,13 @@ export interface RLSPolicy {
   qual: string;
   with_check: string;
 }
+
+// Add this interface to help with typed access to shop system settings JSON
+export interface ShopSystemSettings {
+  recoveryMode?: boolean;
+  liveSync?: boolean;
+  mockupData?: {
+    last_seeded?: string;
+    seed_count?: number;
+  };
+}

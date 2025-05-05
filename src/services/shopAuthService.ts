@@ -2,106 +2,101 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthStatus {
-  isAuthenticated: boolean;
   isAdmin: boolean;
   isEditor: boolean;
-  role: string | null;
+  isAuthenticated: boolean;
+  userId: string | null;
 }
 
-// Get current authentication status and user role
+/**
+ * Get current authentication status and permissions
+ * for the shop module
+ */
 export const getAuthStatus = (): AuthStatus => {
   try {
-    // This is a synchronous function that returns the current status
-    // It doesn't make API calls directly
+    const session = supabase.auth.session();
+    const userId = session?.user?.id || null;
     
-    // Get stored role from local storage as fallback
-    const storedRole = localStorage.getItem('userRole');
+    // TODO: This is a simplified check, in production we would
+    // use claims or query a roles table to determine admin/editor status
+    const isAdmin = !!userId && localStorage.getItem('user_role') === 'admin';
+    const isEditor = !!userId && 
+      (localStorage.getItem('user_role') === 'editor' || localStorage.getItem('user_role') === 'admin');
     
     return {
-      // We check if we have a token stored, which indicates an active session
-      isAuthenticated: !!localStorage.getItem('supabase.auth.token'),
-      // Check if user has admin role (either from state or storage)
-      isAdmin: storedRole === 'admin',
-      // Check if user has editor role (admin is also an editor)
-      isEditor: storedRole === 'editor' || storedRole === 'admin',
-      // Return the actual role
-      role: storedRole
+      isAdmin,
+      isEditor,
+      isAuthenticated: !!userId,
+      userId
     };
   } catch (error) {
-    console.error("Error checking auth status:", error);
+    console.error("Error getting auth status:", error);
+    
+    // Return safe defaults on error
     return {
-      isAuthenticated: false,
       isAdmin: false,
       isEditor: false,
-      role: null
+      isAuthenticated: false,
+      userId: null
     };
   }
 };
 
-// Check if the current user has permission to edit shop items
+/**
+ * Check if the current user has editor or admin access
+ * to edit shop products
+ */
 export const hasShopEditAccess = (): boolean => {
-  const { isAdmin, isEditor } = getAuthStatus();
-  return isAdmin || isEditor;
-};
-
-// Check if the current user has access to the admin-only tools
-export const hasAdminAccess = (): boolean => {
-  const { isAdmin } = getAuthStatus();
-  return isAdmin;
-};
-
-// Secure validation for any shop-related action
-export const validateShopAction = (
-  requiredRole: 'admin' | 'editor' | 'any',
-  actionName: string
-): boolean => {
-  const { isAdmin, isEditor, isAuthenticated } = getAuthStatus();
-  
-  // Base authentication check
-  if (!isAuthenticated) {
-    console.warn(`Unauthorized access attempt: ${actionName} - Not authenticated`);
-    return false;
-  }
-  
-  // Role-based validation
-  if (requiredRole === 'admin' && !isAdmin) {
-    console.warn(`Unauthorized access attempt: ${actionName} - Admin required`);
-    // Silently log unauthorized access attempt to server
-    logUnauthorizedAccess(actionName, 'admin_required');
-    return false;
-  }
-  
-  if (requiredRole === 'editor' && !(isAdmin || isEditor)) {
-    console.warn(`Unauthorized access attempt: ${actionName} - Editor required`);
-    // Silently log unauthorized access attempt to server
-    logUnauthorizedAccess(actionName, 'editor_required');
-    return false;
-  }
-  
-  // Action is authorized
-  return true;
-};
-
-// Silent logging of unauthorized access attempts
-const logUnauthorizedAccess = async (actionName: string, reason: string): Promise<void> => {
   try {
-    // Get the current auth session
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    
-    // Log the attempt to the automation_logs table in Supabase
-    await supabase.from('automation_logs').insert({
-      function_name: 'shop_access_validation',
-      results: {
-        action: actionName,
-        reason: reason,
-        user_id: userId || 'unknown',
-        timestamp: new Date().toISOString(),
-        user_agent: navigator.userAgent
-      }
-    });
+    const { isEditor, isAdmin } = getAuthStatus();
+    return isEditor || isAdmin;
   } catch (error) {
-    // Silent failure - never expose security operations
-    console.debug('Security log entry failed silently');
+    console.error("Error checking shop edit access:", error);
+    return false;
+  }
+};
+
+/**
+ * Check if the current user has admin access to
+ * manage system settings and diagnostics
+ */
+export const hasShopAdminAccess = (): boolean => {
+  try {
+    const { isAdmin } = getAuthStatus();
+    return isAdmin;
+  } catch (error) {
+    console.error("Error checking shop admin access:", error);
+    return false;
+  }
+};
+
+/**
+ * Check if the user has access to view shop diagnostics
+ */
+export const hasShopDiagnosticsAccess = (): boolean => {
+  try {
+    return hasShopAdminAccess();
+  } catch (error) {
+    console.error("Error checking shop diagnostics access:", error);
+    return false;
+  }
+};
+
+/**
+ * Log unauthorized access attempts silently
+ */
+export const logUnauthorizedAccess = (action: string, details: any = {}): void => {
+  try {
+    const { userId } = getAuthStatus();
+    
+    console.warn(`Unauthorized access attempt: ${action}`, {
+      userId,
+      timestamp: new Date().toISOString(),
+      ...details
+    });
+    
+    // In production, we would send this to a logging service or store in the database
+  } catch (error) {
+    console.error("Error logging unauthorized access:", error);
   }
 };

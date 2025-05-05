@@ -1,8 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ShopProduct, ProductFormValues, ProductVariation } from "@/types/shop";
 import { toast } from "sonner";
-import { getAuthStatus, hasShopEditAccess } from "./shopAuthService";
+import { getAuthStatus, hasShopEditAccess, logUnauthorizedAccess } from "./shopAuthService";
 
 // Get all products with collections
 export const getProducts = async (): Promise<ShopProduct[]> => {
@@ -77,30 +76,31 @@ export const getProductById = async (id: string): Promise<ShopProduct | null> =>
 // Upload product image to Supabase Storage
 export const uploadProductImage = async (file: File): Promise<string | null> => {
   try {
+    // Check permissions first
     if (!hasShopEditAccess()) {
-      console.error("Permission denied: User doesn't have edit access");
+      logUnauthorizedAccess('uploadProductImage');
       toast.error("You don't have permission to upload images");
       return null;
     }
     
     console.log("Uploading product image...");
     
-    // Check if file is valid
+    // Validate file
     if (!file || file.size === 0) {
       throw new Error("Invalid file or empty file");
     }
     
-    // Check file size
+    // Check file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       throw new Error("File size exceeds 5MB limit");
     }
     
-    // Generate a unique file name
+    // Generate unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${fileName}`;
     
-    // Upload to Supabase storage
+    // Upload to storage
     const { data, error } = await supabase
       .storage
       .from('product-images')
@@ -114,7 +114,7 @@ export const uploadProductImage = async (file: File): Promise<string | null> => 
       throw error;
     }
     
-    // Get the public URL
+    // Get public URL
     const { data: { publicUrl } } = supabase
       .storage
       .from('product-images')
@@ -132,21 +132,21 @@ export const uploadProductImage = async (file: File): Promise<string | null> => 
 // Create a new product with variations and collection
 export const createProduct = async (productData: ProductFormValues): Promise<ShopProduct | null> => {
   try {
-    // Check if user has edit access
+    // Check permissions first
     if (!hasShopEditAccess()) {
-      console.error("Permission denied: User doesn't have product creation access");
+      logUnauthorizedAccess('createProduct');
       toast.error("You don't have permission to create products");
       return null;
     }
 
-    console.log("Creating new product:", productData.title);
+    console.log("Creating new product:", productData);
 
     // Validate required fields
     if (!productData.title) {
       throw new Error("Product title is required");
     }
 
-    if (!productData.price || productData.price <= 0) {
+    if (typeof productData.price !== 'number' || productData.price <= 0) {
       throw new Error("Valid price is required");
     }
     
@@ -154,7 +154,7 @@ export const createProduct = async (productData: ProductFormValues): Promise<Sho
     const variations = productData.variations || [];
     const { variations: _, ...productWithoutVariations } = productData;
     
-    // Create the product first
+    // Create product first
     const { data, error } = await supabase
       .from("shop_products")
       .insert(productWithoutVariations)
@@ -209,18 +209,26 @@ export const createProduct = async (productData: ProductFormValues): Promise<Sho
 // Update an existing product
 export const updateProduct = async (id: string, updates: Partial<ProductFormValues>): Promise<ShopProduct | null> => {
   try {
-    // Check if user has edit access
+    // Check permissions first
     if (!hasShopEditAccess()) {
-      console.error("Permission denied: User doesn't have product update access");
+      logUnauthorizedAccess('updateProduct', { productId: id });
       toast.error("You don't have permission to update products");
       return null;
     }
     
-    console.log(`Updating product ID: ${id}`);
+    console.log(`Updating product ID: ${id}`, updates);
     
-    // Validate product ID
+    // Validate required data
     if (!id) {
       throw new Error("Product ID is required for updates");
+    }
+
+    if (updates.title === '') {
+      throw new Error("Product title cannot be empty");
+    }
+
+    if (updates.price !== undefined && (typeof updates.price !== 'number' || updates.price <= 0)) {
+      throw new Error("Valid price is required");
     }
     
     // Extract variations to update separately

@@ -1,223 +1,178 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { validateShopAction } from "./shopAuthService";
+import { ShopSystemSettings, DiagnosticTest, DiagnosticStatus, RLSPolicy } from "@/types/shop";
 import { toast } from "sonner";
-
-// Types
-export interface ShopSystemSettings {
-  diagnosticsEnabled: boolean;
-  recoveryMode: boolean;
-  fallbackLevel: string;
-  lastSeededDate: string | null;
-  seedCount: number;
-  liveSync: boolean;
-  pollingInterval: number;
-}
 
 export interface ProductSnapshot {
   id: string;
-  snapshotFilePath: string;
   createdAt: string;
-  createdBy: string;
-  productCount: number;
   version: number;
+  productCount: number;
+  createdBy: string;
+  filePath: string;
 }
 
-// Default settings
-const DEFAULT_SETTINGS: ShopSystemSettings = {
-  diagnosticsEnabled: true,
-  recoveryMode: false,
-  fallbackLevel: "minimal",
-  lastSeededDate: null,
-  seedCount: 0,
-  liveSync: true,
-  pollingInterval: 5000
-};
-
-// Get current system settings
+// Get system settings for the shop
 export const getShopSystemSettings = async (): Promise<ShopSystemSettings> => {
   try {
-    if (!validateShopAction('admin', 'fetch_system_settings')) {
-      return DEFAULT_SETTINGS;
-    }
-
-    const { data: settingsData, error } = await supabase
-      .from('shop_system_settings')
-      .select('*');
-      
-    if (error) throw error;
+    console.log("Fetching shop system settings...");
     
-    // Map raw settings to our structured format
-    if (settingsData && settingsData.length > 0) {
-      const diagnosticsSettings = settingsData.find(s => s.key === 'diagnostics_enabled');
-      const recoverySettings = settingsData.find(s => s.key === 'recovery_mode');
-      const mockupSettings = settingsData.find(s => s.key === 'mockup_data');
-      const syncSettings = settingsData.find(s => s.key === 'sync_settings');
-      
-      return {
-        diagnosticsEnabled: diagnosticsSettings?.value?.enabled || DEFAULT_SETTINGS.diagnosticsEnabled,
-        recoveryMode: recoverySettings?.value?.enabled || DEFAULT_SETTINGS.recoveryMode,
-        fallbackLevel: recoverySettings?.value?.fallback_level || DEFAULT_SETTINGS.fallbackLevel,
-        lastSeededDate: mockupSettings?.value?.last_seeded || DEFAULT_SETTINGS.lastSeededDate,
-        seedCount: mockupSettings?.value?.seed_count || DEFAULT_SETTINGS.seedCount,
-        liveSync: syncSettings?.value?.live_sync || DEFAULT_SETTINGS.liveSync,
-        pollingInterval: syncSettings?.value?.polling_interval || DEFAULT_SETTINGS.pollingInterval
-      };
-    }
-    
-    return DEFAULT_SETTINGS;
-  } catch (error) {
-    console.error("Error fetching shop system settings:", error);
-    return DEFAULT_SETTINGS;
-  }
-};
-
-// Update a specific system setting
-export const updateShopSystemSetting = async (
-  key: 'diagnostics_enabled' | 'recovery_mode' | 'mockup_data' | 'sync_settings',
-  value: any
-): Promise<boolean> => {
-  try {
-    if (!validateShopAction('admin', `update_system_setting_${key}`)) {
-      return false;
-    }
-
+    // Get all settings in a single query
     const { data, error } = await supabase
       .from('shop_system_settings')
-      .update({ value })
-      .eq('key', key);
-      
-    if (error) throw error;
+      .select('key, value')
+      .in('key', ['recovery_mode', 'live_sync', 'mockup_data']);
     
-    return true;
-  } catch (error) {
-    console.error(`Error updating shop system setting ${key}:`, error);
-    toast.error(`Failed to update system setting: ${key}`);
-    return false;
-  }
-};
-
-// Toggle diagnostics mode
-export const toggleDiagnosticsMode = async (enabled: boolean): Promise<boolean> => {
-  try {
-    if (!validateShopAction('admin', 'toggle_diagnostics')) {
-      return false;
+    if (error) {
+      console.error("Error fetching shop system settings:", error);
+      throw error;
     }
     
-    return await updateShopSystemSetting('diagnostics_enabled', {
-      enabled,
-      access_level: 'admin'
+    // Convert array of settings to an object
+    const settings: ShopSystemSettings = {};
+    data?.forEach(item => {
+      if (item.key === 'recovery_mode') {
+        settings.recoveryMode = item.value?.enabled === true;
+      } else if (item.key === 'live_sync') {
+        settings.liveSync = item.value?.enabled === true;
+      } else if (item.key === 'mockup_data') {
+        settings.mockupData = {
+          last_seeded: item.value?.last_seeded,
+          seed_count: item.value?.seed_count
+        };
+      }
     });
+    
+    return settings;
   } catch (error) {
-    console.error("Error toggling diagnostics mode:", error);
-    return false;
+    console.error("Error in getShopSystemSettings:", error);
+    return {};
   }
 };
 
 // Toggle recovery mode
-export const toggleRecoveryMode = async (enabled: boolean, level = 'minimal'): Promise<boolean> => {
+export const toggleRecoveryMode = async (
+  enabled: boolean, 
+  mode: 'full' | 'minimal' = 'full'
+): Promise<boolean> => {
   try {
-    if (!validateShopAction('admin', 'toggle_recovery')) {
-      return false;
-    }
+    console.log(`Setting recovery mode to ${enabled ? 'enabled' : 'disabled'} (${mode})`);
     
-    return await updateShopSystemSetting('recovery_mode', {
-      enabled,
-      fallback_level: level
-    });
+    const { error } = await supabase
+      .from('shop_system_settings')
+      .upsert({
+        key: 'recovery_mode',
+        value: { enabled, mode },
+        updated_at: new Date().toISOString(),
+        updated_by: (await supabase.auth.getUser()).data.user?.id
+      }, {
+        onConflict: 'key'
+      });
+      
+    if (error) throw error;
+    
+    return true;
   } catch (error) {
     console.error("Error toggling recovery mode:", error);
     return false;
   }
 };
 
-// Generate mock product data
+// Generate mock products
 export const generateMockProducts = async (count: number = 5): Promise<boolean> => {
   try {
-    if (!validateShopAction('admin', 'generate_mock_products')) {
-      toast.error("You don't have permission to generate mock products");
-      return false;
+    console.log(`Generating ${count} mock products...`);
+    
+    // Call the RPC function to generate mock products
+    const { data, error } = await supabase.rpc('generate_mock_products', { count });
+    
+    if (error) {
+      console.error("Error generating mock products:", error);
+      throw error;
     }
     
-    const { data, error } = await supabase
-      .rpc('generate_mock_products', { count });
-      
-    if (error) throw error;
-    
-    toast.success(`Successfully generated ${count} mock products`);
+    console.log(`Successfully generated ${count} mock products`);
     return true;
   } catch (error) {
-    console.error("Error generating mock products:", error);
+    console.error("Error in generateMockProducts:", error);
     toast.error("Failed to generate mock products");
     return false;
   }
 };
 
-// Get product snapshots
+// Get all product snapshots
 export const getProductSnapshots = async (): Promise<ProductSnapshot[]> => {
   try {
-    if (!validateShopAction('admin', 'get_product_snapshots')) {
-      return [];
-    }
-    
     const { data, error } = await supabase
       .from('shop_product_snapshots')
       .select('*')
       .order('created_at', { ascending: false });
-      
+    
     if (error) throw error;
     
-    return data?.map(snapshot => ({
+    return data.map(snapshot => ({
       id: snapshot.id,
-      snapshotFilePath: snapshot.snapshot_file_path,
       createdAt: snapshot.created_at,
-      createdBy: snapshot.created_by,
+      version: snapshot.version,
       productCount: snapshot.product_count,
-      version: snapshot.version
-    })) || [];
+      createdBy: snapshot.created_by,
+      filePath: snapshot.snapshot_file_path
+    }));
   } catch (error) {
     console.error("Error fetching product snapshots:", error);
     return [];
   }
 };
 
-// Create a manual product snapshot
+// Run diagnostic tests for the shop module
+export const runShopDiagnostics = async (tests: DiagnosticTest[]): Promise<Map<string, DiagnosticStatus>> => {
+  const results = new Map<string, DiagnosticStatus>();
+  
+  console.log("Running shop diagnostics...");
+  
+  for (const test of tests) {
+    try {
+      results.set(test.name, 'running');
+      await test.runTest();
+      results.set(test.name, 'success');
+    } catch (error) {
+      console.error(`Diagnostic test failed: ${test.name}`, error);
+      results.set(test.name, 'error');
+    }
+  }
+  
+  return results;
+};
+
+// Get RLS policies for a table
+export const getRLSPolicies = async (tableName: string): Promise<RLSPolicy[]> => {
+  try {
+    console.log(`Getting RLS policies for table: ${tableName}`);
+    
+    const { data, error } = await supabase
+      .rpc('get_policies_for_table', { table_name: tableName });
+      
+    if (error) throw error;
+    
+    return data as RLSPolicy[];
+  } catch (error) {
+    console.error("Error fetching RLS policies:", error);
+    toast.error("Failed to load RLS policies");
+    return [];
+  }
+};
+
+// Create manual product snapshot
 export const createProductSnapshot = async (): Promise<boolean> => {
   try {
-    if (!validateShopAction('admin', 'create_product_snapshot')) {
-      return false;
-    }
+    const { error } = await supabase.rpc('create_product_snapshot');
     
-    // Trigger the snapshot function by making a dummy update to a product
-    await supabase.rpc('create_product_snapshot');
+    if (error) throw error;
     
-    toast.success("Product snapshot created successfully");
     return true;
   } catch (error) {
     console.error("Error creating product snapshot:", error);
     toast.error("Failed to create product snapshot");
     return false;
-  }
-};
-
-// Get product change history for a specific product
-export const getProductChangeHistory = async (productId: string): Promise<any[]> => {
-  try {
-    if (!validateShopAction('admin', 'get_product_history')) {
-      return [];
-    }
-    
-    const { data, error } = await supabase
-      .from('shop_metadata')
-      .select('*')
-      .eq('product_id', productId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
-    
-    return data || [];
-  } catch (error) {
-    console.error("Error fetching product change history:", error);
-    return [];
   }
 };

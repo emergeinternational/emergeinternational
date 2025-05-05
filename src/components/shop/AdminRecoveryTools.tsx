@@ -20,8 +20,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   generateMockProducts, 
   getProductSnapshots,
-  ProductSnapshot
+  ProductSnapshot,
+  getShopSystemSettings
 } from "@/services/shopSystemService";
+import { ShopSystemSettings } from "@/types/shop";
 
 interface AdminRecoveryToolsProps {
   isLocked?: boolean;
@@ -60,13 +62,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
   const loadSystemInfo = async () => {
     try {
       // Get system settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('shop_system_settings')
-        .select('*')
-        .eq('key', 'mockup_data')
-        .single();
-        
-      if (settingsError) throw settingsError;
+      const settings = await getShopSystemSettings();
       
       // Count mockup products (products created by system)
       const { count, error: countError } = await supabase
@@ -76,9 +72,15 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
         
       if (countError) throw countError;
       
+      // Safely extract mockup data values with proper typing
+      const mockupData = settings.mockupData as unknown as { 
+        last_seeded?: string; 
+        seed_count?: number 
+      } || {};
+      
       setSystemInfo({
-        lastSeedDate: settingsData?.value?.last_seeded || null,
-        seedCount: settingsData?.value?.seed_count || 0,
+        lastSeedDate: mockupData?.last_seeded || null,
+        seedCount: mockupData?.seed_count || 0,
         mockupCount: count || 0
       });
     } catch (error) {
@@ -117,7 +119,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
     try {
       setIsSnapshotting(true);
       
-      // Call the snapshot RPC function
+      // Call the snapshot RPC function directly using the database
       const { error } = await supabase.rpc('create_product_snapshot');
       
       if (error) throw error;
