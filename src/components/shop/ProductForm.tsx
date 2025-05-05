@@ -59,9 +59,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
       setIsSubmitting(true);
       
       // Convert price to cents for storage
-      const productData = {
-        ...data,
+      const productData: ProductFormValues = {
+        title: data.title,
         price: Math.round(data.price * 100),
+        description: data.description,
+        image_url: data.image_url,
+        in_stock: data.in_stock,
+        category: data.category,
       };
 
       if (isEditing && product) {

@@ -1,14 +1,26 @@
 
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { getProducts } from "../services/shopService";
+import { getProducts, deleteProduct } from "../services/shopService";
 import { ShopProduct } from "../types/shop";
 import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle } from "lucide-react";
+import { Search, PlusCircle, Trash2 } from "lucide-react";
 import { getAuthStatus } from "@/services/authService";
+import { toast } from "sonner";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 
 const Shop = () => {
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -17,6 +29,7 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
   
   // Get auth status from isolated service
   const { isAdmin } = getAuthStatus();
@@ -41,6 +54,21 @@ const Shop = () => {
       console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      const success = await deleteProduct(id);
+      if (success) {
+        fetchProducts();
+        toast.success("Product deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setProductToDelete(null);
     }
   };
 
@@ -125,7 +153,43 @@ const Shop = () => {
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <div key={product.id} className="relative">
+                <ProductCard product={product} />
+                {isAdmin && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProductToDelete(product.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{product.title}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         ) : (

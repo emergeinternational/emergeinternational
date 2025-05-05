@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { ShopProduct } from "@/types/shop";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface ProductCardProps {
   product: ShopProduct;
@@ -21,6 +22,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   
   const handleClick = () => {
     navigate(`/shop/product/${product.id}`);
+  };
+  
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking the button
+    // This is non-functional for now as requested
+    console.log("Add to cart clicked for:", product.title);
   };
   
   return (
@@ -56,8 +63,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {product.description || 'No description available'}
         </p>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex justify-between items-center">
         <p className="font-semibold text-lg">{formatPrice(product.price)}</p>
+        <Button 
+          size="sm" 
+          onClick={handleAddToCart}
+          disabled={!product.in_stock}
+        >
+          Add to Cart
+        </Button>
       </CardFooter>
     </Card>
   );
