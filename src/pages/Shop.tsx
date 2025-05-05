@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -6,25 +7,16 @@ import { ShopProduct, Collection } from "../types/shop";
 import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
 import CollectionFormDialog from "../components/shop/CollectionFormDialog";
-import CollectionFilter from "../components/shop/CollectionFilter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Trash2, Edit, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 import { hasShopEditAccess, getAuthStatus } from "@/services/shopAuthService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/shop/ErrorBoundary";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger 
-} from "@/components/ui/alert-dialog";
+import FilterSidebar from "@/components/shop/FilterSidebar";
+import AdminFloatingPanel from "@/components/shop/AdminFloatingPanel";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Shop = () => {
   console.log("Shop component starting to render");
@@ -37,11 +29,16 @@ const Shop = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+    const [selectedColors, setSelectedColors] = useState<string[]>([]);
+    const [isGridView, setIsGridView] = useState(true);
     const [categories, setCategories] = useState<string[]>([]);
     const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
     const [isAddCollectionDialogOpen, setIsAddCollectionDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]); // Default price range (0 to $1000)
+    const [maxPrice, setMaxPrice] = useState(100000);
     
     console.log("Shop component states initialized");
     
@@ -133,6 +130,14 @@ const Shop = () => {
         ) as string[];
         
         setCategories(uniqueCategories);
+        
+        // Set max price based on products
+        const highestPrice = Math.max(
+          ...data.map(product => product.price || 0),
+          ...data.flatMap(p => (p.variations || []).map(v => v.price || 0))
+        );
+        setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
+        setPriceRange([0, Math.max(highestPrice, 100000)]);
       } catch (error) {
         console.error("Error fetching products:", error);
         toast.error("Failed to load products. Please try again.");
@@ -162,12 +167,15 @@ const Shop = () => {
       try {
         const success = await deleteProduct(id);
         if (success) {
-          setProducts(products.filter(product => product.id !== id));
+          // Optimistic UI update
+          setProducts(prevProducts => prevProducts.filter(product => product.id !== id));
           toast.success("Product deleted successfully");
         }
       } catch (error) {
         console.error("Error deleting product:", error);
         toast.error("Failed to delete product");
+        // Refresh products to ensure UI is in sync with backend
+        fetchProducts();
       }
     };
 
@@ -180,27 +188,81 @@ const Shop = () => {
       setIsEditDialogOpen(true);
     };
 
+    const handleSizeChange = (size: string) => {
+      setSelectedSizes(prev => 
+        prev.includes(size)
+          ? prev.filter(s => s !== size)
+          : [...prev, size]
+      );
+    };
+
+    const handleColorChange = (color: string) => {
+      setSelectedColors(prev => 
+        prev.includes(color)
+          ? prev.filter(c => c !== color)
+          : [...prev, color]
+      );
+    };
+
+    const handleClearFilters = () => {
+      setSearchTerm("");
+      setSelectedCategory(null);
+      setSelectedCollection(null);
+      setSelectedSizes([]);
+      setSelectedColors([]);
+      setPriceRange([0, maxPrice]);
+    };
+
     // Add null checks and defensive programming to filter
     const filteredProducts = products.filter(product => {
       if (!product) return false;
       
-      const matchesSearch = product.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !searchTerm || (
+        (product.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
       
-      const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
+      const matchesCategory = !selectedCategory || product.category === selectedCategory;
       
-      const matchesCollection = selectedCollection ? product.collection_id === selectedCollection : true;
+      const matchesCollection = !selectedCollection || product.collection_id === selectedCollection;
       
-      return matchesSearch && matchesCategory && matchesCollection;
+      const matchesPrice = (product.price || 0) >= priceRange[0] && (product.price || 0) <= priceRange[1];
+      
+      const matchesSize = selectedSizes.length === 0 || (
+        product.variations?.some(v => v.size && selectedSizes.includes(v.size))
+      );
+      
+      const matchesColor = selectedColors.length === 0 || (
+        product.variations?.some(v => v.color && selectedColors.includes(v.color))
+      );
+      
+      return matchesSearch && matchesCategory && matchesCollection && matchesPrice && matchesSize && matchesColor;
     });
 
-    const handleCategorySelect = (category: string) => {
-      setSelectedCategory(category === selectedCategory ? null : category);
-    };
-    
-    const handleCollectionSelect = (collectionId: string | null) => {
-      setSelectedCollection(collectionId);
-    };
+    // Group products by collection for better display
+    const groupedProducts = filteredProducts.reduce((acc, product) => {
+      const collectionId = product.collection_id || 'uncategorized';
+      if (!acc[collectionId]) {
+        acc[collectionId] = [];
+      }
+      acc[collectionId].push(product);
+      return acc;
+    }, {} as Record<string, ShopProduct[]>);
+
+    const collectionEntries = Object.entries(groupedProducts).map(([collectionId, products]) => {
+      const collection = collections.find(c => c.id === collectionId);
+      return {
+        id: collectionId,
+        title: collection ? collection.title : 'Other Products',
+        designer: collection ? collection.designer_name : '',
+        products
+      };
+    }).sort((a, b) => {
+      // Sort collections with named collections first
+      if (a.id === 'uncategorized' && b.id !== 'uncategorized') return 1;
+      if (a.id !== 'uncategorized' && b.id === 'uncategorized') return -1;
+      return a.title.localeCompare(b.title);
+    });
 
     console.log("Shop component rendering UI");
     
@@ -222,157 +284,115 @@ const Shop = () => {
 
             {/* Search and Filter Section */}
             <ErrorBoundary>
-              <div className="mb-8">
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {canEdit && (
-                      <>
-                        <Button 
-                          variant="outline"
-                          onClick={() => setIsAddCollectionDialogOpen(true)}
-                          className="flex items-center gap-1"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add Collection
-                        </Button>
-                        <Button 
-                          onClick={() => setIsAddProductDialogOpen(true)}
-                          className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-                        >
-                          <PlusCircle className="h-4 w-4 mr-2" />
-                          Add Product
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Collection Filter */}
-                {collections.length > 0 && (
-                  <CollectionFilter 
-                    collections={collections} 
-                    selectedCollection={selectedCollection}
-                    onCollectionSelect={handleCollectionSelect}
+              <div className="mb-8 flex items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
-                )}
-                
-                {/* Category Filter */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    All Categories
-                  </Button>
-                  {categories.map(category => (
-                    <Button
-                      key={category}
-                      variant="outline"
-                      size="sm"
-                      className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
-                      onClick={() => handleCategorySelect(category)}
-                    >
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </Button>
-                  ))}
                 </div>
               </div>
             </ErrorBoundary>
 
-            {/* Products Grid with ErrorBoundary wrapping */}
-            <ErrorBoundary>
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-gray-500">Loading products...</p>
+            {/* Main Content with Sidebar */}
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Filter Sidebar */}
+              <ErrorBoundary>
+                <div className="w-full md:w-64 flex-shrink-0">
+                  <FilterSidebar 
+                    collections={collections}
+                    products={products}
+                    selectedCollection={selectedCollection}
+                    selectedCategory={selectedCategory}
+                    selectedSizes={selectedSizes}
+                    selectedColors={selectedColors}
+                    priceRange={priceRange}
+                    maxPrice={maxPrice}
+                    onCollectionChange={setSelectedCollection}
+                    onCategoryChange={setSelectedCategory}
+                    onSizeChange={handleSizeChange}
+                    onColorChange={handleColorChange}
+                    onPriceRangeChange={setPriceRange}
+                    onClearFilters={handleClearFilters}
+                  />
                 </div>
-              ) : filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {filteredProducts.map(product => (
-                    <ErrorBoundary 
-                      key={product.id}
-                      fallback={
-                        <div className="border border-red-300 rounded-md p-4">
-                          <p className="text-red-500">Failed to render product</p>
+              </ErrorBoundary>
+
+              {/* Products Display */}
+              <ErrorBoundary className="flex-1">
+                {loading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {Array(8).fill(0).map((_, i) => (
+                      <Card key={i} className="overflow-hidden">
+                        <Skeleton className="aspect-square w-full" />
+                        <CardHeader className="pb-2">
+                          <Skeleton className="h-6 w-3/4" />
+                          <Skeleton className="h-4 w-1/2 mt-2" />
+                        </CardHeader>
+                        <CardContent className="pb-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-5/6 mt-2" />
+                        </CardContent>
+                        <CardFooter>
+                          <Skeleton className="h-6 w-1/3" />
+                          <Skeleton className="h-8 w-1/3 ml-auto" />
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : filteredProducts.length > 0 ? (
+                  <div className="space-y-8">
+                    {collectionEntries.map(({ id, title, designer, products }) => (
+                      <div key={id} className="mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-bold">
+                            {title}
+                            {designer && <span className="ml-2 text-sm text-gray-500">by {designer}</span>}
+                          </h2>
                         </div>
-                      }
-                    >
-                      <div className="relative">
-                        <ProductCard product={product} />
-                        {canEdit && (
-                          <div className="absolute top-2 right-2 z-10 flex gap-1">
-                            <Button 
-                              variant="secondary"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditProduct(product);
-                              }}
-                              className="bg-white/80 hover:bg-white"
+                        
+                        <div className={isGridView 
+                          ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" 
+                          : "space-y-4"
+                        }>
+                          {products.map(product => (
+                            <ErrorBoundary 
+                              key={product.id}
+                              fallback={
+                                <div className="border border-red-300 rounded-md p-4">
+                                  <p className="text-red-500">Failed to render product</p>
+                                </div>
+                              }
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="destructive" 
-                                  size="icon"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Product</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{product.title}"? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteProduct(product.id)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        )}
+                              <ProductCard 
+                                product={product}
+                                onEdit={handleEditProduct}
+                                onDelete={handleDeleteProduct}
+                                canEdit={canEdit}
+                                listView={!isGridView}
+                              />
+                            </ErrorBoundary>
+                          ))}
+                        </div>
                       </div>
-                    </ErrorBoundary>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No products found matching your criteria</p>
-                  <Button 
-                    variant="link" 
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedCategory(null);
-                      setSelectedCollection(null);
-                    }}
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              )}
-            </ErrorBoundary>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No products found matching your criteria</p>
+                    <Button 
+                      variant="link" 
+                      onClick={handleClearFilters}
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                )}
+              </ErrorBoundary>
+            </div>
           </div>
         </ErrorBoundary>
         
@@ -419,6 +439,17 @@ const Shop = () => {
             }}
           />
         </ErrorBoundary>
+
+        {/* Admin Floating Panel */}
+        {(isAdmin || canEdit) && (
+          <AdminFloatingPanel
+            productCount={products.length}
+            isGridView={isGridView}
+            toggleViewMode={() => setIsGridView(!isGridView)}
+            onAddProduct={() => setIsAddProductDialogOpen(true)}
+            onManageCollections={() => setIsAddCollectionDialogOpen(true)}
+          />
+        )}
       </MainLayout>
     );
   } catch (error) {

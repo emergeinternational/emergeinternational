@@ -1,12 +1,55 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Shop from './Shop';
 import ErrorBoundary from '@/components/shop/ErrorBoundary';
 import { toast } from 'sonner';
+import { getAuthStatus } from '@/services/shopAuthService';
+import { Loader2 } from 'lucide-react';
 
 const ShopPage: React.FC = () => {
-  // Add this console log to detect if the component renders at all
-  console.log("ShopPage component is rendering");
+  const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  
+  // Check auth status on component mount
+  useEffect(() => {
+    try {
+      // Add this console log to detect if the component renders at all
+      console.log("ShopPage component is rendering");
+      
+      const checkAuth = async () => {
+        const authStatus = getAuthStatus();
+        console.log("Auth status in ShopPage:", authStatus);
+        
+        // If authStatus includes role, set it
+        if (authStatus) {
+          // Assuming role is available from authStatus
+          setUserRole(authStatus.role || null);
+        }
+        
+        setAuthChecked(true);
+        setIsLoading(false);
+      };
+      
+      checkAuth();
+    } catch (error) {
+      console.error("Error checking auth status:", error);
+      setAuthChecked(true);
+      setIsLoading(false);
+      toast.error("Failed to verify user permissions");
+    }
+  }, []);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-emerge-gold" />
+          <p>Loading Shop...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <ErrorBoundary
@@ -27,10 +70,11 @@ const ShopPage: React.FC = () => {
     >
       {/* Debug indicator */}
       <div style={{ background: 'red', color: 'white', padding: '8px', textAlign: 'center' }}>
-        ShopPage loaded
+        ShopPage loaded - User Role: {userRole || 'Not authenticated'}
       </div>
       
-      <Shop />
+      {/* Pass user role to Shop component */}
+      <Shop userRole={userRole} />
     </ErrorBoundary>
   );
 };
