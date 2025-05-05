@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingBag, User, Settings } from "lucide-react";
 import Logo from "./Logo";
-import { useAuth } from "@/hooks/useAuth";
+import { getAuthStatus } from "@/services/shopAuthService"; // Changed to local shopAuthService
 import { useToast } from "@/hooks/use-toast";
 
 interface NavigationProps {
@@ -12,9 +12,20 @@ interface NavigationProps {
 
 const Navigation = ({ variant = "light" }: NavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, hasRole, userRole } = useAuth();
+  // @override:shop-isolation
+  // Using local auth service instead of global useAuth hook
+  const { isAuthenticated: userExists, isAdmin, userId } = getAuthStatus();
+  const user = userExists ? { id: userId } : null;
   const location = useLocation();
   const { toast } = useToast();
+
+  // Simplified role check for shop module isolation
+  const hasRole = (roles: string | string[]) => {
+    if (Array.isArray(roles)) {
+      return isAdmin && roles.includes('admin');
+    }
+    return isAdmin && roles === 'admin';
+  };
 
   const navLinks = [
     { name: "Home", href: "/" },
