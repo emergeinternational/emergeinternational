@@ -2,6 +2,8 @@
 // Local auth service specific to shop module that doesn't depend on external auth providers
 // This is a temporary solution until full auth restoration
 
+import { supabase } from "@/integrations/supabase/client";
+
 // Simplified auth status interface
 export interface ShopAuthStatus {
   isAdmin: boolean;

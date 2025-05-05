@@ -29,6 +29,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     // This is non-functional for now as requested
     console.log("Add to cart clicked for:", product.title);
   };
+
+  // Check if product has variations
+  const hasVariations = product.variations && product.variations.length > 0;
   
   return (
     <Card 
@@ -62,9 +65,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <p className="text-sm text-gray-500 line-clamp-2">
           {product.description || 'No description available'}
         </p>
+        
+        {hasVariations && (
+          <div className="mt-2">
+            <div className="flex flex-wrap gap-1 mt-1">
+              {Array.from(new Set(product.variations?.map(v => v.color).filter(Boolean))).map(color => (
+                <Badge key={color} variant="secondary" className="text-xs">
+                  {color}
+                </Badge>
+              ))}
+              {Array.from(new Set(product.variations?.map(v => v.size).filter(Boolean))).map(size => (
+                <Badge key={size} variant="outline" className="text-xs">
+                  {size}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between items-center">
-        <p className="font-semibold text-lg">{formatPrice(product.price)}</p>
+        <div>
+          <p className="font-semibold text-lg">{formatPrice(product.price)}</p>
+          {hasVariations && (
+            <p className="text-xs text-muted-foreground">
+              {product.variations?.length} {product.variations?.length === 1 ? 'variant' : 'variants'}
+            </p>
+          )}
+        </div>
         <Button 
           size="sm" 
           onClick={handleAddToCart}

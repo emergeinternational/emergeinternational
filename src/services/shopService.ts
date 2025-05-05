@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ShopProduct, ProductFormValues } from "@/types/shop";
+import { ShopProduct, ProductFormValues, ProductVariation } from "@/types/shop";
 import { toast } from "sonner";
 import { getAuthStatus, hasShopEditAccess } from "./shopAuthService";
 
@@ -9,7 +9,7 @@ export const getProducts = async (): Promise<ShopProduct[]> => {
   try {
     const { data, error } = await supabase
       .from("shop_products")
-      .select("*")
+      .select("*, variations:product_variations(*)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -29,7 +29,7 @@ export const getProductById = async (id: string): Promise<ShopProduct | null> =>
   try {
     const { data, error } = await supabase
       .from("shop_products")
-      .select("*")
+      .select("*, variations:product_variations(*)")
       .eq("id", id)
       .single();
 
@@ -45,7 +45,47 @@ export const getProductById = async (id: string): Promise<ShopProduct | null> =>
   }
 };
 
-// Create a new product
+// Upload product image to Supabase Storage
+export const uploadProductImage = async (file: File): Promise<string | null> => {
+  try {
+    if (!hasShopEditAccess()) {
+      toast.error("You don't have permission to upload images");
+      return null;
+    }
+    
+    // Generate a unique file name
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `${fileName}`;
+    
+    // Upload to Supabase storage
+    const { data, error } = await supabase
+      .storage
+      .from('product-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      throw error;
+    }
+    
+    // Get the public URL
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('product-images')
+      .getPublicUrl(data.path);
+      
+    return publicUrl;
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    toast.error("Failed to upload image");
+    return null;
+  }
+};
+
+// Create a new product with variations
 export const createProduct = async (productData: ProductFormValues): Promise<ShopProduct | null> => {
   try {
     // Check if user has edit access
@@ -54,9 +94,14 @@ export const createProduct = async (productData: ProductFormValues): Promise<Sho
       return null;
     }
 
+    // Extract variations to insert separately
+    const variations = productData.variations || [];
+    const { variations: _, ...productWithoutVariations } = productData;
+    
+    // Create the product first
     const { data, error } = await supabase
       .from("shop_products")
-      .insert(productData)
+      .insert(productWithoutVariations)
       .select("*")
       .single();
 
@@ -64,8 +109,28 @@ export const createProduct = async (productData: ProductFormValues): Promise<Sho
       throw error;
     }
 
+    // If there are variations, add them
+    if (variations.length > 0) {
+      const variationsWithProductId = variations.map(variation => ({
+        ...variation,
+        product_id: data.id
+      }));
+      
+      const { error: variationsError } = await supabase
+        .from("product_variations")
+        .insert(variationsWithProductId);
+      
+      if (variationsError) {
+        console.error("Error adding variations:", variationsError);
+        toast.error("Product created but failed to add variations");
+      }
+    }
+
+    // Get the product with variations
+    const product = await getProductById(data.id);
+    
     toast.success("Product created successfully");
-    return data;
+    return product;
   } catch (error) {
     console.error("Error creating product:", error);
     toast.error("Failed to create product");
@@ -82,9 +147,14 @@ export const updateProduct = async (id: string, updates: Partial<ProductFormValu
       return null;
     }
     
+    // Extract variations to update separately
+    const variations = updates.variations || [];
+    const { variations: _, ...productUpdatesWithoutVariations } = updates;
+    
+    // Update the product
     const { data, error } = await supabase
       .from("shop_products")
-      .update(updates)
+      .update(productUpdatesWithoutVariations)
       .eq("id", id)
       .select("*")
       .single();
@@ -93,8 +163,35 @@ export const updateProduct = async (id: string, updates: Partial<ProductFormValu
       throw error;
     }
 
+    // Handle variations: We'll delete existing variations and insert new ones
+    if (variations.length > 0) {
+      // Delete existing variations
+      await supabase
+        .from("product_variations")
+        .delete()
+        .eq("product_id", id);
+      
+      // Insert new variations
+      const variationsWithProductId = variations.map(variation => ({
+        ...variation,
+        product_id: id
+      }));
+      
+      const { error: variationsError } = await supabase
+        .from("product_variations")
+        .insert(variationsWithProductId);
+      
+      if (variationsError) {
+        console.error("Error updating variations:", variationsError);
+        toast.error("Product updated but failed to update variations");
+      }
+    }
+
+    // Get the updated product with variations
+    const updatedProduct = await getProductById(id);
+    
     toast.success("Product updated successfully");
-    return data;
+    return updatedProduct;
   } catch (error) {
     console.error("Error updating product:", error);
     toast.error("Failed to update product");
