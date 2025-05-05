@@ -1,4 +1,3 @@
-
 export interface ShopProduct {
   id: string;
   title: string;
@@ -92,4 +91,13 @@ export interface RecoveryLogEntry {
   action: string;
   status: 'success' | 'failure' | 'pending';
   details?: any;
+}
+
+export interface ProductSnapshot {
+  id: string;
+  createdAt: string;
+  version: number;
+  productCount: number;
+  createdBy: string;
+  filePath: string;
 }
