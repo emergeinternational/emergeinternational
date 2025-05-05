@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 // Function to log scraper actions
-export const logScraperActivity = async (
+export const logScraperAction = async (
   source: string,
   action: string,
   details?: any
@@ -122,6 +122,3 @@ export const formatDateToIso = (dateString: string) => {
     return null;
   }
 };
-
-// Added this function to fix the build error
-export const logScraperAction = logScraperActivity;
