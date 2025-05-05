@@ -1,135 +1,128 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { ChevronRight, Globe } from "lucide-react";
-import { ShippingBanner } from "@/components/ShippingBanner";
+import { getProducts, ShopProduct } from "../services/shopService";
+import ProductCard from "../components/shop/ProductCard";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Search, Filter } from "lucide-react";
 
 const Shop = () => {
-  const [activeCategory, setActiveCategory] = useState("all");
-  
-  const categories = [
-    { id: "new", name: "New Arrivals" },
-    { id: "clothing", name: "Clothing" },
-    { id: "footwear", name: "Footwear" },
-    { id: "accessories", name: "Accessories" },
-  ];
-  
-  const products = [
-    { 
-      id: 1, 
-      name: "Emerge T-Shirt", 
-      price: "ETB 4,800", 
-      category: "clothing", 
-      image: "/placeholder.svg",
-      shipsTo: ["Ethiopia", "International"]
-    },
-    { 
-      id: 2, 
-      name: "Designer Earrings", 
-      price: "ETB 12,500", 
-      category: "accessories", 
-      image: "/placeholder.svg",
-      shipsTo: ["Ethiopia", "International"]
-    },
-    { id: 3, name: "Leather Bag", price: "ETB 4,800", category: "accessories", image: "/placeholder.svg" },
-    { id: 4, name: "Tailored Coat", price: "ETB 12,500", category: "clothing", image: "/placeholder.svg" },
-    { id: 5, name: "Woven Sandals", price: "ETB 3,200", category: "footwear", image: "/placeholder.svg" },
-    { id: 6, name: "Patterned Scarf", price: "ETB 2,400", category: "accessories", image: "/placeholder.svg" },
-    { id: 7, name: "Denim Jacket", price: "ETB 8,600", category: "clothing", image: "/placeholder.svg" },
-    { id: 8, name: "Leather Boots", price: "ETB 7,500", category: "footwear", image: "/placeholder.svg" },
-  ];
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const filteredProducts = activeCategory === "all" 
-    ? products 
-    : products.filter(product => product.category === activeCategory);
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const data = await getProducts();
+      setProducts(data);
+      
+      // Extract unique categories
+      const uniqueCategories = Array.from(
+        new Set(data.map(product => product.category).filter(Boolean))
+      ) as string[];
+      
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
+    
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category === selectedCategory ? null : category);
+  };
 
   return (
     <MainLayout>
-      <ShippingBanner />
-      <div className="emerge-container py-8">
-        <h1 className="emerge-heading text-4xl mb-8">Shop</h1>
-        
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Shop Our Collection</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Discover our curated selection of fashion and accessories from emerging designers
+          </p>
+        </div>
+
+        {/* Search and Filter Section */}
         <div className="mb-8">
-          <div className="flex flex-col sm:flex-row">
-            <select 
-              className="block sm:hidden mb-4 p-2 border border-gray-300 rounded"
-              value={activeCategory}
-              onChange={(e) => setActiveCategory(e.target.value)}
-            >
-              <option value="all">ALL PRODUCTS</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-            
-            <div className="hidden sm:flex flex-col space-y-2 w-64 mr-8">
-              <button 
-                onClick={() => setActiveCategory("all")}
-                className={`text-left py-2 px-4 flex justify-between items-center ${
-                  activeCategory === "all" ? "font-bold text-emerge-gold" : ""
-                }`}
-              >
-                <span>ALL PRODUCTS</span>
-                {activeCategory === "all" && <ChevronRight size={16} />}
-              </button>
-              
-              {categories.map(category => (
-                <button 
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`text-left py-2 px-4 flex justify-between items-center ${
-                    activeCategory === category.id ? "font-bold text-emerge-gold" : ""
-                  }`}
-                >
-                  <span>{category.name}</span>
-                  {activeCategory === category.id && <ChevronRight size={16} />}
-                </button>
-              ))}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            
-            <div className="flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map(product => (
-                  <Link 
-                    to={`/shop/product/${product.id}`} 
-                    key={product.id} 
-                    className="group"
-                  >
-                    <div className="bg-gray-100 aspect-square mb-3 overflow-hidden">
-                      <img 
-                        src={product.image} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <h3 className="font-medium">{product.name}</h3>
-                    <p className="text-gray-700">{product.price}</p>
-                    <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
-                      <Globe size={12} />
-                      <span>International Shipping Available</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-              
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-8">
-                  <p>No products found in this category.</p>
-                </div>
-              )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
+                onClick={() => setSelectedCategory(null)}
+              >
+                All
+              </Button>
+              {categories.map(category => (
+                <Button
+                  key={category}
+                  variant="outline"
+                  size="sm"
+                  className={selectedCategory === category ? "bg-primary text-primary-foreground" : ""}
+                  onClick={() => handleCategorySelect(category)}
+                >
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </Button>
+              ))}
             </div>
           </div>
         </div>
-        
-        <div className="mt-12 border-t pt-8">
-          <h2 className="emerge-heading text-2xl mb-4">About Our Products</h2>
-          <p className="text-gray-700 max-w-3xl">
-            Every item in our collection is designed and crafted by emerging African fashion talents. 
-            We focus on sustainable materials, ethical production practices, and supporting local communities.
-            By purchasing from Emerge International, you're directly supporting the growth and development 
-            of Africa's fashion industry.
-          </p>
-        </div>
+
+        {/* Products Grid */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-500">Loading products...</p>
+          </div>
+        ) : filteredProducts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No products found matching your criteria</p>
+            <Button 
+              variant="link" 
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedCategory(null);
+              }}
+            >
+              Clear filters
+            </Button>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

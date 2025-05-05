@@ -1,20 +1,18 @@
 
 import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
-import ProductsManager from "../../components/admin/shop/ProductsManager";
+import ProductsManager from "../../components/shop/ProductsManager";
 import { Toaster } from "@/components/ui/toaster";
 import PageLock from "../../components/admin/PageLock";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw } from "lucide-react";
-import ProductFormDialog from "@/components/admin/shop/ProductFormDialog";
+import { RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 const ProductManagementPage = () => {
   const [pageLocked, setPageLocked] = useState(true);
   const { userRole } = useAuth();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleClearCache = () => {
@@ -43,15 +41,6 @@ const ProductManagementPage = () => {
               <RefreshCw className="h-4 w-4" />
               Clear Cache
             </Button>
-            
-            <Button 
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-              disabled={pageLocked}
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add New Product
-            </Button>
           </div>
         </div>
         
@@ -74,16 +63,6 @@ const ProductManagementPage = () => {
           <ProductsManager isLocked={pageLocked} key={refreshTrigger} />
         </div>
       </div>
-      
-      <ProductFormDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        product={null}
-        onSuccess={() => {
-          setIsAddDialogOpen(false);
-        }}
-        isLocked={pageLocked}
-      />
       
       <Toaster />
     </AdminLayout>
