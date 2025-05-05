@@ -21,7 +21,7 @@ export const getShopSystemSettings = async (): Promise<ShopSystemSettings> => {
     const { data, error } = await supabase
       .from('shop_system_settings')
       .select('key, value')
-      .in('key', ['recovery_mode', 'live_sync', 'mockup_data']);
+      .in('key', ['recovery_mode', 'live_sync', 'mockup_data', 'diagnostics_mode']);
     
     if (error) {
       console.error("Error fetching shop system settings:", error);
@@ -33,6 +33,7 @@ export const getShopSystemSettings = async (): Promise<ShopSystemSettings> => {
     data?.forEach(item => {
       if (item.key === 'recovery_mode') {
         settings.recoveryMode = item.value?.enabled === true;
+        settings.fallbackLevel = item.value?.mode || 'minimal';
       } else if (item.key === 'live_sync') {
         settings.liveSync = item.value?.enabled === true;
       } else if (item.key === 'mockup_data') {
@@ -40,6 +41,8 @@ export const getShopSystemSettings = async (): Promise<ShopSystemSettings> => {
           last_seeded: item.value?.last_seeded,
           seed_count: item.value?.seed_count
         };
+      } else if (item.key === 'diagnostics_mode') {
+        settings.diagnosticsEnabled = item.value?.enabled === true;
       }
     });
     
@@ -74,6 +77,31 @@ export const toggleRecoveryMode = async (
     return true;
   } catch (error) {
     console.error("Error toggling recovery mode:", error);
+    return false;
+  }
+};
+
+// Toggle diagnostics mode
+export const toggleDiagnosticsMode = async (enabled: boolean): Promise<boolean> => {
+  try {
+    console.log(`Setting diagnostics mode to ${enabled ? 'enabled' : 'disabled'}`);
+    
+    const { error } = await supabase
+      .from('shop_system_settings')
+      .upsert({
+        key: 'diagnostics_mode',
+        value: { enabled },
+        updated_at: new Date().toISOString(),
+        updated_by: (await supabase.auth.getUser()).data.user?.id
+      }, {
+        onConflict: 'key'
+      });
+      
+    if (error) throw error;
+    
+    return true;
+  } catch (error) {
+    console.error("Error toggling diagnostics mode:", error);
     return false;
   }
 };
@@ -165,14 +193,61 @@ export const getRLSPolicies = async (tableName: string): Promise<RLSPolicy[]> =>
 // Create manual product snapshot
 export const createProductSnapshot = async (): Promise<boolean> => {
   try {
-    const { error } = await supabase.rpc('create_product_snapshot');
+    console.log("Creating product snapshot...");
     
-    if (error) throw error;
+    // Create a direct object with empty parameters to fix the error
+    const { error } = await supabase.rpc('create_product_snapshot', {});
+    
+    if (error) {
+      console.error("Error creating product snapshot:", error);
+      throw error;
+    }
     
     return true;
   } catch (error) {
     console.error("Error creating product snapshot:", error);
     toast.error("Failed to create product snapshot");
+    return false;
+  }
+};
+
+// Restore from a product snapshot
+export const restoreFromSnapshot = async (snapshotId: string): Promise<boolean> => {
+  try {
+    // This would call a server-side function to handle the restore
+    // For now, we'll just implement a placeholder
+    console.log(`Restoring from snapshot ID: ${snapshotId}`);
+    
+    // In a real implementation, we would call an RPC function like:
+    // const { error } = await supabase.rpc('restore_product_snapshot', { snapshot_id: snapshotId });
+    
+    toast.warning("Snapshot restoration is not yet implemented");
+    return false;
+  } catch (error) {
+    console.error("Error restoring from snapshot:", error);
+    toast.error("Failed to restore from snapshot");
+    return false;
+  }
+};
+
+// Run synchronization to fix inconsistencies
+export const runShopSync = async (): Promise<boolean> => {
+  try {
+    console.log("Running shop synchronization...");
+    
+    // This would be a full sync operation that ensures:
+    // 1. All products with variations are properly linked
+    // 2. All collections have the correct product counts
+    // 3. Any orphaned data is cleaned up
+    
+    // In a real implementation, we'd call an RPC function
+    // const { error } = await supabase.rpc('sync_shop_data');
+    
+    toast.warning("Shop synchronization is not yet implemented");
+    return true;
+  } catch (error) {
+    console.error("Error running shop sync:", error);
+    toast.error("Failed to synchronize shop data");
     return false;
   }
 };

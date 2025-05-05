@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Shop from './Shop';
 import ErrorBoundary from '@/components/shop/ErrorBoundary';
 import { toast } from 'sonner';
-import { getAuthStatus, validateShopAction } from '@/services/shopAuthService';
+import { getAuthStatus, hasShopAdminAccess } from '@/services/shopAuthService';
 import { getShopSystemSettings } from '@/services/shopSystemService';
 import { Loader2 } from 'lucide-react';
 import { useShopSafeguard } from '@/hooks/useShopSafeguard';
@@ -28,17 +28,22 @@ const ShopPage: React.FC = () => {
         const authStatus = getAuthStatus();
         console.log("Auth status in ShopPage:", authStatus);
         
-        // If authStatus includes role, set it
-        if (authStatus) {
-          setUserRole(authStatus.role || null);
+        // Extract user role based on permissions
+        let role = null;
+        if (authStatus.isAdmin) {
+          role = 'admin';
+        } else if (authStatus.isEditor) {
+          role = 'editor';
         }
+        
+        setUserRole(role);
         
         // Check if diagnostics should be shown
         const enableDiagnostics = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
         
         if (enableDiagnostics) {
           // Only show diagnostics if user is admin, otherwise ignore the parameter
-          const canAccessDiagnostics = validateShopAction('admin', 'view_diagnostics');
+          const canAccessDiagnostics = hasShopAdminAccess();
           
           if (canAccessDiagnostics) {
             setShowDiagnostics(true);
@@ -51,7 +56,7 @@ const ShopPage: React.FC = () => {
           if (authStatus.isAdmin) {
             try {
               const settings = await getShopSystemSettings();
-              setShowDiagnostics(settings.diagnosticsEnabled);
+              setShowDiagnostics(settings.diagnosticsEnabled || false);
             } catch (settingsError) {
               console.error("Error loading system settings:", settingsError);
               // Default to not showing diagnostics if settings can't be loaded
@@ -68,7 +73,7 @@ const ShopPage: React.FC = () => {
       // Add diagnostics parameter tracking
       const handlePopState = () => {
         const diagnosticsParam = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
-        const canAccessDiagnostics = validateShopAction('admin', 'view_diagnostics');
+        const canAccessDiagnostics = hasShopAdminAccess();
         
         if (diagnosticsParam && canAccessDiagnostics) {
           setShowDiagnostics(true);

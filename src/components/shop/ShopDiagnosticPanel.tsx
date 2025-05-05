@@ -1,312 +1,321 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { getProducts } from '@/services/shopService';
-import { getShopSystemSettings } from '@/services/shopSystemService';
-import { getAuthStatus } from '@/services/shopAuthService';
-import { DiagnosticTest, DiagnosticStatus, DiagnosticTestResult, RLSPolicy } from '@/types/shop';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  RefreshCw, 
+  Database, 
+  ShieldCheck, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle,
+  Shield,
+  TableProperties
+} from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { DiagnosticStatus, DiagnosticTest, RLSPolicy } from "@/types/shop";
+import { runShopDiagnostics, getRLSPolicies } from "@/services/shopSystemService";
+import { getAuthStatus } from "@/services/shopAuthService";
 
-interface ShopDiagnosticPanelProps {
-  onResults?: (results: any) => void;
-}
+const ShopDiagnosticPanel: React.FC = () => {
+  const [diagnosisRunning, setDiagnosisRunning] = useState(false);
+  const [testResults, setTestResults] = useState<Map<string, DiagnosticStatus>>(new Map());
+  const [rlsPolicies, setRLSPolicies] = useState<Record<string, RLSPolicy[]>>({});
+  const [selectedTable, setSelectedTable] = useState('shop_products');
+  
+  // Tables to check policies for
+  const shopTables = [
+    'shop_products',
+    'product_variations',
+    'collections',
+    'shop_metadata',
+    'shop_product_snapshots',
+    'shop_system_settings'
+  ];
 
-const ShopDiagnosticPanel: React.FC<ShopDiagnosticPanelProps> = ({ onResults }) => {
-  const [tests, setTests] = useState<DiagnosticTest[]>([]);
-  const [runningTests, setRunningTests] = useState(false);
-  const [runStartTime, setRunStartTime] = useState<Date | null>(null);
-  const [runEndTime, setRunEndTime] = useState<Date | null>(null);
+  // Get auth status to check permissions
+  const authStatus = getAuthStatus();
+  const isAdmin = authStatus.isAdmin;
 
-  // Initialize tests
-  useEffect(() => {
-    const baseTests: DiagnosticTest[] = [
-      {
-        name: 'Supabase Connection',
-        message: 'Checking Supabase connection...',
-        status: 'pending',
-        details: {},
-        runTest: async () => {
-          try {
-            const { data, error } = await supabase.from('shop_products').select('count(*)').limit(1).single();
-            
-            if (error) {
-              throw error;
-            }
-            
-            const result: DiagnosticTestResult = {
-              status: 'success',
-              details: { connectionSuccessful: true }
-            };
-            updateTestResult('Supabase Connection', result);
-          } catch (error) {
-            const result: DiagnosticTestResult = {
-              status: 'error',
-              details: { error }
-            };
-            updateTestResult('Supabase Connection', result);
-          }
-        }
-      },
-      {
-        name: 'Product Fetch',
-        message: 'Testing product retrieval...',
-        status: 'pending',
-        details: {},
-        runTest: async () => {
-          try {
-            const products = await getProducts();
-            
-            const result: DiagnosticTestResult = {
-              status: products.length > 0 ? 'success' : 'warning',
-              details: { 
-                count: products.length,
-                products: products.slice(0, 3),
-                hasPublishedProducts: products.some(p => p.status === 'published'),
-                hasMissingImages: products.some(p => !p.image_url)
-              }
-            };
-            
-            updateTestResult('Product Fetch', result);
-          } catch (error) {
-            const result: DiagnosticTestResult = {
-              status: 'error',
-              details: { error }
-            };
-            updateTestResult('Product Fetch', result);
-          }
-        }
-      },
-      {
-        name: 'Authentication Status',
-        message: 'Checking user authentication...',
-        status: 'pending',
-        details: {},
-        runTest: async () => {
-          try {
-            const { isAuthenticated, isAdmin, isEditor, role } = getAuthStatus();
-            
-            const result: DiagnosticTestResult = {
-              status: isAuthenticated ? 'success' : 'warning',
-              details: { isAuthenticated, isAdmin, isEditor, role }
-            };
-            
-            updateTestResult('Authentication Status', result);
-          } catch (error) {
-            const result: DiagnosticTestResult = {
-              status: 'error',
-              details: { error }
-            };
-            updateTestResult('Authentication Status', result);
-          }
-        }
-      },
-      {
-        name: 'System Settings',
-        message: 'Checking shop system settings...',
-        status: 'pending',
-        details: {},
-        runTest: async () => {
-          try {
-            const settings = await getShopSystemSettings();
-            
-            const result: DiagnosticTestResult = {
-              status: 'success',
-              details: { settings }
-            };
-            
-            updateTestResult('System Settings', result);
-          } catch (error) {
-            const result: DiagnosticTestResult = {
-              status: 'error',
-              details: { error }
-            };
-            updateTestResult('System Settings', result);
-          }
-        }
-      },
-      {
-        name: 'Row Level Security',
-        message: 'Checking RLS policies...',
-        status: 'pending',
-        details: {},
-        runTest: async () => {
-          try {
-            const { data, error } = await supabase.rpc('get_policies_for_table', {
-              table_name: 'shop_products'
-            });
-            
-            if (error) throw error;
-            
-            const policies = data as RLSPolicy[];
-            
-            const result: DiagnosticTestResult = {
-              status: policies.length > 0 ? 'success' : 'warning',
-              details: { policies }
-            };
-            
-            updateTestResult('Row Level Security', result);
-          } catch (error) {
-            const result: DiagnosticTestResult = {
-              status: 'error',
-              details: { error }
-            };
-            updateTestResult('Row Level Security', result);
-          }
+  // Define diagnostic tests
+  const diagnosticTests: DiagnosticTest[] = [
+    {
+      name: 'auth_check',
+      message: 'Verifying user authentication',
+      status: 'pending',
+      details: null,
+      runTest: async () => {
+        // This tests the auth session
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          throw new Error('No active session found');
         }
       }
-    ];
+    },
+    {
+      name: 'products_query',
+      message: 'Testing products table access',
+      status: 'pending',
+      details: null,
+      runTest: async () => {
+        const { error } = await supabase
+          .from('shop_products')
+          .select('id')
+          .limit(1);
+          
+        if (error) throw error;
+      }
+    },
+    {
+      name: 'variations_query',
+      message: 'Testing variations table access',
+      status: 'pending',
+      details: null,
+      runTest: async () => {
+        const { error } = await supabase
+          .from('product_variations')
+          .select('id')
+          .limit(1);
+          
+        if (error) throw error;
+      }
+    },
+    {
+      name: 'collections_query',
+      message: 'Testing collections table access',
+      status: 'pending',
+      details: null,
+      runTest: async () => {
+        const { error } = await supabase
+          .from('collections')
+          .select('id')
+          .limit(1);
+          
+        if (error) throw error;
+      }
+    }
+  ];
+
+  // Only run diagnostics if user is admin - as a defensive measure
+  const runDiagnostics = async () => {
+    if (!isAdmin) {
+      console.error("Non-admin user attempted to run diagnostics");
+      toast.error("You don't have permission to run diagnostics");
+      return;
+    }
     
-    setTests(baseTests);
-  }, []);
-
-  const updateTestResult = (testName: string, result: DiagnosticTestResult) => {
-    setTests(prevTests => 
-      prevTests.map(test => 
-        test.name === testName 
-          ? { ...test, status: result.status, details: result.details } 
-          : test
-      )
-    );
-  };
-
-  const runAllTests = async () => {
+    setDiagnosisRunning(true);
     try {
-      setRunningTests(true);
-      setRunStartTime(new Date());
-      setRunEndTime(null);
-      
-      // Reset all tests to pending
-      setTests(prevTests => 
-        prevTests.map(test => ({ ...test, status: 'pending' as DiagnosticStatus, details: {} }))
-      );
-      
-      // Run all tests in sequence
-      for (const test of tests) {
-        await test.runTest();
-      }
-      
-      // Notify completion
-      const endTime = new Date();
-      setRunEndTime(endTime);
-      const duration = endTime.getTime() - (runStartTime?.getTime() || endTime.getTime());
-      
-      toast.success(`All diagnostic tests completed in ${duration}ms`);
-      
-      // Send results if callback provided
-      if (onResults) {
-        onResults({
-          results: tests,
-          startTime: runStartTime,
-          endTime,
-          duration
-        });
-      }
+      const results = await runShopDiagnostics(diagnosticTests);
+      setTestResults(results);
+      toast.success("Diagnostics completed");
     } catch (error) {
-      console.error("Error running diagnostic tests:", error);
-      toast.error("Failed to run some diagnostic tests");
+      console.error("Error running diagnostics:", error);
+      toast.error("Failed to run diagnostics");
     } finally {
-      setRunningTests(false);
+      setDiagnosisRunning(false);
     }
   };
 
-  const getStatusIcon = (status: DiagnosticStatus) => {
+  // Get RLS policies for selected table
+  const fetchRLSPolicies = async (tableName: string) => {
+    if (!isAdmin) {
+      console.error("Non-admin user attempted to view RLS policies");
+      return;
+    }
+    
+    try {
+      const policies = await getRLSPolicies(tableName);
+      setRLSPolicies(prev => ({
+        ...prev,
+        [tableName]: policies
+      }));
+    } catch (error) {
+      console.error(`Error fetching RLS policies for ${tableName}:`, error);
+    }
+  };
+
+  // Fetch RLS policies for selected table
+  useEffect(() => {
+    if (isAdmin && selectedTable) {
+      fetchRLSPolicies(selectedTable);
+    }
+  }, [isAdmin, selectedTable]);
+
+  // Status icon for test results
+  const StatusIcon = ({ status }: { status: DiagnosticStatus }) => {
     switch (status) {
       case 'success':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'error':
         return <XCircle className="h-5 w-5 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       case 'running':
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
+        return <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-300" />;
-    }
-  };
-
-  const getStatusColor = (status: DiagnosticStatus) => {
-    switch (status) {
-      case 'success': return 'bg-green-50 text-green-700 border-green-200';
-      case 'error': return 'bg-red-50 text-red-700 border-red-200';
-      case 'warning': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'running': return 'bg-blue-50 text-blue-700 border-blue-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getStatusBadge = (status: DiagnosticStatus) => {
-    switch (status) {
-      case 'success': return 'bg-green-100 text-green-800';
-      case 'error': return 'bg-red-100 text-red-800';
-      case 'warning': return 'bg-amber-100 text-amber-800';
-      case 'running': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+        return <AlertTriangle className="h-5 w-5 text-gray-400" />;
     }
   };
 
   return (
-    <Card className="border-emerge-gold">
-      <CardHeader className="bg-emerge-gold/10">
-        <CardTitle className="text-emerge-gold flex items-center">
-          <AlertCircle className="h-5 w-5 mr-2" />
-          Shop Diagnostic Panel
+    <Card className="w-full mb-6">
+      <CardHeader className="bg-slate-50">
+        <CardTitle className="text-lg flex items-center">
+          <Database className="h-5 w-5 mr-2 text-slate-500" />
+          Shop System Diagnostics
         </CardTitle>
-        <CardDescription>
-          Run diagnostics to identify issues with the shop system
-        </CardDescription>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Button 
-              onClick={runAllTests} 
-              disabled={runningTests}
-              className="bg-emerge-gold hover:bg-emerge-gold/90 text-white"
-            >
-              {runningTests && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Run All Tests
-            </Button>
-          </div>
+        <Tabs defaultValue="tests">
+          <TabsList className="mb-4">
+            <TabsTrigger value="tests">Diagnostics</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="rls">RLS Policies</TabsTrigger>
+          </TabsList>
           
-          {runEndTime && (
-            <div className="text-xs text-gray-500">
-              Last run: {runEndTime.toLocaleTimeString()}
+          {/* Diagnostic Tests Tab */}
+          <TabsContent value="tests">
+            <div className="flex justify-between mb-4">
+              <Button 
+                variant="outline" 
+                onClick={runDiagnostics}
+                disabled={diagnosisRunning}
+                className="flex items-center"
+              >
+                {diagnosisRunning ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Run Diagnostics
+              </Button>
             </div>
-          )}
-        </div>
-        
-        <div className="space-y-2">
-          {tests.map((test, index) => (
-            <Accordion key={index} type="single" collapsible>
-              <AccordionItem value={`item-${index}`} className={`border rounded-md ${getStatusColor(test.status)}`}>
-                <AccordionTrigger className="px-4 py-2 hover:no-underline">
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center">
-                      {getStatusIcon(test.status)}
-                      <span className="ml-2">{test.name}</span>
-                    </div>
-                    <Badge className={getStatusBadge(test.status)}>
-                      {test.status.toUpperCase()}
-                    </Badge>
+            
+            <div className="space-y-3">
+              {diagnosticTests.map(test => (
+                <div 
+                  key={test.name} 
+                  className="p-3 border rounded-md flex justify-between items-center"
+                >
+                  <div>
+                    <div className="font-medium">{test.message}</div>
+                    <div className="text-sm text-gray-500">{test.name}</div>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-4 py-2 bg-white rounded-b-md">
-                  <div className="text-sm">{test.message}</div>
-                  {test.details && Object.keys(test.details).length > 0 && (
-                    <pre className="mt-2 bg-gray-50 p-2 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(test.details, null, 2)}
-                    </pre>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          ))}
-        </div>
+                  <div>
+                    <StatusIcon status={testResults.get(test.name) || 'pending'} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+          
+          {/* Security Tab */}
+          <TabsContent value="security">
+            <div className="space-y-3">
+              <div className="p-3 border rounded-md">
+                <div className="flex items-center mb-2">
+                  <ShieldCheck className="h-5 w-5 mr-2 text-green-500" />
+                  <div className="font-medium">Authentication Status</div>
+                </div>
+                
+                <div className="ml-7 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>User authenticated:</span>
+                    <span className="font-mono">{authStatus.isAuthenticated ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Admin permissions:</span>
+                    <span className="font-mono">{authStatus.isAdmin ? 'Yes' : 'No'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Editor permissions:</span>
+                    <span className="font-mono">{authStatus.isEditor ? 'Yes' : 'No'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-3 border rounded-md">
+                <div className="flex items-center mb-2">
+                  <Shield className="h-5 w-5 mr-2 text-blue-500" />
+                  <div className="font-medium">Access Control</div>
+                </div>
+                
+                <div className="ml-7 space-y-2 text-sm">
+                  <p>Role-based permissions are enforced for the following operations:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>View products (public)</li>
+                    <li>Edit products (editors + admins)</li>
+                    <li>Delete products (editors + admins)</li>
+                    <li>Create products (editors + admins)</li>
+                    <li>Access diagnostics (admins only)</li>
+                    <li>System settings (admins only)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          {/* RLS Policies Tab */}
+          <TabsContent value="rls">
+            <div className="mb-4">
+              <select 
+                className="w-full p-2 border rounded-md"
+                value={selectedTable}
+                onChange={(e) => setSelectedTable(e.target.value)}
+              >
+                {shopTables.map(table => (
+                  <option key={table} value={table}>{table}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <TableProperties className="h-5 w-5 mr-2 text-slate-500" />
+                <h3 className="font-medium">Policies for {selectedTable}</h3>
+              </div>
+              
+              {rlsPolicies[selectedTable]?.length ? (
+                rlsPolicies[selectedTable].map((policy, index) => (
+                  <div key={index} className="p-3 border rounded-md text-sm">
+                    <div className="font-medium mb-1">{policy.policyname}</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      <span className="text-gray-500">Operation:</span>
+                      <span>{policy.cmd}</span>
+                      
+                      <span className="text-gray-500">Roles:</span>
+                      <span>{policy.roles?.join(', ') || 'all'}</span>
+                      
+                      <span className="text-gray-500">Type:</span>
+                      <span>{policy.permissive}</span>
+                      
+                      <span className="text-gray-500">USING condition:</span>
+                      <div className="bg-gray-100 p-1 rounded font-mono text-xs overflow-x-auto">
+                        {policy.qual || 'true'}
+                      </div>
+                      
+                      {policy.with_check && (
+                        <>
+                          <span className="text-gray-500">WITH CHECK:</span>
+                          <div className="bg-gray-100 p-1 rounded font-mono text-xs overflow-x-auto">
+                            {policy.with_check}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center p-4 border rounded-md text-sm text-gray-500">
+                  {rlsPolicies[selectedTable] ? 'No policies found' : 'Loading policies...'}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

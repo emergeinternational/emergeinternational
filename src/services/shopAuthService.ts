@@ -71,6 +71,33 @@ export const hasShopAdminAccess = (): boolean => {
 };
 
 /**
+ * Validate if user has permission to perform a specific shop action
+ * 
+ * @param requiredRole Minimum role required ('admin' or 'editor')
+ * @param action The action being attempted
+ * @returns boolean indicating if user can perform the action
+ */
+export const validateShopAction = (requiredRole: 'admin' | 'editor', action: string): boolean => {
+  try {
+    const { isAdmin, isEditor } = getAuthStatus();
+    
+    // Admin can do anything
+    if (isAdmin) return true;
+    
+    // Editor can only do editor-level actions
+    if (requiredRole === 'editor' && isEditor) return true;
+    
+    // If we got here, user doesn't have permission
+    // Log the unauthorized access attempt silently
+    logUnauthorizedAccess(action, { requiredRole });
+    return false;
+  } catch (error) {
+    console.error(`Error validating shop action '${action}':`, error);
+    return false;
+  }
+};
+
+/**
  * Check if the user has access to view shop diagnostics
  */
 export const hasShopDiagnosticsAccess = (): boolean => {

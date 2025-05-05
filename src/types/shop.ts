@@ -48,7 +48,7 @@ export interface ProductFormValues {
   status?: 'draft' | 'pending' | 'published' | 'rejected';
 }
 
-// Add these diagnostic types to fix build errors
+// Diagnostic types for shop module
 export type DiagnosticStatus = 'pending' | 'error' | 'running' | 'success' | 'warning';
 
 export interface DiagnosticTest {
@@ -73,12 +73,23 @@ export interface RLSPolicy {
   with_check: string;
 }
 
-// Add this interface to help with typed access to shop system settings JSON
+// Shop system settings JSON
 export interface ShopSystemSettings {
   recoveryMode?: boolean;
+  fallbackLevel?: 'minimal' | 'full';
+  diagnosticsEnabled?: boolean;
   liveSync?: boolean;
   mockupData?: {
     last_seeded?: string;
     seed_count?: number;
   };
+}
+
+// Recovery log entry interface
+export interface RecoveryLogEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  status: 'success' | 'failure' | 'pending';
+  details?: any;
 }

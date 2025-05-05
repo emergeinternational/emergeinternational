@@ -10,7 +10,7 @@ import CollectionFormDialog from "../components/shop/CollectionFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import { hasShopEditAccess, validateShopAction } from "@/services/shopAuthService";
+import { hasShopEditAccess, hasShopAdminAccess } from "@/services/shopAuthService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/shop/ErrorBoundary";
@@ -82,7 +82,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
         const settings = await getShopSystemSettings();
         setSystemSettings({
           recoveryMode: settings.recoveryMode,
-          fallbackLevel: settings.fallbackLevel,
+          fallbackLevel: settings.fallbackLevel || 'minimal',
           diagnosticsEnabled: settings.diagnosticsEnabled,
           liveSync: settings.liveSync
         });
@@ -93,7 +93,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
 
     // Handle diagnostics toggle
     const handleToggleDiagnostics = async () => {
-      if (validateShopAction('admin', 'toggle_diagnostics')) {
+      if (hasShopAdminAccess()) {
         const newValue = !systemSettings.diagnosticsEnabled;
         const success = await toggleDiagnosticsMode(newValue);
         
@@ -122,6 +122,8 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
             }
           }
         }
+      } else {
+        toast.error("You don't have permission to toggle diagnostics mode");
       }
     };
 
@@ -285,7 +287,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
     };
 
     const handleDeleteProduct = async (id: string) => {
-      if (!validateShopAction('editor', 'delete_product')) {
+      if (!hasShopEditAccess()) {
         toast.error("You don't have permission to delete products");
         return;
       }
@@ -312,7 +314,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
     };
 
     const handleEditProduct = (product: ShopProduct) => {
-      if (!validateShopAction('editor', 'edit_product')) {
+      if (!hasShopEditAccess()) {
         toast.error("You don't have permission to edit products");
         return;
       }
@@ -636,7 +638,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
             {canEdit && (
               <AdminFloatingPanel 
                 onAddProduct={() => setIsAddProductDialogOpen(true)}
-                onAddCollection={() => setIsAddCollectionDialogOpen(true)}
                 onRefresh={() => {
                   fetchProducts();
                   fetchCollections();
