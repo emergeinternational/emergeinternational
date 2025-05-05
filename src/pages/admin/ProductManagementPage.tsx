@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
-import ProductsManager from "../../components/shop/ProductsManager";
 import { Toaster } from "@/components/ui/toaster";
 import PageLock from "../../components/admin/PageLock";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import AdminProductTabs from "../../components/shop/AdminProductTabs";
 
 const ProductManagementPage = () => {
   const [pageLocked, setPageLocked] = useState(true);
@@ -60,7 +60,7 @@ const ProductManagementPage = () => {
         )}
         
         <div className="bg-white p-6 rounded-lg shadow">
-          <ProductsManager isLocked={pageLocked} key={refreshTrigger} />
+          <AdminProductTabs isLocked={pageLocked} key={refreshTrigger} />
         </div>
       </div>
       

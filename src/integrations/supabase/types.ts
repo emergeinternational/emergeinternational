@@ -131,6 +131,33 @@ export type Database = {
         }
         Relationships: []
       }
+      collections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          designer_name: string
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          designer_name: string
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          designer_name?: string
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       course_engagement: {
         Row: {
           course_id: string
@@ -1287,6 +1314,7 @@ export type Database = {
       shop_products: {
         Row: {
           category: string | null
+          collection_id: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -1298,6 +1326,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          collection_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -1309,6 +1338,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          collection_id?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -1318,7 +1348,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       talent_applications: {
         Row: {

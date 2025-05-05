@@ -9,6 +9,8 @@ import ProductFormDialog from "./ProductFormDialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import { getAuthStatus, hasShopEditAccess } from "@/services/shopAuthService";
+import CollectionsManager from "./CollectionsManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductsManagerProps {
   isLocked?: boolean;
@@ -29,7 +31,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
     fetchProducts();
     
     // Subscribe to changes
-    const channel = supabase
+    const productsChannel = supabase
       .channel('shop_product_changes')
       .on(
         'postgres_changes',
@@ -40,26 +42,49 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
         },
         (payload) => {
           console.log('Product change detected:', payload);
-          
-          // Update UI based on the type of change
-          if (payload.eventType === 'INSERT') {
-            const newProduct = payload.new as ShopProduct;
-            setProducts(prev => [newProduct, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedProduct = payload.new as ShopProduct;
-            setProducts(prev => prev.map(product => 
-              product.id === updatedProduct.id ? updatedProduct : product
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            const deletedProductId = payload.old.id;
-            setProducts(prev => prev.filter(product => product.id !== deletedProductId));
-          }
+          fetchProducts();
+        }
+      )
+      .subscribe();
+      
+    // Also listen for variation changes
+    const variationsChannel = supabase
+      .channel('product_variations_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_variations'
+        },
+        (payload) => {
+          console.log('Variation change detected:', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+      
+    // Listen for collections changes
+    const collectionsChannel = supabase
+      .channel('collections_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'collections'
+        },
+        (payload) => {
+          console.log('Collection change detected:', payload);
+          fetchProducts();
         }
       )
       .subscribe();
       
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(variationsChannel);
+      supabase.removeChannel(collectionsChannel);
     };
   }, []);
 
@@ -123,37 +148,50 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Shop Products</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchProducts} 
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
-          
-          {canEdit && (
-            <Button 
-              onClick={() => setIsAddDialogOpen(true)}
-              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add New Product
-            </Button>
-          )}
-        </div>
-      </div>
+      <Tabs defaultValue="products">
+        <TabsList className="mb-4">
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="collections">Collections</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="products">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Shop Products</h2>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={fetchProducts} 
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+              
+              {canEdit && (
+                <Button 
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add New Product
+                </Button>
+              )}
+            </div>
+          </div>
 
-      <ProductsTable 
-        products={products} 
-        isLoading={isLoading} 
-        onEdit={handleEdit} 
-        onDelete={handleDelete}
-        isLocked={!canEdit} 
-      />
+          <ProductsTable 
+            products={products} 
+            isLoading={isLoading} 
+            onEdit={handleEdit} 
+            onDelete={handleDelete}
+            isLocked={!canEdit} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="collections">
+          <CollectionsManager isLocked={isLocked} />
+        </TabsContent>
+      </Tabs>
       
       {/* Form dialog for adding new products */}
       <ProductFormDialog
@@ -164,6 +202,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
           if (newProduct) {
             setProducts(prev => [newProduct, ...prev]);
           }
+          setIsAddDialogOpen(false);
         }}
       />
       
@@ -180,6 +219,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
               ));
             }
             setSelectedProduct(null);
+            setIsEditDialogOpen(false);
           }}
         />
       )}

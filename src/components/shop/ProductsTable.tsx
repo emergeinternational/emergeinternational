@@ -42,6 +42,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
         <TableHeader>
           <TableRow>
             <TableHead>Product</TableHead>
+            <TableHead>Collection</TableHead>
             <TableHead>Category</TableHead>
             <TableHead>Price</TableHead>
             <TableHead>Status</TableHead>
@@ -51,13 +52,13 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center h-24">
+              <TableCell colSpan={6} className="text-center h-24">
                 Loading products...
               </TableCell>
             </TableRow>
           ) : products.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center h-24">
+              <TableCell colSpan={6} className="text-center h-24">
                 <div className="flex flex-col items-center justify-center space-y-2">
                   <AlertTriangle className="h-8 w-8 text-amber-500" />
                   <p className="text-muted-foreground">No products found</p>
@@ -90,6 +91,15 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                       </p>
                     </div>
                   </div>
+                </TableCell>
+                <TableCell>
+                  {product.collection ? (
+                    <Badge variant="secondary">
+                      {product.collection.title} • {product.collection.designer_name}
+                    </Badge>
+                  ) : (
+                    <span className="text-gray-400 text-xs">No collection</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="capitalize">

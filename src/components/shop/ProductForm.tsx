@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -16,8 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ShopProduct, ProductFormValues } from "@/types/shop";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
+import { ShopProduct, ProductFormValues, Collection } from "@/types/shop";
 import { createProduct, updateProduct, uploadProductImage } from "@/services/shopService";
+import { getCollections } from "@/services/collectionService";
 import { DialogClose } from "@/components/ui/dialog";
 import ProductVariationForm from "./ProductVariationForm";
 import { Upload, ImageIcon, Loader2 } from "lucide-react";
@@ -29,6 +37,7 @@ const formSchema = z.object({
   image_url: z.string().url("Must be a valid URL").optional().or(z.literal('')),
   in_stock: z.boolean().default(true),
   category: z.string().min(1, "Category is required"),
+  collection_id: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -42,8 +51,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [variations, setVariations] = useState(product?.variations || []);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!product;
+
+  useEffect(() => {
+    fetchCollections();
+  }, []);
+
+  const fetchCollections = async () => {
+    const data = await getCollections();
+    setCollections(data);
+  };
 
   const defaultValues: Partial<FormValues> = {
     title: product?.title || "",
@@ -52,6 +71,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
     image_url: product?.image_url || "",
     in_stock: product?.in_stock ?? true,
     category: product?.category || "",
+    collection_id: product?.collection_id || undefined,
   };
 
   const form = useForm<FormValues>({
@@ -90,6 +110,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
         image_url: data.image_url,
         in_stock: data.in_stock,
         category: data.category,
+        collection_id: data.collection_id || undefined,
         variations: variations,
       };
 
@@ -135,20 +156,65 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
           )}
         />
         
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="price"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Base Price (USD)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="0.00" 
+                    step="0.01" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <FormControl>
+                  <Input placeholder="E.g. clothing, accessories" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
         <FormField
           control={form.control}
-          name="price"
+          name="collection_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Base Price (USD)</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  placeholder="0.00" 
-                  step="0.01" 
-                  {...field} 
-                />
-              </FormControl>
+              <FormLabel>Collection</FormLabel>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a collection" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {collections.map((collection) => (
+                    <SelectItem key={collection.id} value={collection.id}>
+                      {collection.title} ({collection.designer_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -226,20 +292,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess }) => {
                   </div>
                 </div>
               </div>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <FormControl>
-                <Input placeholder="E.g. clothing, accessories" {...field} />
-              </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />

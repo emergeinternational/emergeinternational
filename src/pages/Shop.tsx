@@ -2,12 +2,15 @@
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
-import { ShopProduct } from "../types/shop";
+import { getCollections } from "../services/collectionService";
+import { ShopProduct, Collection } from "../types/shop";
 import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
+import CollectionFormDialog from "../components/shop/CollectionFormDialog";
+import CollectionFilter from "../components/shop/CollectionFilter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, Trash2, Edit } from "lucide-react";
+import { Search, PlusCircle, Trash2, Edit, Plus } from "lucide-react";
 import { hasShopEditAccess, getAuthStatus } from "@/services/shopAuthService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,11 +28,14 @@ import {
 
 const Shop = () => {
   const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [isAddCollectionDialogOpen, setIsAddCollectionDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
@@ -39,9 +45,10 @@ const Shop = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchCollections();
 
-    // Subscribe to changes
-    const channel = supabase
+    // Subscribe to product changes
+    const productsChannel = supabase
       .channel('shop_product_changes')
       .on(
         'postgres_changes',
@@ -52,53 +59,49 @@ const Shop = () => {
         },
         (payload) => {
           console.log('Product change detected:', payload);
-          
-          // Update UI based on the type of change
-          if (payload.eventType === 'INSERT') {
-            const newProduct = payload.new as ShopProduct;
-            setProducts(prev => [newProduct, ...prev]);
-            
-            // Extract unique categories again
-            setCategories(prevCategories => {
-              if (newProduct.category && !prevCategories.includes(newProduct.category)) {
-                return [...prevCategories, newProduct.category];
-              }
-              return prevCategories;
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedProduct = payload.new as ShopProduct;
-            setProducts(prev => prev.map(product => 
-              product.id === updatedProduct.id ? updatedProduct : product
-            ));
-            
-            // Refresh categories
-            const uniqueCategories = Array.from(
-              new Set(
-                [...products.map(p => p.id === updatedProduct.id ? updatedProduct : p)]
-                  .map(product => product.category).filter(Boolean)
-              )
-            ) as string[];
-            setCategories(uniqueCategories);
-          } else if (payload.eventType === 'DELETE') {
-            const deletedProductId = payload.old.id;
-            setProducts(prev => {
-              const filtered = prev.filter(product => product.id !== deletedProductId);
-              
-              // Refresh categories with remaining products
-              const remainingCategories = Array.from(
-                new Set(filtered.map(product => product.category).filter(Boolean))
-              ) as string[];
-              setCategories(remainingCategories);
-              
-              return filtered;
-            });
-          }
+          fetchProducts();
+        }
+      )
+      .subscribe();
+      
+    // Subscribe to variation changes
+    const variationsChannel = supabase
+      .channel('product_variations_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_variations'
+        },
+        (payload) => {
+          console.log('Variation change detected:', payload);
+          fetchProducts();
+        }
+      )
+      .subscribe();
+      
+    // Subscribe to collection changes
+    const collectionsChannel = supabase
+      .channel('collections_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'collections'
+        },
+        (payload) => {
+          console.log('Collection change detected:', payload);
+          fetchCollections();
         }
       )
       .subscribe();
     
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(variationsChannel);
+      supabase.removeChannel(collectionsChannel);
     };
   }, []);
 
@@ -118,6 +121,15 @@ const Shop = () => {
       console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCollections = async () => {
+    try {
+      const data = await getCollections();
+      setCollections(data);
+    } catch (error) {
+      console.error("Error fetching collections:", error);
     }
   };
 
@@ -154,11 +166,17 @@ const Shop = () => {
     
     const matchesCategory = selectedCategory ? product.category === selectedCategory : true;
     
-    return matchesSearch && matchesCategory;
+    const matchesCollection = selectedCollection ? product.collection_id === selectedCollection : true;
+    
+    return matchesSearch && matchesCategory && matchesCollection;
   });
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category === selectedCategory ? null : category);
+  };
+  
+  const handleCollectionSelect = (collectionId: string | null) => {
+    setSelectedCollection(collectionId);
   };
 
   return (
@@ -186,17 +204,37 @@ const Shop = () => {
             
             <div className="flex items-center gap-2">
               {canEdit && (
-                <Button 
-                  onClick={() => setIsAddDialogOpen(true)}
-                  className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsAddCollectionDialogOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Collection
+                  </Button>
+                  <Button 
+                    onClick={() => setIsAddProductDialogOpen(true)}
+                    className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </>
               )}
             </div>
           </div>
           
+          {/* Collection Filter */}
+          {collections.length > 0 && (
+            <CollectionFilter 
+              collections={collections} 
+              selectedCollection={selectedCollection}
+              onCollectionSelect={handleCollectionSelect}
+            />
+          )}
+          
+          {/* Category Filter */}
           <div className="flex flex-wrap gap-2 mt-4">
             <Button
               variant="outline"
@@ -204,7 +242,7 @@ const Shop = () => {
               className={!selectedCategory ? "bg-primary text-primary-foreground" : ""}
               onClick={() => setSelectedCategory(null)}
             >
-              All
+              All Categories
             </Button>
             {categories.map(category => (
               <Button
@@ -284,6 +322,7 @@ const Shop = () => {
               onClick={() => {
                 setSearchTerm("");
                 setSelectedCategory(null);
+                setSelectedCollection(null);
               }}
             >
               Clear filters
@@ -294,8 +333,8 @@ const Shop = () => {
       
       {/* Form dialog for adding new products */}
       <ProductFormDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        open={isAddProductDialogOpen}
+        onOpenChange={setIsAddProductDialogOpen}
         product={null}
         onSuccess={(newProduct) => {
           if (newProduct) {
@@ -320,6 +359,18 @@ const Shop = () => {
           }}
         />
       )}
+      
+      {/* Form dialog for adding new collections */}
+      <CollectionFormDialog
+        open={isAddCollectionDialogOpen}
+        onOpenChange={setIsAddCollectionDialogOpen}
+        collection={null}
+        onSuccess={(newCollection) => {
+          if (newCollection) {
+            setCollections(prev => [newCollection, ...prev]);
+          }
+        }}
+      />
     </MainLayout>
   );
 };

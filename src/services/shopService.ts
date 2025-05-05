@@ -4,12 +4,12 @@ import { ShopProduct, ProductFormValues, ProductVariation } from "@/types/shop";
 import { toast } from "sonner";
 import { getAuthStatus, hasShopEditAccess } from "./shopAuthService";
 
-// Get all products
+// Get all products with collections
 export const getProducts = async (): Promise<ShopProduct[]> => {
   try {
     const { data, error } = await supabase
       .from("shop_products")
-      .select("*, variations:product_variations(*)")
+      .select("*, variations:product_variations(*), collection:collections(*)")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -24,12 +24,33 @@ export const getProducts = async (): Promise<ShopProduct[]> => {
   }
 };
 
+// Get products by collection
+export const getProductsByCollection = async (collectionId: string): Promise<ShopProduct[]> => {
+  try {
+    const { data, error } = await supabase
+      .from("shop_products")
+      .select("*, variations:product_variations(*), collection:collections(*)")
+      .eq("collection_id", collectionId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching products by collection:", error);
+    toast.error("Failed to load products");
+    return [];
+  }
+};
+
 // Get a specific product by ID
 export const getProductById = async (id: string): Promise<ShopProduct | null> => {
   try {
     const { data, error } = await supabase
       .from("shop_products")
-      .select("*, variations:product_variations(*)")
+      .select("*, variations:product_variations(*), collection:collections(*)")
       .eq("id", id)
       .single();
 
@@ -85,7 +106,7 @@ export const uploadProductImage = async (file: File): Promise<string | null> => 
   }
 };
 
-// Create a new product with variations
+// Create a new product with variations and collection
 export const createProduct = async (productData: ProductFormValues): Promise<ShopProduct | null> => {
   try {
     // Check if user has edit access
@@ -126,7 +147,7 @@ export const createProduct = async (productData: ProductFormValues): Promise<Sho
       }
     }
 
-    // Get the product with variations
+    // Get the product with variations and collection
     const product = await getProductById(data.id);
     
     toast.success("Product created successfully");
@@ -187,7 +208,7 @@ export const updateProduct = async (id: string, updates: Partial<ProductFormValu
       }
     }
 
-    // Get the updated product with variations
+    // Get the updated product with variations and collection
     const updatedProduct = await getProductById(id);
     
     toast.success("Product updated successfully");

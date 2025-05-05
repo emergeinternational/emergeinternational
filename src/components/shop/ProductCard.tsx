@@ -59,12 +59,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <h3 className="font-medium text-lg">{product.title}</h3>
       </CardHeader>
       <CardContent className="pb-2">
-        {product.category && (
-          <Badge variant="outline" className="mb-2">{product.category}</Badge>
-        )}
-        <p className="text-sm text-gray-500 line-clamp-2">
-          {product.description || 'No description available'}
-        </p>
+        <div className="flex flex-col gap-2">
+          {product.category && (
+            <Badge variant="outline" className="w-fit">{product.category}</Badge>
+          )}
+          
+          {product.collection && (
+            <Badge variant="secondary" className="w-fit">
+              {product.collection.title} • {product.collection.designer_name}
+            </Badge>
+          )}
+        
+          <p className="text-sm text-gray-500 line-clamp-2">
+            {product.description || 'No description available'}
+          </p>
+        </div>
         
         {hasVariations && (
           <div className="mt-2">
