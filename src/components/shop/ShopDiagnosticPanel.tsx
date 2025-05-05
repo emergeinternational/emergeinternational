@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle, XCircle, RefreshCw, Lock } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
-import { getAuthStatus } from "@/services/shopAuthService";
+import { getAuthStatus, validateShopAction } from "@/services/shopAuthService";
 
 interface DiagnosticResult {
   status: "success" | "error" | "warning" | "pending";
@@ -36,6 +36,17 @@ const ShopDiagnosticPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const auth = useAuth();
+  
+  // Verify that only authorized users can access diagnostics
+  useEffect(() => {
+    const isAuthorized = validateShopAction('admin', 'view_diagnostics');
+    
+    if (!isAuthorized) {
+      console.error("Unauthorized attempt to access Shop Diagnostic Panel");
+      // Silently fail - don't show error messages that might reveal the diagnostics feature
+      return;
+    }
+  }, []);
   
   // Function to update a specific diagnostic result
   const updateResult = (
@@ -242,53 +253,67 @@ const ShopDiagnosticPanel: React.FC = () => {
       const editButtons = document.querySelectorAll('[data-edit-product="true"]');
       
       // Check if RLS policies are in place for shop_products table
-      const { data: policies, error: policiesError } = await supabase
-        .rpc('get_policies_for_table', { table_name: 'shop_products' })
-        .catch(() => ({ data: null, error: new Error("RPC get_policies_for_table not available") }));
-      
-      let policyDetails: string[] = [];
-      
-      if (policiesError) {
-        console.log("Shop Diagnostic - Unable to check RLS policies via RPC");
-        policyDetails.push("Unable to verify RLS policies programmatically");
-      } else if (policies) {
-        policyDetails.push(`Found ${policies.length} RLS policies for shop_products table`);
-      }
-      
-      // Test accessing admin routes
       try {
-        const canSeeManagementUI = document.querySelector('[data-admin-products-manager="true"]') !== null;
-        policyDetails.push(`Admin UI visibility: ${canSeeManagementUI ? 'Visible' : 'Not visible'}`);
-      } catch (e) {
-        policyDetails.push("Error checking admin UI visibility");
-      }
-      
-      policyDetails.push(`Current user role: ${currentUserRole}`);
-      policyDetails.push(`Admin status: ${isAdmin ? 'Yes' : 'No'}`);
-      policyDetails.push(`Editor status: ${isEditor ? 'Yes' : 'No'}`);
-      policyDetails.push(`Edit buttons visible: ${editButtons.length > 0 ? 'Yes' : 'No'}`);
-      policyDetails.push(`Admin elements found: ${adminElements.length}`);
-      
-      if ((isAdmin || isEditor) && editButtons.length === 0 && window.location.pathname.includes('/shop')) {
+        const { data: policies, error } = await supabase
+          .rpc('get_policies_for_table', { table_name: 'shop_products' });
+          
+        let policyDetails: string[] = [];
+        
+        if (error) {
+          console.warn("Unable to check RLS policies:", error.message);
+          policyDetails.push("Unable to verify RLS policies programmatically: " + error.message);
+        } else if (policies) {
+          policyDetails.push(`Found ${policies.length} RLS policies for shop_products table`);
+          
+          // Add details about each policy
+          policies.forEach((policy: any, index: number) => {
+            policyDetails.push(`Policy ${index + 1}: ${policy.policyname} (${policy.cmd})`);
+          });
+        }
+        
+        // Test accessing admin routes
+        try {
+          const canSeeManagementUI = document.querySelector('[data-admin-products-manager="true"]') !== null;
+          policyDetails.push(`Admin UI visibility: ${canSeeManagementUI ? 'Visible' : 'Not visible'}`);
+        } catch (e) {
+          policyDetails.push("Error checking admin UI visibility");
+        }
+        
+        policyDetails.push(`Current user role: ${currentUserRole}`);
+        policyDetails.push(`Admin status: ${isAdmin ? 'Yes' : 'No'}`);
+        policyDetails.push(`Editor status: ${isEditor ? 'Yes' : 'No'}`);
+        policyDetails.push(`Edit buttons visible: ${editButtons.length > 0 ? 'Yes' : 'No'}`);
+        policyDetails.push(`Admin elements found: ${adminElements.length}`);
+        
+        if ((isAdmin || isEditor) && editButtons.length === 0 && window.location.pathname.includes('/shop')) {
+          updateResult(
+            "accessControl", 
+            "warning", 
+            "User has admin/editor role but edit controls aren't visible", 
+            policyDetails
+          );
+        } else if (!(isAdmin || isEditor) && editButtons.length > 0) {
+          updateResult(
+            "accessControl", 
+            "error", 
+            "Non-admin user can see edit controls", 
+            policyDetails
+          );
+        } else {
+          updateResult(
+            "accessControl", 
+            "success", 
+            "Access control appears to be correctly configured", 
+            policyDetails
+          );
+        }
+      } catch (error) {
+        console.error("RPC call error:", error);
         updateResult(
           "accessControl", 
-          "warning", 
-          "User has admin/editor role but edit controls aren't visible", 
-          policyDetails
-        );
-      } else if (!(isAdmin || isEditor) && editButtons.length > 0) {
-        updateResult(
-          "accessControl", 
-          "error", 
-          "Non-admin user can see edit controls", 
-          policyDetails
-        );
-      } else {
-        updateResult(
-          "accessControl", 
-          "success", 
-          "Access control appears to be correctly configured", 
-          policyDetails
+          "warning",
+          "Could not verify RLS policies programmatically",
+          [(error as Error).message]
         );
       }
       
@@ -475,6 +500,11 @@ const ShopDiagnosticPanel: React.FC = () => {
 
   // Function to run all checks
   const runAllChecks = async () => {
+    // Only allow authorized users to run checks
+    if (!validateShopAction('admin', 'run_diagnostics')) {
+      return;
+    }
+    
     setLoading(true);
     setProgress(0);
     
@@ -505,9 +535,11 @@ const ShopDiagnosticPanel: React.FC = () => {
     }
   };
 
-  // Run checks on mount
+  // Run checks on mount - but only for authorized users
   useEffect(() => {
-    runAllChecks();
+    if (validateShopAction('admin', 'run_diagnostics')) {
+      runAllChecks();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -525,6 +557,11 @@ const ShopDiagnosticPanel: React.FC = () => {
         return <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />;
     }
   };
+
+  // Only show to authorized users
+  if (!validateShopAction('admin', 'view_diagnostics')) {
+    return null;
+  }
 
   return (
     <div className="bg-white border rounded-lg p-4 shadow-md mb-6" data-testid="shop-diagnostic-panel">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -9,7 +10,7 @@ import CollectionFormDialog from "../components/shop/CollectionFormDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import { hasShopEditAccess } from "@/services/shopAuthService";
+import { hasShopEditAccess, validateShopAction } from "@/services/shopAuthService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ErrorBoundary from "@/components/shop/ErrorBoundary";
@@ -18,22 +19,26 @@ import AdminFloatingPanel from "@/components/shop/AdminFloatingPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import ShopDiagnosticPanel from "@/components/shop/ShopDiagnosticPanel";
+import RecoveryFallback from "@/components/shop/RecoveryFallback";
+import DeveloperNotesOverlay from "@/components/shop/DeveloperNotesOverlay";
+import AdminRecoveryTools from "@/components/shop/AdminRecoveryTools";
+import { getShopSystemSettings, toggleDiagnosticsMode } from "@/services/shopSystemService";
 
 interface ShopProps {
   userRole: string | null;
+  showDiagnostics?: boolean;
 }
 
-const Shop: React.FC<ShopProps> = ({ userRole }) => {
+const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
   try {
-    // Add diagnostic mode state
-    const [showDiagnostics, setShowDiagnostics] = useState<boolean>(
-      new URLSearchParams(window.location.search).get('diagnostics') === 'true'
-    );
-    
-    // Wrap the entire component in a try-catch to detect any immediate errors
+    // State for shop data
     const [products, setProducts] = useState<ShopProduct[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dataError, setDataError] = useState<boolean>(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    
+    // State for filters
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
@@ -41,31 +46,89 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
     const [selectedColors, setSelectedColors] = useState<string[]>([]);
     const [isGridView, setIsGridView] = useState(true);
     const [categories, setCategories] = useState<string[]>([]);
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]); // Default price range
+    const [maxPrice, setMaxPrice] = useState(100000);
+    
+    // State for dialogs
     const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
     const [isAddCollectionDialogOpen, setIsAddCollectionDialogOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]); // Default price range (0 to $1000)
-    const [maxPrice, setMaxPrice] = useState(100000);
-    const [dataError, setDataError] = useState<boolean>(false);
+    const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
+
+    // State for system settings
+    const [systemSettings, setSystemSettings] = useState<any>({
+      recoveryMode: false,
+      fallbackLevel: 'minimal',
+      diagnosticsEnabled: showDiagnostics
+    });
+
+    // State for recovery errors 
+    const [recoveryError, setRecoveryError] = useState<Error | null>(null);
     
     // Get auth status directly from props
     const isAdmin = userRole === 'admin';
     const isEditor = userRole === 'editor' || userRole === 'admin';
     const canEdit = isEditor || isAdmin;
 
+    // Load system settings for admins
+    useEffect(() => {
+      if (isAdmin) {
+        loadSystemSettings();
+      }
+    }, [isAdmin]);
+    
+    const loadSystemSettings = async () => {
+      try {
+        const settings = await getShopSystemSettings();
+        setSystemSettings({
+          recoveryMode: settings.recoveryMode,
+          fallbackLevel: settings.fallbackLevel,
+          diagnosticsEnabled: settings.diagnosticsEnabled,
+          liveSync: settings.liveSync
+        });
+      } catch (error) {
+        console.error("Error loading system settings:", error);
+      }
+    };
+
+    // Handle diagnostics toggle
+    const handleToggleDiagnostics = async () => {
+      if (validateShopAction('admin', 'toggle_diagnostics')) {
+        const newValue = !systemSettings.diagnosticsEnabled;
+        const success = await toggleDiagnosticsMode(newValue);
+        
+        if (success) {
+          setSystemSettings(prev => ({
+            ...prev,
+            diagnosticsEnabled: newValue
+          }));
+          
+          toast.success(`Diagnostics ${newValue ? 'enabled' : 'disabled'}`);
+          
+          // Update URL if turning diagnostics on
+          if (newValue) {
+            // Add the diagnostics parameter if not already present
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('diagnostics')) {
+              url.searchParams.set('diagnostics', 'true');
+              window.history.pushState({}, '', url.toString());
+            }
+          } else {
+            // Remove the diagnostics parameter if present
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('diagnostics')) {
+              url.searchParams.delete('diagnostics');
+              window.history.pushState({}, '', url.toString());
+            }
+          }
+        }
+      }
+    };
+
     useEffect(() => {
       try {
         fetchProducts();
         fetchCollections();
-
-        // Add diagnostics parameter tracking
-        const handlePopState = () => {
-          const showDiag = new URLSearchParams(window.location.search).get('diagnostics') === 'true';
-          setShowDiagnostics(showDiag);
-        };
-        
-        window.addEventListener('popstate', handlePopState);
 
         // Subscribe to product changes
         const productsChannel = supabase
@@ -80,6 +143,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
             (payload) => {
               console.log('Product change detected:', payload);
               fetchProducts();
+              setLastUpdated(new Date());
             }
           )
           .subscribe();
@@ -97,6 +161,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
             (payload) => {
               console.log('Variation change detected:', payload);
               fetchProducts();
+              setLastUpdated(new Date());
             }
           )
           .subscribe();
@@ -114,21 +179,54 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
             (payload) => {
               console.log('Collection change detected:', payload);
               fetchCollections();
+              setLastUpdated(new Date());
             }
           )
           .subscribe();
+        
+        // Subscribe to system settings changes for admins
+        let settingsChannel;
+        if (isAdmin) {
+          settingsChannel = supabase
+            .channel('shop_system_settings_changes')
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'shop_system_settings'
+              },
+              (payload) => {
+                console.log('System settings changed:', payload);
+                loadSystemSettings();
+              }
+            )
+            .subscribe();
+        }
         
         return () => {
           supabase.removeChannel(productsChannel);
           supabase.removeChannel(variationsChannel);
           supabase.removeChannel(collectionsChannel);
-          window.removeEventListener('popstate', handlePopState);
+          if (settingsChannel) {
+            supabase.removeChannel(settingsChannel);
+          }
         };
       } catch (error) {
         console.error("Error in Shop useEffect:", error);
-        setDataError(true);
+        handleRecoveryMode(error as Error);
       }
     }, []);
+
+    const handleRecoveryMode = (error: Error) => {
+      setRecoveryError(error);
+      setDataError(true);
+      
+      // If system is in recovery mode, don't show the error toast
+      if (!systemSettings.recoveryMode) {
+        toast.error("Shop encountered an error and is attempting to recover");
+      }
+    };
 
     const fetchProducts = async () => {
       setLoading(true);
@@ -138,32 +236,35 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
         // Defensive check for valid data
         if (!data || !Array.isArray(data)) {
           console.error("Invalid products data received:", data);
-          setDataError(true);
-          setProducts([]);
-        } else {
-          setProducts(data);
-          
-          // Extract unique categories with null checks
-          const uniqueCategories = Array.from(
-            new Set(data.filter(product => product && product.category).map(product => product.category))
-          ) as string[];
-          
-          setCategories(uniqueCategories);
-          
-          // Set max price based on products with defensive checks
-          const highestPrice = Math.max(
-            ...data.map(product => (product && product.price) ? product.price : 0),
-            ...data.flatMap(p => (p && p.variations) 
-              ? p.variations.map(v => (v && v.price) ? v.price : 0) 
-              : [0])
-          );
-          setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
-          setPriceRange([0, Math.max(highestPrice, 100000)]);
+          throw new Error("Invalid products data format");
         }
+        
+        setProducts(data);
+        setLastUpdated(new Date());
+        
+        // Extract unique categories with null checks
+        const uniqueCategories = Array.from(
+          new Set(data.filter(product => product && product.category).map(product => product.category))
+        ) as string[];
+        
+        setCategories(uniqueCategories);
+        
+        // Set max price based on products with defensive checks
+        const highestPrice = Math.max(
+          ...data.map(product => (product && product.price) ? product.price : 0),
+          ...data.flatMap(p => (p && p.variations) 
+            ? p.variations.map(v => (v && v.price) ? v.price : 0) 
+            : [0])
+        );
+        setMaxPrice(Math.max(highestPrice, 100000)); // Ensure there is a reasonable minimum
+        setPriceRange([0, Math.max(highestPrice, 100000)]);
+        
+        // Clear any previous data error state
+        setDataError(false);
+        setRecoveryError(null);
       } catch (error) {
         console.error("Error fetching products:", error);
-        toast.error("Failed to load products. Please try again.");
-        setDataError(true);
+        handleRecoveryMode(error as Error);
       } finally {
         setLoading(false);
       }
@@ -180,12 +281,11 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
         }
       } catch (error) {
         console.error("Error fetching collections:", error);
-        toast.error("Failed to load collections. Please try again.");
       }
     };
 
     const handleDeleteProduct = async (id: string) => {
-      if (!canEdit) {
+      if (!validateShopAction('editor', 'delete_product')) {
         toast.error("You don't have permission to delete products");
         return;
       }
@@ -201,6 +301,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
           // Optimistic UI update
           setProducts(prevProducts => prevProducts.filter(product => product && product.id !== id));
           toast.success("Product deleted successfully");
+          setLastUpdated(new Date());
         }
       } catch (error) {
         console.error("Error deleting product:", error);
@@ -211,7 +312,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
     };
 
     const handleEditProduct = (product: ShopProduct) => {
-      if (!canEdit) {
+      if (!validateShopAction('editor', 'edit_product')) {
         toast.error("You don't have permission to edit products");
         return;
       }
@@ -280,27 +381,19 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       return matchesSearch && matchesCategory && matchesCollection && matchesPrice && matchesSize && matchesColor;
     });
 
-    // Show error state if data failed to load
-    if (dataError) {
+    // If we should render in recovery mode
+    const shouldUseRecoveryMode = systemSettings.recoveryMode || dataError;
+
+    // If in full recovery mode, render the RecoveryFallback component
+    if (shouldUseRecoveryMode && systemSettings.fallbackLevel === 'full') {
       return (
         <MainLayout>
-          <div className="container mx-auto p-8">
-            <div className="text-center py-12">
-              <h2 className="text-2xl font-bold mb-4">Unable to load shop data</h2>
-              <p className="mb-6 text-gray-600">
-                We're experiencing technical difficulties loading the shop. Please try again later.
-              </p>
-              <Button 
-                onClick={() => {
-                  setDataError(false);
-                  fetchProducts();
-                  fetchCollections();
-                }}
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
+          <RecoveryFallback 
+            products={products} 
+            error={recoveryError} 
+            level="full"
+          />
+          {isAdmin && <AdminRecoveryTools />}
         </MainLayout>
       );
     }
@@ -332,17 +425,55 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
       return a.title.localeCompare(b.title);
     });
 
+    // If we should show the diagnostic panel
+    const showDiagnosticsPanel = (showDiagnostics || systemSettings.diagnosticsEnabled) && isAdmin;
+
     return (
       <MainLayout>
         <ErrorBoundary>
           <div className="container mx-auto px-4 py-8">
-            {/* Shop Diagnostic Panel - only shown when diagnostics is enabled */}
-            {showDiagnostics && (
+            {/* AdminRecoveryTools component - only visible to admins */}
+            {isAdmin && <AdminRecoveryTools />}
+            
+            {/* Shop Diagnostic Panel - only shown when diagnostics is enabled for admins */}
+            {showDiagnosticsPanel && (
               <ErrorBoundary 
                 fallback={<div className="bg-red-100 p-4 mb-6 rounded-lg">Error loading diagnostics panel</div>}
               >
                 <ShopDiagnosticPanel />
               </ErrorBoundary>
+            )}
+            
+            {/* Recovery mode notice - only when using partial recovery mode */}
+            {shouldUseRecoveryMode && systemSettings.fallbackLevel !== 'full' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Shop Recovery Mode Active
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        Some features may be limited while the shop is in recovery mode. 
+                        {isAdmin && (
+                          <Button 
+                            variant="link" 
+                            onClick={() => loadSystemSettings()}
+                            className="p-0 h-auto text-yellow-800 underline"
+                          >
+                            Refresh status
+                          </Button>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
             
             {/* Text center heading section */}
@@ -351,6 +482,20 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Discover our curated selection of fashion and accessories from emerging designers
               </p>
+              
+              {/* Admin diagnostics toggle - only visible to admins */}
+              {isAdmin && (
+                <div className="flex justify-center mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleToggleDiagnostics}
+                    className="text-xs"
+                  >
+                    {systemSettings.diagnosticsEnabled ? 'Disable' : 'Enable'} Diagnostics
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Search and Filter Section */}
@@ -393,7 +538,12 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
               </ErrorBoundary>
 
               {/* Products Display */}
-              <ErrorBoundary fallback={<div className="flex-1 p-4 bg-red-50 rounded-lg border border-red-100">Error loading products. Please refresh the page and try again.</div>}>
+              <ErrorBoundary fallback={
+                // Fall back to minimal recovery view if product section fails
+                <div className="flex-1">
+                  <RecoveryFallback products={products} level="minimal" />
+                </div>
+              }>
                 <div className="flex-1">
                 {loading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -434,9 +584,16 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
                             <ErrorBoundary 
                               key={product.id}
                               fallback={
-                                <div className="border border-red-300 rounded-md p-4">
-                                  <p className="text-red-500">Failed to render product</p>
-                                </div>
+                                // Fall back to minimal product card if individual card fails
+                                shouldUseRecoveryMode ? (
+                                  <div className="border rounded-md overflow-hidden">
+                                    <RecoveryFallback products={[product]} level="minimal" />
+                                  </div>
+                                ) : (
+                                  <div className="border border-red-300 rounded-md p-4">
+                                    <p className="text-red-500">Failed to render product</p>
+                                  </div>
+                                )
                               }
                             >
                               <ProductCard 
@@ -469,6 +626,14 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
           </div>
         </ErrorBoundary>
         
+        {/* Admin developer notes overlay - only visible to admins */}
+        {isAdmin && (
+          <DeveloperNotesOverlay 
+            products={products} 
+            lastUpdated={lastUpdated}
+          />
+        )}
+        
         {/* Form dialogs wrapped with ErrorBoundary */}
         <ErrorBoundary>
           {/* Form dialog for adding new products */}
@@ -479,6 +644,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
             onSuccess={(newProduct) => {
               if (newProduct) {
                 setProducts(prev => [newProduct, ...prev]);
+                setLastUpdated(new Date());
               }
             }}
           />
@@ -494,6 +660,7 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
                   setProducts(prev => prev.map(product => 
                     product && product.id === updatedProduct.id ? updatedProduct : product
                   ));
+                  setLastUpdated(new Date());
                 }
                 setSelectedProduct(null);
               }}
@@ -519,8 +686,20 @@ const Shop: React.FC<ShopProps> = ({ userRole }) => {
             productCount={products.length}
             isGridView={isGridView}
             toggleViewMode={() => setIsGridView(!isGridView)}
-            onAddProduct={() => setIsAddProductDialogOpen(true)}
-            onManageCollections={() => setIsAddCollectionDialogOpen(true)}
+            onAddProduct={() => {
+              if (validateShopAction('editor', 'add_product')) {
+                setIsAddProductDialogOpen(true);
+              } else {
+                toast.error("You don't have permission to add products");
+              }
+            }}
+            onManageCollections={() => {
+              if (validateShopAction('editor', 'manage_collections')) {
+                setIsAddCollectionDialogOpen(true);
+              } else {
+                toast.error("You don't have permission to manage collections");
+              }
+            }}
           />
         )}
       </MainLayout>

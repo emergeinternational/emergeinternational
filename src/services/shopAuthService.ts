@@ -43,3 +43,65 @@ export const hasShopEditAccess = (): boolean => {
   const { isAdmin, isEditor } = getAuthStatus();
   return isAdmin || isEditor;
 };
+
+// Check if the current user has access to the admin-only tools
+export const hasAdminAccess = (): boolean => {
+  const { isAdmin } = getAuthStatus();
+  return isAdmin;
+};
+
+// Secure validation for any shop-related action
+export const validateShopAction = (
+  requiredRole: 'admin' | 'editor' | 'any',
+  actionName: string
+): boolean => {
+  const { isAdmin, isEditor, isAuthenticated } = getAuthStatus();
+  
+  // Base authentication check
+  if (!isAuthenticated) {
+    console.warn(`Unauthorized access attempt: ${actionName} - Not authenticated`);
+    return false;
+  }
+  
+  // Role-based validation
+  if (requiredRole === 'admin' && !isAdmin) {
+    console.warn(`Unauthorized access attempt: ${actionName} - Admin required`);
+    // Silently log unauthorized access attempt to server
+    logUnauthorizedAccess(actionName, 'admin_required');
+    return false;
+  }
+  
+  if (requiredRole === 'editor' && !(isAdmin || isEditor)) {
+    console.warn(`Unauthorized access attempt: ${actionName} - Editor required`);
+    // Silently log unauthorized access attempt to server
+    logUnauthorizedAccess(actionName, 'editor_required');
+    return false;
+  }
+  
+  // Action is authorized
+  return true;
+};
+
+// Silent logging of unauthorized access attempts
+const logUnauthorizedAccess = async (actionName: string, reason: string): Promise<void> => {
+  try {
+    // Get the current auth session
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    
+    // Log the attempt to the automation_logs table in Supabase
+    await supabase.from('automation_logs').insert({
+      function_name: 'shop_access_validation',
+      results: {
+        action: actionName,
+        reason: reason,
+        user_id: userId || 'unknown',
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent
+      }
+    });
+  } catch (error) {
+    // Silent failure - never expose security operations
+    console.debug('Security log entry failed silently');
+  }
+};
