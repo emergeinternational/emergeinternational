@@ -26,9 +26,18 @@ export const getCollections = async (): Promise<Collection[]> => {
 // Create a new collection
 export const createCollection = async (collectionData: Partial<Collection>): Promise<Collection | null> => {
   try {
+    // Make sure designer_name is provided even if it's partial data
+    if (!collectionData.designer_name) {
+      throw new Error("Designer name is required");
+    }
+    
     const { data, error } = await supabase
       .from("collections")
-      .insert(collectionData)
+      .insert({
+        title: collectionData.title || '',
+        designer_name: collectionData.designer_name,
+        description: collectionData.description
+      })
       .select()
       .single();
 
