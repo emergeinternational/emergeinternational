@@ -12,7 +12,8 @@ import ProductManagementPage from "./pages/admin/ProductManagementPage";
 import AdminLayout from "./layouts/AdminLayout";
 
 const App: React.FC = () => {
-  const { isLoggedIn } = useAuth();
+  const { user, userRole } = useAuth();
+  const isAuthenticated = !!user;
 
   const router = createBrowserRouter([
     {
@@ -29,7 +30,7 @@ const App: React.FC = () => {
     },
     {
       path: "/admin/product-management",
-      element: isLoggedIn ? (
+      element: isAuthenticated ? (
         <AdminLayout>
           <ProductManagementPage />
         </AdminLayout>

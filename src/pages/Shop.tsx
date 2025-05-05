@@ -17,7 +17,7 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const { isLoggedIn, userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const isAdmin = userRole === "admin" || userRole === "editor";
 
   useEffect(() => {
