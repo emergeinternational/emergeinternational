@@ -55,6 +55,7 @@ const DeveloperNotesOverlay: React.FC<DeveloperNotesOverlayProps> = ({ products 
           table: 'shop_products'
         },
         (payload) => {
+          console.log("Product change detected:", payload);
           setLastUpdated(new Date());
           setRpcCount(prev => prev + 1);
         }

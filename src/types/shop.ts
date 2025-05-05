@@ -47,3 +47,28 @@ export interface ProductFormValues {
   variations?: ProductVariation[];
   status?: 'draft' | 'pending' | 'published' | 'rejected';
 }
+
+// Add these diagnostic types to fix build errors
+export type DiagnosticStatus = 'pending' | 'error' | 'running' | 'success' | 'warning';
+
+export interface DiagnosticTest {
+  name: string;
+  message: string;
+  status: DiagnosticStatus;
+  details: any;
+  runTest: () => Promise<void>;
+}
+
+export interface DiagnosticTestResult {
+  status: DiagnosticStatus;
+  details: any;
+}
+
+export interface RLSPolicy {
+  policyname: string;
+  permissive: string;
+  roles: string[];
+  cmd: string;
+  qual: string;
+  with_check: string;
+}

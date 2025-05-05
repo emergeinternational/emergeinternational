@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Plus, ImagePlus, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getCollections } from "@/services/collectionService";
 import { ShopProduct, ProductFormValues, Collection, ProductVariation } from "@/types/shop";
 import { createProductSubmission, updateProductSubmission, saveProductDraft } from "@/services/designerProductService";
@@ -33,13 +33,21 @@ interface ProductFormProps {
   submitType: 'draft' | 'pending';
 }
 
+// Define form schema with improved validation
 const productFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string()
+    .min(1, "Title is required")
+    .max(100, "Title must be 100 characters or less"),
   description: z.string().optional(),
-  price: z.coerce.number().min(0, "Price must be a positive number"),
+  price: z.coerce
+    .number()
+    .min(0.01, "Price must be greater than 0")
+    .max(1000000, "Price too high"),
   image_url: z.string().optional(),
   in_stock: z.boolean().default(true),
-  category: z.string().optional(),
+  category: z.string({
+    required_error: "Please select a category",
+  }),
   collection_id: z.string().optional(),
   variations: z.array(
     z.object({
@@ -56,7 +64,6 @@ const productFormSchema = z.object({
 type ProductFormType = z.infer<typeof productFormSchema>;
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitType }) => {
-  const { toast } = useToast();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,18 +83,42 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
     },
   });
 
+  // Log initial form state for debugging
+  useEffect(() => {
+    console.log("ProductForm initialized with product:", product);
+    console.log("Initial form values:", form.getValues());
+  }, [product]);
+
   // Fetch collections on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchCollections = async () => {
-      const collectionsData = await getCollections();
-      setCollections(collectionsData);
+      try {
+        const collectionsData = await getCollections();
+        setCollections(collectionsData);
+      } catch (error) {
+        console.error("Error fetching collections:", error);
+        toast.error("Failed to load collections");
+      }
     };
     fetchCollections();
   }, []);
 
   const handleSubmit = async (data: ProductFormType) => {
+    console.log("Form submission data:", data);
+    
     setIsSubmitting(true);
     try {
+      // Validate required fields
+      if (!data.title) {
+        toast.error("Product title is required");
+        return;
+      }
+      
+      if (data.price <= 0) {
+        toast.error("Price must be greater than 0");
+        return;
+      }
+      
       if (submitType === 'draft') {
         // Save as draft
         const result = await saveProductDraft(data as ProductFormValues, product?.id);
@@ -97,6 +128,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
             title: "Draft saved",
             description: "Your product has been saved as a draft"
           });
+        } else {
+          throw new Error("Failed to save draft");
         }
       } else if (product) {
         // Update existing product
@@ -107,6 +140,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
             title: "Product updated",
             description: "Your product has been updated and resubmitted for approval"
           });
+        } else {
+          throw new Error("Failed to update product");
         }
       } else {
         // Create new product
@@ -117,15 +152,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
             title: "Product submitted",
             description: "Your product has been submitted for approval"
           });
+        } else {
+          throw new Error("Failed to create product");
         }
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save product",
-        variant: "destructive"
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to save product");
+      
+      // Log detailed error
+      if (error instanceof Error) {
+        console.error("Details:", error.stack);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +229,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
     form.setValue("variations", updatedVariations);
   };
 
+  // Log form errors to help with debugging
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (Object.keys(form.formState.errors).length > 0) {
+        console.log("Form errors:", form.formState.errors);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   return (
     <div>
       <Form {...form}>
@@ -208,9 +256,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>Title *</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} placeholder="Product title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -222,9 +270,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price</FormLabel>
+                      <FormLabel>Price *</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          {...field} 
+                          placeholder="0.00" 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -246,6 +299,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                               src={field.value}
                               alt="Product preview"
                               className="w-full h-full object-contain"
+                              onError={(e) => {
+                                console.error("Image failed to load:", field.value);
+                                e.currentTarget.src = "https://placehold.co/400x300?text=Image+Not+Found";
+                              }}
                             />
                             <Button
                               type="button"
@@ -327,10 +384,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Category *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -359,6 +417,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -500,7 +559,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, submitTyp
                           </div>
 
                           <div className="space-y-2">
-                            <FormLabel>SKU</FormLabel>
+                            <FormLabel>SKU *</FormLabel>
                             <Input
                               value={(form.watch("variations") || [])[index]?.sku || ""}
                               onChange={(e) => {

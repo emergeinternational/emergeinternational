@@ -15,6 +15,7 @@ export const useShopSafeguard = () => {
   useEffect(() => {
     // Only admins get the full monitoring capability
     if (isAdmin) {
+      console.log("Shop safeguard monitoring activated for admin user");
       setIsMonitoring(true);
       
       const monitorErrorRate = () => {
@@ -25,6 +26,7 @@ export const useShopSafeguard = () => {
           
           // If error count is high, check if we should activate recovery mode
           if (errorCount > 5 && !recoveryActivated) {
+            console.log(`High error count detected (${errorCount}), checking if recovery mode should be activated`);
             checkAndActivateRecovery();
           }
           
@@ -33,6 +35,7 @@ export const useShopSafeguard = () => {
             const currentCount = parseInt(sessionStorage.getItem('shop_error_count') || '0');
             const newCount = currentCount + 1;
             sessionStorage.setItem('shop_error_count', newCount.toString());
+            console.log(`Shop error detected, new count: ${newCount}`);
             
             if (newCount > 5 && !recoveryActivated) {
               checkAndActivateRecovery();
@@ -61,11 +64,13 @@ export const useShopSafeguard = () => {
   // Check if recovery mode should be activated
   const checkAndActivateRecovery = async () => {
     try {
+      console.log("Checking if recovery mode should be activated");
       // Get current system settings
       const settings = await getShopSystemSettings();
       
       // If recovery mode is already active, don't activate again
       if (settings.recoveryMode) {
+        console.log("Recovery mode is already active");
         return;
       }
       
@@ -78,6 +83,8 @@ export const useShopSafeguard = () => {
         
         // Clear error count to prevent rapid toggling
         sessionStorage.setItem('shop_error_count', '0');
+      } else {
+        console.error("Failed to activate recovery mode");
       }
     } catch (err) {
       console.error("Error activating recovery mode:", err);
