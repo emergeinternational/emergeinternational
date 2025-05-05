@@ -16,7 +16,7 @@ export const useMockProducts = (isLocked: boolean = false) => {
   const handleGenerateMockProducts = async (count: number = 5) => {
     if (isLocked) {
       toast.error("System is locked. Unlock it to generate mock products.");
-      return;
+      return null;
     }
     
     try {
@@ -28,7 +28,7 @@ export const useMockProducts = (isLocked: boolean = false) => {
       if (error) {
         console.error("Error generating mock products:", error);
         toast.error("Failed to generate mock products");
-        return;
+        return null;
       }
       
       // Show success message with count of products created

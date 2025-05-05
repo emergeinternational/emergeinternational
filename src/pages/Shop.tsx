@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
 import { getProducts, deleteProduct } from "../services/shopService";
@@ -394,6 +395,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
             products={products} 
             error={recoveryError} 
             level="full"
+            onRefresh={fetchProducts}
           />
           {isAdmin && <AdminRecoveryTools />}
         </MainLayout>
@@ -514,7 +516,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={refreshProducts}
+                  onClick={fetchProducts}
                   className="ml-2"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -551,7 +553,7 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
               <ErrorBoundary fallback={
                 // Fall back to minimal recovery view if product section fails
                 <div className="flex-1">
-                  <RecoveryFallback products={products} level="minimal" />
+                  <RecoveryFallback products={products} level="minimal" onRefresh={fetchProducts} />
                 </div>
               }>
                 <div className="flex-1">
@@ -646,7 +648,6 @@ const Shop: React.FC<ShopProps> = ({ userRole, showDiagnostics = false }) => {
             {canEdit && (
               <AdminFloatingPanel 
                 onAddProduct={() => setIsAddProductDialogOpen(true)}
-                onRefresh={refreshProducts}
               />
             )}
             

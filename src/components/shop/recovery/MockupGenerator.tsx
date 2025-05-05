@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -21,13 +21,16 @@ const MockupGenerator: React.FC<MockupGeneratorProps> = ({
 
   // Handle generation with callback for refresh
   const generateProducts = async (count: number) => {
-    const products = await handleGenerateMockProducts(count);
-    
-    if (products) {
-      // If products were generated successfully, trigger refresh
-      if (onProductsGenerated) {
+    try {
+      const products = await handleGenerateMockProducts(count);
+      
+      if (products && onProductsGenerated) {
+        // If products were generated successfully, trigger refresh
         onProductsGenerated();
       }
+    } catch (error) {
+      console.error("Error generating mock products:", error);
+      toast.error("Failed to generate mock products");
     }
   };
 
