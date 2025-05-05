@@ -15,264 +15,49 @@ import {
   AlertTriangle,
   Package,
   FileJson,
-  Sync,
+  RefreshCcw,
   Rewind
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  generateMockProducts, 
-  getProductSnapshots,
-  createProductSnapshot,
-  getShopSystemSettings,
-  runShopSync,
-  restoreFromSnapshot,
-  ProductSnapshot
-} from "@/services/shopSystemService";
-import { ShopSystemSettings, RecoveryLogEntry } from "@/types/shop";
 import { validateShopAction } from "@/services/shopAuthService";
+import { useShopDiagnostics } from "@/hooks/shop/useShopDiagnostics";
+import { useMockProducts } from "@/hooks/shop/useMockProducts";
+import { useProductSnapshots } from "@/hooks/shop/useProductSnapshots";
+import { useShopSync } from "@/hooks/shop/useShopSync";
 
 interface AdminRecoveryToolsProps {
   isLocked?: boolean;
 }
 
+/**
+ * AdminRecoveryTools component serves as a wrapper and layout manager
+ * for the shop module's recovery and diagnostic tools.
+ */
 const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = false }) => {
-  // State for UI actions
-  const [isMockGenerating, setIsMockGenerating] = useState(false);
-  const [isSnapshotting, setIsSnapshotting] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  
-  // State for data
-  const [snapshots, setSnapshots] = useState<ProductSnapshot[]>([]);
-  const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLogEntry[]>([]);
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
-  
-  // State for system info
-  const [systemInfo, setSystemInfo] = useState<{
-    lastSeedDate: string | null;
-    seedCount: number;
-    mockupCount: number;
-    syncStatus: 'synced' | 'out-of-sync' | 'unknown';
-  }>({
-    lastSeedDate: null,
-    seedCount: 0,
-    mockupCount: 0,
-    syncStatus: 'unknown'
-  });
-
   // Check if user has admin access
   const hasAdminAccess = validateShopAction('admin', 'view_recovery_tools');
-
-  // Load snapshots and system info on mount
-  useEffect(() => {
-    if (hasAdminAccess) {
-      loadSnapshots();
-      loadSystemInfo();
-      loadRecoveryLogs();
-    }
-  }, [hasAdminAccess]);
-
-  // Load product snapshots
-  const loadSnapshots = async () => {
-    try {
-      const snapshotData = await getProductSnapshots();
-      setSnapshots(snapshotData);
-    } catch (error) {
-      console.error("Error loading snapshots:", error);
-      toast.error("Failed to load product snapshots");
-      addRecoveryLog('load_snapshots', 'failure', { error: String(error) });
-    }
-  };
-
-  // Load system information
-  const loadSystemInfo = async () => {
-    try {
-      // Get system settings
-      const settings = await getShopSystemSettings();
-      
-      // Count mockup products (products created by system)
-      const { count, error: countError } = await supabase
-        .from('shop_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'published');
-        
-      if (countError) throw countError;
-      
-      // Extract mockup data with proper typing
-      const mockupData = settings.mockupData || {};
-      
-      setSystemInfo({
-        lastSeedDate: mockupData.last_seeded || null,
-        seedCount: mockupData.seed_count || 0,
-        mockupCount: count || 0,
-        syncStatus: 'synced' // Assume synced by default
-      });
-    } catch (error) {
-      console.error("Error loading system info:", error);
-      addRecoveryLog('load_system_info', 'failure', { error: String(error) });
-    }
-  };
-
-  // Load recovery logs
-  const loadRecoveryLogs = async () => {
-    try {
-      // In a real implementation, we'd fetch logs from a database table
-      // For now, we'll use mock data
-      setRecoveryLogs([
-        {
-          id: '1',
-          timestamp: new Date().toISOString(),
-          action: 'system_startup',
-          status: 'success',
-          details: { message: 'Recovery tools initialized' }
-        }
-      ]);
-    } catch (error) {
-      console.error("Error loading recovery logs:", error);
-    }
-  };
-
-  // Add a new recovery log entry
-  const addRecoveryLog = (action: string, status: 'success' | 'failure' | 'pending', details?: any) => {
-    const newLog: RecoveryLogEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      action,
-      status,
-      details
-    };
-    
-    setRecoveryLogs(prev => [newLog, ...prev]);
-  };
-
-  // Handle generating mock products
-  const handleGenerateMockProducts = async (count: number = 5) => {
-    if (isLocked || !validateShopAction('admin', 'generate_mock_products')) {
-      toast.error("You don't have permission to generate mock products");
-      addRecoveryLog('generate_mock_products', 'failure', { reason: 'permission_denied' });
-      return;
-    }
-    
-    try {
-      setIsMockGenerating(true);
-      addRecoveryLog('generate_mock_products', 'pending', { count });
-      
-      const success = await generateMockProducts(count);
-      
-      if (success) {
-        toast.success(`Successfully generated ${count} mock products`);
-        addRecoveryLog('generate_mock_products', 'success', { count });
-        loadSystemInfo();
-      } else {
-        addRecoveryLog('generate_mock_products', 'failure');
-      }
-    } catch (error) {
-      console.error("Error generating mock products:", error);
-      toast.error("Failed to generate mock products");
-      addRecoveryLog('generate_mock_products', 'failure', { error: String(error) });
-    } finally {
-      setIsMockGenerating(false);
-    }
-  };
-
-  // Handle creating a manual snapshot
-  const handleCreateSnapshot = async () => {
-    if (isLocked || !validateShopAction('admin', 'create_snapshot')) {
-      toast.error("You don't have permission to create snapshots");
-      addRecoveryLog('create_snapshot', 'failure', { reason: 'permission_denied' });
-      return;
-    }
-    
-    try {
-      setIsSnapshotting(true);
-      addRecoveryLog('create_snapshot', 'pending');
-      
-      const success = await createProductSnapshot();
-      
-      if (success) {
-        toast.success("Product snapshot created successfully");
-        addRecoveryLog('create_snapshot', 'success');
-        loadSnapshots();
-      } else {
-        addRecoveryLog('create_snapshot', 'failure');
-      }
-    } catch (error) {
-      console.error("Error creating snapshot:", error);
-      toast.error("Failed to create product snapshot");
-      addRecoveryLog('create_snapshot', 'failure', { error: String(error) });
-    } finally {
-      setIsSnapshotting(false);
-    }
-  };
-
-  // Handle restoring from a snapshot
-  const handleRestoreSnapshot = async (snapshotId: string) => {
-    if (isLocked || !validateShopAction('admin', 'restore_snapshot')) {
-      toast.error("You don't have permission to restore snapshots");
-      addRecoveryLog('restore_snapshot', 'failure', { reason: 'permission_denied', snapshotId });
-      return;
-    }
-    
-    try {
-      setIsRestoring(true);
-      setSelectedSnapshotId(snapshotId);
-      addRecoveryLog('restore_snapshot', 'pending', { snapshotId });
-      
-      const success = await restoreFromSnapshot(snapshotId);
-      
-      if (success) {
-        toast.success("Successfully restored from snapshot");
-        addRecoveryLog('restore_snapshot', 'success', { snapshotId });
-        loadSystemInfo();
-      } else {
-        addRecoveryLog('restore_snapshot', 'failure', { snapshotId });
-      }
-    } catch (error) {
-      console.error("Error restoring from snapshot:", error);
-      toast.error("Failed to restore from snapshot");
-      addRecoveryLog('restore_snapshot', 'failure', { snapshotId, error: String(error) });
-    } finally {
-      setIsRestoring(false);
-      setSelectedSnapshotId(null);
-    }
-  };
-
-  // Handle running a full shop sync
-  const handleRunSync = async () => {
-    if (isLocked || !validateShopAction('admin', 'run_shop_sync')) {
-      toast.error("You don't have permission to run shop synchronization");
-      addRecoveryLog('run_shop_sync', 'failure', { reason: 'permission_denied' });
-      return;
-    }
-    
-    try {
-      setIsSyncing(true);
-      addRecoveryLog('run_shop_sync', 'pending');
-      
-      const success = await runShopSync();
-      
-      if (success) {
-        toast.success("Shop synchronization completed successfully");
-        addRecoveryLog('run_shop_sync', 'success');
-        loadSystemInfo();
-      } else {
-        addRecoveryLog('run_shop_sync', 'failure');
-      }
-    } catch (error) {
-      console.error("Error running shop sync:", error);
-      toast.error("Failed to synchronize shop data");
-      addRecoveryLog('run_shop_sync', 'failure', { error: String(error) });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
+  
   // If user doesn't have admin access, don't render anything
   if (!hasAdminAccess) {
     return null;
   }
-  
+
+  // Get hooks for different feature areas
+  const { systemInfo, syncStatus, handleRunSync, isSyncing } = useShopSync();
+  const { 
+    snapshots, 
+    isSnapshotting, 
+    isRestoring, 
+    selectedSnapshotId,
+    handleCreateSnapshot, 
+    handleRestoreSnapshot 
+  } = useProductSnapshots(isLocked);
+  const { 
+    handleGenerateMockProducts, 
+    isMockGenerating 
+  } = useMockProducts(isLocked);
+  const { recoveryLogs } = useShopDiagnostics();
+
   // Get the snapshot count for Badge display
   const snapshotCount = snapshots.length;
 
@@ -319,6 +104,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           
+          {/* Mock Data Tab */}
           <TabsContent value="mockups">
             <div className="space-y-4">
               <div className="p-4 border rounded-md bg-slate-50">
@@ -371,6 +157,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
             </div>
           </TabsContent>
           
+          {/* Snapshots Tab */}
           <TabsContent value="snapshots">
             <div className="space-y-4">
               <div className="p-4 border rounded-md bg-slate-50">
@@ -434,6 +221,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
             </div>
           </TabsContent>
           
+          {/* Synchronization Tab */}
           <TabsContent value="sync">
             <div className="space-y-4">
               <div className="p-4 border rounded-md">
@@ -447,7 +235,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
                   disabled={isSyncing || isLocked}
                   className="flex items-center"
                 >
-                  {isSyncing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Sync className="h-4 w-4 mr-2" />}
+                  {isSyncing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
                   Run Full Synchronization
                 </Button>
               </div>
@@ -456,16 +244,16 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
                 <h3 className="font-medium mb-2">System Status</h3>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    {systemInfo.syncStatus === 'synced' ? (
+                    {syncStatus === 'synced' ? (
                       <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    ) : systemInfo.syncStatus === 'out-of-sync' ? (
+                    ) : syncStatus === 'out-of-sync' ? (
                       <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
                     ) : (
                       <AlertCircle className="h-4 w-4 text-gray-500 mr-2" />
                     )}
                     <span className="text-sm">
-                      {systemInfo.syncStatus === 'synced' ? 'System is in sync' : 
-                       systemInfo.syncStatus === 'out-of-sync' ? 'System needs synchronization' : 
+                      {syncStatus === 'synced' ? 'System is in sync' : 
+                       syncStatus === 'out-of-sync' ? 'System needs synchronization' : 
                        'Sync status unknown'}
                     </span>
                   </div>
@@ -486,6 +274,7 @@ const AdminRecoveryTools: React.FC<AdminRecoveryToolsProps> = ({ isLocked = fals
             </div>
           </TabsContent>
           
+          {/* Logs Tab */}
           <TabsContent value="logs">
             <div className="p-4 border rounded-md">
               <h3 className="font-medium mb-2">Recovery Logs</h3>
