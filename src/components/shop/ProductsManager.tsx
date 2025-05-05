@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ShopProduct, getProducts, deleteProduct } from "@/services/shopService";
+import { ShopProduct } from "@/types/shop";
+import { getProducts, deleteProduct } from "@/services/shopService";
 import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
 import { Button } from "@/components/ui/button";

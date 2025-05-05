@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import MainLayout from "../layouts/MainLayout";
-import { getProducts, ShopProduct } from "../services/shopService";
+import { getProducts } from "../services/shopService";
+import { ShopProduct } from "../types/shop";
 import ProductCard from "../components/shop/ProductCard";
 import ProductFormDialog from "../components/shop/ProductFormDialog";
 import { Input } from "@/components/ui/input";

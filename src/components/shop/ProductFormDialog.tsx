@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Dialog,
@@ -7,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import ProductForm from "./ProductForm";
-import { ShopProduct } from "@/services/shopService";
+import { ShopProduct } from "@/types/shop";
 
 interface ProductFormDialogProps {
   open: boolean;

@@ -1,4 +1,3 @@
-
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
@@ -167,8 +166,7 @@ export const resetPassword = async (password: string): Promise<void> => {
     }
 
     console.log("Password updated successfully");
-    toast({
-      title: "Password updated",
+    toast.success("Password updated", {
       description: "Your password has been updated successfully."
     });
   } catch (error) {

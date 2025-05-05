@@ -16,7 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ShopProduct, createProduct, updateProduct } from "@/services/shopService";
+import { ShopProduct, ProductFormValues } from "@/types/shop";
+import { createProduct, updateProduct } from "@/services/shopService";
 import { DialogClose } from "@/components/ui/dialog";
 
 const formSchema = z.object({

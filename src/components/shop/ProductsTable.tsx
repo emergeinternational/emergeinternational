@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShopProduct } from '@/services/shopService';
+import { ShopProduct } from '@/types/shop';
 import { Edit, Trash, AlertTriangle } from "lucide-react";
 
 interface ProductsTableProps {

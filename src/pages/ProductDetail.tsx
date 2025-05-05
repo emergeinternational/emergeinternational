@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
-import { getProductById, ShopProduct } from "../services/shopService";
+import { getProductById } from "../services/shopService";
+import { ShopProduct } from "../types/shop";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, ArrowLeft } from "lucide-react";

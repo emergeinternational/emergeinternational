@@ -45,7 +45,7 @@ export const getProductById = async (id: string): Promise<ShopProduct | null> =>
 };
 
 // Create a new product
-export const createProduct = async (productData: Omit<ShopProduct, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
+export const createProduct = async (productData: ProductFormValues): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from("shop_products")

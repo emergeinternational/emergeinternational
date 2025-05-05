@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { ShopProduct } from "@/services/shopService";
+import { ShopProduct } from "@/types/shop";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
