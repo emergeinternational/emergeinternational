@@ -4,17 +4,13 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "sonner";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
-import { initializeAuth, setupAuthListener } from './services/shopAuthService'; // Changed to local shopAuthService
+import { getAuthStatus } from './services/shopAuthService'; // Fix imports to use only what exists
 
 const App: React.FC = () => {
   // Initialize auth state at app startup
   React.useEffect(() => {
-    initializeAuth();
-    const cleanup = setupAuthListener();
-    
-    return () => {
-      cleanup();
-    };
+    // Just check auth status instead of calling missing functions
+    console.log("App starting, checking auth:", getAuthStatus());
   }, []);
 
   // Only include Shop module routes
