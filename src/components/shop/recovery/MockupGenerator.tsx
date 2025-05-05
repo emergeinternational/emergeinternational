@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Package } from "lucide-react";
 import { toast } from "sonner";
-import { useMockProducts } from "@/hooks/shop/useMockProducts";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MockupGeneratorProps {
   isLocked?: boolean;
@@ -17,21 +17,48 @@ const MockupGenerator: React.FC<MockupGeneratorProps> = ({
   isLocked = false, 
   onProductsGenerated 
 }) => {
-  const { handleGenerateMockProducts, isMockGenerating } = useMockProducts(isLocked);
+  const [isMockGenerating, setIsMockGenerating] = useState<boolean>(false);
 
-  // Handle generation with callback for refresh
-  const generateProducts = async (count: number) => {
+  // Generate mock products function that doesn't depend on external hooks
+  const handleGenerateMockProducts = async (count: number) => {
+    if (isLocked) {
+      toast.error("System is locked. Unlock it to generate mock products.");
+      return null;
+    }
+    
     try {
-      const products = await handleGenerateMockProducts(count);
+      setIsMockGenerating(true);
       
-      if (products && onProductsGenerated) {
-        // If products were generated successfully, trigger refresh
+      // Call the RPC function directly to generate mock products
+      const { data, error } = await supabase.rpc('generate_mock_products', { count });
+      
+      if (error) {
+        console.error("Error generating mock products:", error);
+        toast.error("Failed to generate mock products");
+        return null;
+      }
+      
+      // Show success message with count of products created
+      toast.success(`Successfully generated ${count} mock products`);
+      
+      // Call the callback if provided
+      if (onProductsGenerated) {
         onProductsGenerated();
       }
+      
+      return data;
     } catch (error) {
-      console.error("Error generating mock products:", error);
+      console.error("Error in handleGenerateMockProducts:", error);
       toast.error("Failed to generate mock products");
+      return null;
+    } finally {
+      setIsMockGenerating(false);
     }
+  };
+  
+  // Handle generation with callback for refresh
+  const generateProducts = async (count: number) => {
+    await handleGenerateMockProducts(count);
   };
 
   return (

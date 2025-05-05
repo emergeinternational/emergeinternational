@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,29 +26,35 @@ const RecoveryFallback: React.FC<RecoveryFallbackProps> = ({
 
   // Safe fetch products function that doesn't rely on external functions
   const fetchProductsDirectly = async () => {
-    if (!onRefresh) {
-      try {
-        setIsLoading(true);
-        const { data } = await supabase
-          .from('shop_products')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
+    try {
+      setIsLoading(true);
+      
+      if (onRefresh) {
+        // If parent provided a refresh function, use it
+        onRefresh();
         setIsLoading(false);
-        
-        if (onRefresh) {
-          onRefresh(); // Call parent refresh if provided
-        }
-        
-        return data || [];
-      } catch (e) {
-        console.error("Error fetching products in recovery mode:", e);
-        setIsLoading(false);
-        return [];
+        return;
       }
-    } else {
-      // Use provided refresh function if available
-      onRefresh();
+      
+      // Otherwise do a direct fetch
+      const { data } = await supabase
+        .from('shop_products')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      setIsLoading(false);
+      
+      // We don't update state here as we can't guarantee the parent component
+      // This is just for user feedback that something happened
+      if (data && data.length > 0) {
+        return data;
+      }
+      
+      return [];
+    } catch (e) {
+      console.error("Error fetching products in recovery mode:", e);
+      setIsLoading(false);
+      return [];
     }
   };
 
