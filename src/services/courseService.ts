@@ -1,3 +1,4 @@
+
 // This file re-exports functionality from the refactored service files
 // to maintain backward compatibility with existing imports
 export { 
@@ -25,7 +26,8 @@ export {
   approveScrapedCourse,
   rejectScrapedCourse,
   getScrapedCoursesBySource,
-  getDuplicateStats
+  getDuplicateStats,
+  triggerManualScrape
 } from './scraping/courseScraperCore';
 
 export {

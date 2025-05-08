@@ -131,6 +131,33 @@ export type Database = {
         }
         Relationships: []
       }
+      collections: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          designer_name: string
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          designer_name: string
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          designer_name?: string
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       course_engagement: {
         Row: {
           course_id: string
@@ -998,6 +1025,88 @@ export type Database = {
         }
         Relationships: []
       }
+      product_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          product_id: string
+          status: Database["public"]["Enums"]["product_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          product_id: string
+          status: Database["public"]["Enums"]["product_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          product_id?: string
+          status?: Database["public"]["Enums"]["product_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_notifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variations: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          price: number | null
+          product_id: string
+          size: string | null
+          sku: string
+          stock_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          price?: number | null
+          product_id: string
+          size?: string | null
+          sku: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          price?: number | null
+          product_id?: string
+          size?: string | null
+          sku?: string
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
@@ -1237,6 +1346,154 @@ export type Database = {
           state?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      shop_metadata: {
+        Row: {
+          action_type: string
+          created_at: string
+          field_name: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          product_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          product_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_metadata_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_snapshots: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          product_count: number
+          snapshot_file_path: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          product_count: number
+          snapshot_file_path: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          product_count?: number
+          snapshot_file_path?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      shop_products: {
+        Row: {
+          category: string | null
+          collection_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean | null
+          price: number
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          collection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean | null
+          price: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          collection_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean | null
+          price?: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_system_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -1536,6 +1793,24 @@ export type Database = {
       }
     }
     Functions: {
+      generate_mock_products: {
+        Args: { count?: number }
+        Returns: {
+          category: string | null
+          collection_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean | null
+          price: number
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at: string | null
+        }[]
+      }
       get_current_user_profile: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1577,6 +1852,17 @@ export type Database = {
           events: Json
         }[]
       }
+      get_policies_for_table: {
+        Args: { table_name: string }
+        Returns: {
+          policyname: unknown
+          permissive: string
+          roles: unknown[]
+          cmd: string
+          qual: string
+          with_check: string
+        }[]
+      }
       log_user_action: {
         Args: {
           action_type: string
@@ -1599,7 +1885,12 @@ export type Database = {
         | "musical_artist"
         | "fine_artist"
         | "event_planner"
-      certificate_status: "pending" | "approved" | "denied"
+      certificate_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "rejected"
+        | "ineligible"
       course_category:
         | "model"
         | "designer"
@@ -1628,6 +1919,7 @@ export type Database = {
       event_status: "draft" | "published" | "cancelled"
       hosting_type: "hosted" | "embedded" | "external"
       product_category: "accessories" | "footwear" | "new_arrivals" | "clothing"
+      product_status: "draft" | "pending" | "published" | "rejected"
       talent_status: "pending" | "approved" | "rejected" | "on_hold"
       user_role_type: "admin" | "editor" | "viewer" | "user"
     }
@@ -1754,7 +2046,13 @@ export const Constants = {
         "fine_artist",
         "event_planner",
       ],
-      certificate_status: ["pending", "approved", "denied"],
+      certificate_status: [
+        "pending",
+        "approved",
+        "denied",
+        "rejected",
+        "ineligible",
+      ],
       course_category: [
         "model",
         "designer",
@@ -1786,6 +2084,7 @@ export const Constants = {
       event_status: ["draft", "published", "cancelled"],
       hosting_type: ["hosted", "embedded", "external"],
       product_category: ["accessories", "footwear", "new_arrivals", "clothing"],
+      product_status: ["draft", "pending", "published", "rejected"],
       talent_status: ["pending", "approved", "rejected", "on_hold"],
       user_role_type: ["admin", "editor", "viewer", "user"],
     },

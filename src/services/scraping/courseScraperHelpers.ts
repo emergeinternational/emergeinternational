@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Course } from "../courseTypes";
+import { Course, CourseCategory, CourseLevel, CourseHostingType } from "../courseTypes";
 
 // Log scraper activity
 export const logScraperActivity = async (
@@ -28,9 +28,16 @@ export const logScraperActivity = async (
 // Create a verified course directly (for manual course creation)
 export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
   try {
+    const validatedData = {
+      ...courseData,
+      category: courseData.category as CourseCategory,
+      level: courseData.level || 'beginner' as CourseLevel,
+      hosting_type: courseData.hosting_type as CourseHostingType
+    };
+    
     const { data, error } = await supabase
       .from("courses")
-      .insert(courseData)
+      .insert(validatedData)
       .select()
       .single();
     
@@ -45,4 +52,3 @@ export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'crea
     return null;
   }
 };
-
