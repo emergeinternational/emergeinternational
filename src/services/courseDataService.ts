@@ -1,7 +1,7 @@
 
 import { Course, CourseProgress } from "./courseTypes";
 import { getUserCourseProgress } from "./courseProgressService";
-import { getStaticCourses } from "./education/staticCoursesService";
+import { getStaticCourses } from "./staticCoursesData";
 import { 
   getCourseById as getCourseByIdQuery, 
   getAllCourses as getAllCoursesQuery,
@@ -71,5 +71,4 @@ export const getCoursesForCategory = async (
   }
 };
 
-// Re-export getStaticCourses for backward compatibility
 export { getStaticCourses };

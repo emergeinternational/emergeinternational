@@ -1,592 +1,467 @@
 
 import React, { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, ImagePlus, AlertCircle, Plus, Trash2, Package } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProductCategory, ProductVariation, Product } from "@/services/productTypes";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ProductFormDialogProps } from "./ProductFormDialog.d";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Product, ProductCategory, ProductVariation } from "@/services/productTypes";
+import { Trash, Plus, Upload, Loader2 } from "lucide-react";
 
-const ProductFormDialog: React.FC<ProductFormDialogProps> = ({
-  open,
-  onOpenChange,
-  onSuccess,
-  product,
-  isLocked
-}) => {
+interface ProductFormDialogProps {
+  open: boolean;
+  product?: Product | null;
+  onClose: (refresh: boolean) => void;
+}
+
+const ProductFormDialog = ({ open, product, onClose }: ProductFormDialogProps) => {
   const { toast } = useToast();
-  const [activeProduct, setActiveProduct] = useState<any>(product || {});
-  const [title, setTitle] = useState(activeProduct?.title || "");
-  const [description, setDescription] = useState(activeProduct?.description || "");
-  const [price, setPrice] = useState(activeProduct?.price?.toString() || "");
-  const [category, setCategory] = useState<ProductCategory>(activeProduct?.category || "clothing");
-  const [imageUrl, setImageUrl] = useState(activeProduct?.image_url || "");
-  const [isPublished, setIsPublished] = useState(activeProduct?.is_published || false);
-  const [inStock, setInStock] = useState(activeProduct?.in_stock || false);
-  const [sku, setSku] = useState(activeProduct?.sku || "");
-  const [weight, setWeight] = useState(activeProduct?.weight?.toString() || "");
-  const [stockQuantity, setStockQuantity] = useState(activeProduct?.stock_quantity?.toString() || "0");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
-  const [variations, setVariations] = useState<ProductVariation[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
+  // Form state
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState(0);
+  const [category, setCategory] = useState<ProductCategory>("clothing");
+  const [imageUrl, setImageUrl] = useState("");
+  const [isPublished, setIsPublished] = useState(false);
+  const [inStock, setInStock] = useState(true);
+  
+  // Variations state
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
+
   useEffect(() => {
     if (product) {
-      setActiveProduct(product);
       setTitle(product.title || "");
       setDescription(product.description || "");
-      setPrice(product.price?.toString() || "");
+      setPrice(product.price || 0);
       setCategory(product.category || "clothing");
       setImageUrl(product.image_url || "");
       setIsPublished(product.is_published || false);
-      setInStock(product.in_stock || false);
-      setSku(product.sku || "");
-      setWeight(product.weight?.toString() || "");
-      setStockQuantity(product.stock_quantity?.toString() || "0");
-      
-      // If we have a product ID, fetch the variations from the database
-      if (product.id) {
-        fetchVariations(product.id);
-      } else {
-        setVariations([]);
-      }
+      setInStock(product.in_stock || true);
+      setVariations(product.variations || []);
+    } else {
+      resetForm();
     }
   }, [product]);
 
-  const fetchVariations = async (productId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('product_variations')
-        .select('*')
-        .eq('product_id', productId);
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setPrice(0);
+    setCategory("clothing");
+    setImageUrl("");
+    setIsPublished(false);
+    setInStock(true);
+    setVariations([]);
+  };
 
-      if (error) throw error;
+  const handleAddVariation = () => {
+    const newVariation: ProductVariation = {
+      name: "",
+      options: [""],
+      price_adjustments: [0],
+    };
+    setVariations([...variations, newVariation]);
+  };
 
-      if (data && data.length > 0) {
-        setVariations(data as ProductVariation[]);
-      } else {
-        // Fall back to variations in the product object if database doesn't have them
-        if (activeProduct?.variations && Array.isArray(activeProduct.variations)) {
-          setVariations(activeProduct.variations);
-        } else {
-          setVariations([]);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching product variations:", err);
-      toast({
-        title: "Error",
-        description: "Failed to load product variations",
-        variant: "destructive"
-      });
-    }
+  const handleRemoveVariation = (index: number) => {
+    const newVariations = [...variations];
+    newVariations.splice(index, 1);
+    setVariations(newVariations);
+  };
+
+  const handleVariationNameChange = (index: number, name: string) => {
+    const newVariations = [...variations];
+    newVariations[index].name = name;
+    setVariations(newVariations);
+  };
+
+  const handleAddVariationOption = (variationIndex: number) => {
+    const newVariations = [...variations];
+    newVariations[variationIndex].options.push("");
+    newVariations[variationIndex].price_adjustments.push(0);
+    setVariations(newVariations);
+  };
+
+  const handleRemoveVariationOption = (variationIndex: number, optionIndex: number) => {
+    const newVariations = [...variations];
+    newVariations[variationIndex].options.splice(optionIndex, 1);
+    newVariations[variationIndex].price_adjustments.splice(optionIndex, 1);
+    setVariations(newVariations);
+  };
+
+  const handleVariationOptionChange = (variationIndex: number, optionIndex: number, option: string) => {
+    const newVariations = [...variations];
+    newVariations[variationIndex].options[optionIndex] = option;
+    setVariations(newVariations);
+  };
+
+  const handleVariationPriceChange = (variationIndex: number, optionIndex: number, price: number) => {
+    const newVariations = [...variations];
+    newVariations[variationIndex].price_adjustments[optionIndex] = price;
+    setVariations(newVariations);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
     try {
+      setUploadingImage(true);
+      
+      // Create a unique file path
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      const { data, error } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Upload to Supabase storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('products')
+        .upload(filePath, file);
 
-      if (error) throw error;
+      if (uploadError) throw uploadError;
 
-      // Use the URLs with .from() to correctly form the URL
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(data.path);
+        .from('products')
+        .getPublicUrl(filePath);
 
       setImageUrl(publicUrl);
       toast({
-        title: "Image uploaded",
-        description: "The product image has been successfully uploaded"
+        title: "Image uploaded successfully",
+        description: "The product image has been uploaded.",
       });
-    } catch (error) {
-      console.error("Error uploading image:", error);
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "There was a problem uploading the image",
-        variant: "destructive"
+        title: "Error uploading image",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
       });
     } finally {
-      setUploading(false);
+      setUploadingImage(false);
     }
-  };
-
-  const addVariation = () => {
-    const newVariation: ProductVariation = {
-      id: `temp-${Date.now()}`,
-      product_id: activeProduct.id || 'new',
-      size: '',
-      color: '',
-      stock_quantity: 0,
-      sku: `${sku || 'SKU'}-${variations.length + 1}`
-    };
-    setVariations([...variations, newVariation]);
-  };
-
-  const removeVariation = (index: number) => {
-    const updatedVariations = [...variations];
-    updatedVariations.splice(index, 1);
-    setVariations(updatedVariations);
-  };
-
-  const handleVariationChange = (index: number, field: keyof ProductVariation, value: any) => {
-    const updatedVariations = [...variations];
-    updatedVariations[index] = {
-      ...updatedVariations[index],
-      [field]: field === 'stock_quantity' ? parseInt(value) : value
-    };
-    setVariations(updatedVariations);
-  };
-
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setPrice("");
-    setCategory("clothing");
-    setImageUrl("");
-    setIsPublished(false);
-    setInStock(false);
-    setSku("");
-    setWeight("");
-    setStockQuantity("0");
-    setVariations([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isLocked) {
+    if (!title) {
       toast({
-        title: "Page is locked",
-        description: "Unable to save product while the page is locked",
+        title: "Missing information",
+        description: "Please provide a product title",
         variant: "destructive",
       });
       return;
     }
-    
-    setIsSubmitting(true);
-    
+
     try {
-      // Prepare product data without variations
+      setIsSubmitting(true);
+      
+      // Prepare the product data
       const productData = {
         title,
         description,
-        price: parseFloat(price),
+        price,
         category,
         image_url: imageUrl,
         is_published: isPublished,
         in_stock: inStock,
-        sku,
-        weight: weight ? parseFloat(weight) : null,
-        stock_quantity: stockQuantity ? parseInt(stockQuantity) : 0,
-        updated_at: new Date().toISOString()
+        variations: variations as any,
+        updated_at: new Date().toISOString(),
       };
-      
-      let productId = activeProduct?.id;
-      
-      if (productId) {
+
+      if (product?.id) {
         // Update existing product
         const { error } = await supabase
           .from('products')
           .update(productData)
-          .eq('id', productId);
-          
+          .eq('id', product.id);
+
         if (error) throw error;
-        
-        // Handle variations - we need to manage them in a separate table now
-        await handleProductVariations(productId);
         
         toast({
           title: "Product updated",
-          description: "The product has been successfully updated"
+          description: `${title} has been updated successfully.`,
         });
       } else {
         // Create new product
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('products')
-          .insert({
+          .insert([{
             ...productData,
-            created_at: new Date().toISOString()
-          })
-          .select();
-          
+            created_at: new Date().toISOString(),
+          }]);
+
         if (error) throw error;
-        
-        productId = data[0].id;
-        
-        // Now create all the variations
-        await handleProductVariations(productId);
-        
+
         toast({
           title: "Product created",
-          description: "The product has been successfully created"
+          description: `${title} has been added successfully.`,
         });
       }
-      
-      onSuccess?.();
-      onOpenChange(false);
+
+      onClose(true);
       resetForm();
-    } catch (error) {
-      console.error("Error saving product:", error);
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "There was a problem saving the product",
-        variant: "destructive"
+        title: "Error saving product",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle creating/updating variations for a product
-  const handleProductVariations = async (productId: string) => {
-    try {
-      // Handle each variation
-      for (const variation of variations) {
-        if (variation.id.startsWith('temp-')) {
-          // This is a new variation, insert it
-          await supabase.from('product_variations').insert({
-            product_id: productId,
-            size: variation.size,
-            color: variation.color,
-            stock_quantity: variation.stock_quantity,
-            sku: variation.sku,
-            price: variation.price || null
-          });
-        } else {
-          // This is an existing variation, update it
-          await supabase.from('product_variations').update({
-            size: variation.size,
-            color: variation.color,
-            stock_quantity: variation.stock_quantity,
-            sku: variation.sku,
-            price: variation.price || null
-          }).eq('id', variation.id);
-        }
-      }
-      
-      // Get IDs of current variations to check for deleted ones
-      const currentVariationIds = variations
-        .filter(v => !v.id.startsWith('temp-'))
-        .map(v => v.id);
-      
-      // Delete variations that were removed
-      if (currentVariationIds.length > 0) {
-        const { data: existingVariations } = await supabase
-          .from('product_variations')
-          .select('id')
-          .eq('product_id', productId);
-        
-        if (existingVariations) {
-          const existingIds = existingVariations.map(v => v.id);
-          const toDeleteIds = existingIds.filter(id => !currentVariationIds.includes(id));
-          
-          if (toDeleteIds.length > 0) {
-            await supabase
-              .from('product_variations')
-              .delete()
-              .in('id', toDeleteIds);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error handling product variations:", err);
-      throw err;
-    }
-  };
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={(open) => !open && onClose(false)}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{activeProduct?.id ? "Edit Product" : "Create New Product"}</DialogTitle>
+          <DialogTitle>
+            {product ? `Edit Product: ${product.title}` : "Add New Product"}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="variations">Variations</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="general" className="space-y-4">
+        
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          {/* Basic Info */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Product Title</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  required
+                  placeholder="Enter product title"
                 />
               </div>
+              
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  value={description}
+                  value={description || ""}
                   onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter product description"
+                  className="min-h-[100px]"
                 />
-              </div>
-              <div>
-                <Label htmlFor="price">Price</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={(value) => setCategory(value as ProductCategory)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="clothing">Clothing</SelectItem>
-                    <SelectItem value="footwear">Footwear</SelectItem>
-                    <SelectItem value="accessories">Accessories</SelectItem>
-                    <SelectItem value="new_arrivals">New Arrivals</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="image">Image URL</Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="image"
-                    type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Or upload a new image"
-                  />
-                  <Label htmlFor="upload-image" className="cursor-pointer">
-                    <div className="flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md px-3 py-2 text-sm font-medium">
-                      {uploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Uploading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ImagePlus className="h-4 w-4" />
-                          <span>Upload</span>
-                        </>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      id="upload-image"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={uploading}
-                    />
-                  </Label>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="isPublished">Published</Label>
-                <Switch
-                  id="isPublished"
-                  checked={isPublished}
-                  onCheckedChange={setIsPublished}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="inventory" className="space-y-4">
-              <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  placeholder="SKU code"
-                />
-              </div>
-              <div>
-                <Label htmlFor="stockQuantity">Stock Quantity</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  value={stockQuantity}
-                  onChange={(e) => setStockQuantity(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="weight">Weight (kg)</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.01"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder="Product weight in kg"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="inStock">In Stock</Label>
-                <Switch
-                  id="inStock"
-                  checked={inStock}
-                  onCheckedChange={setInStock}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="variations" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Product Variations</h4>
-                <Button 
-                  type="button" 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={addVariation}
-                  disabled={isLocked}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Variation
-                </Button>
               </div>
               
-              {variations.length === 0 ? (
-                <Card>
-                  <CardContent className="p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
-                    <Package className="h-8 w-8 mb-2 text-muted-foreground" />
-                    <p>No variations added yet</p>
-                    <p className="text-sm">Add size, color or other variations for this product</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {variations.map((variation, index) => (
-                    <Card key={variation.id || index} className="relative">
-                      <CardContent className="p-4">
-                        <div className="absolute top-2 right-2">
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => removeVariation(index)}
-                            disabled={isLocked}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`variation-size-${index}`}>Size</Label>
-                            <Input
-                              id={`variation-size-${index}`}
-                              value={variation.size || ''}
-                              onChange={(e) => handleVariationChange(index, 'size', e.target.value)}
-                              placeholder="Size (e.g. S, M, L)"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`variation-color-${index}`}>Color</Label>
-                            <Input
-                              id={`variation-color-${index}`}
-                              value={variation.color || ''}
-                              onChange={(e) => handleVariationChange(index, 'color', e.target.value)}
-                              placeholder="Color (e.g. Red, Blue)"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`variation-sku-${index}`}>SKU</Label>
-                            <Input
-                              id={`variation-sku-${index}`}
-                              value={variation.sku || ''}
-                              onChange={(e) => handleVariationChange(index, 'sku', e.target.value)}
-                              placeholder="Variation SKU"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`variation-stock-${index}`}>Stock</Label>
-                            <Input
-                              id={`variation-stock-${index}`}
-                              type="number"
-                              value={variation.stock_quantity || 0}
-                              onChange={(e) => handleVariationChange(index, 'stock_quantity', e.target.value)}
-                              placeholder="Available stock"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`variation-price-${index}`}>Price Override (Optional)</Label>
-                            <Input
-                              id={`variation-price-${index}`}
-                              type="number"
-                              value={variation.price || ''}
-                              onChange={(e) => handleVariationChange(index, 'price', e.target.value ? parseFloat(e.target.value) : null)}
-                              placeholder="Leave empty to use product price"
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-2 flex gap-1 flex-wrap">
-                          {variation.size && (
-                            <Badge variant="outline">{variation.size}</Badge>
-                          )}
-                          {variation.color && (
-                            <Badge variant="outline" className="bg-gray-100">{variation.color}</Badge>
-                          )}
-                          <Badge variant="secondary">Stock: {variation.stock_quantity}</Badge>
-                          {variation.price && (
-                            <Badge variant="secondary">Price: ${variation.price}</Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price">Price ($)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={price}
+                    onChange={(e) => setPrice(parseFloat(e.target.value))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={category}
+                    onValueChange={(value) => setCategory(value as ProductCategory)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="accessories">Accessories</SelectItem>
+                      <SelectItem value="footwear">Footwear</SelectItem>
+                      <SelectItem value="new_arrivals">New Arrivals</SelectItem>
+                      <SelectItem value="clothing">Clothing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div className="space-y-4">
+            <Label>Product Image</Label>
+            <div className="flex items-center gap-4">
+              {imageUrl && (
+                <div className="relative h-24 w-24 rounded-md overflow-hidden border">
+                  <img
+                    src={imageUrl}
+                    alt="Product"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
+              
+              <div>
+                <Label
+                  htmlFor="image-upload"
+                  className="cursor-pointer flex items-center gap-2 border rounded-md px-3 py-2 hover:bg-gray-100"
+                >
+                  {uploadingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  <span>{imageUrl ? "Change Image" : "Upload Image"}</span>
+                </Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Product Status */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="is-published" 
+                  checked={isPublished}
+                  onCheckedChange={(checked) => setIsPublished(!!checked)}
+                />
+                <Label htmlFor="is-published">Published</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="in-stock" 
+                  checked={inStock}
+                  onCheckedChange={(checked) => setInStock(!!checked)}
+                />
+                <Label htmlFor="in-stock">In Stock</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Variations */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label>Product Variations</Label>
+              <Button 
+                type="button" 
+                onClick={handleAddVariation}
+                size="sm" 
+                variant="outline"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add Variation
+              </Button>
+            </div>
+            
+            {variations.length > 0 ? (
+              <div className="space-y-6">
+                {variations.map((variation, vIndex) => (
+                  <div key={vIndex} className="border rounded-md p-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <Label htmlFor={`variation-name-${vIndex}`}>Variation Name</Label>
+                        <Input
+                          id={`variation-name-${vIndex}`}
+                          value={variation.name}
+                          onChange={(e) => handleVariationNameChange(vIndex, e.target.value)}
+                          placeholder="e.g. Size, Color, etc."
+                        />
+                      </div>
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="ml-2 mt-6"
+                        onClick={() => handleRemoveVariation(vIndex)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Variation Options */}
+                    <div className="space-y-2">
+                      <Label>Options</Label>
+                      {variation.options.map((option, oIndex) => (
+                        <div key={oIndex} className="grid grid-cols-3 gap-2 items-center">
+                          <Input
+                            value={option}
+                            onChange={(e) => handleVariationOptionChange(vIndex, oIndex, e.target.value)}
+                            placeholder="Option name"
+                            className="col-span-2"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              placeholder="Price adjustment"
+                              value={variation.price_adjustments[oIndex]}
+                              onChange={(e) => handleVariationPriceChange(vIndex, oIndex, parseFloat(e.target.value))}
+                            />
+                            <Button 
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleRemoveVariationOption(vIndex, oIndex)}
+                              disabled={variation.options.length <= 1}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <Button 
+                        type="button" 
+                        onClick={() => handleAddVariationOption(vIndex)}
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-2"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Option
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 border rounded-md text-gray-500">
+                No variations added yet
+              </div>
+            )}
+          </div>
           
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          {/* Form Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button 
+              type="button"
+              variant="outline"
+              onClick={() => onClose(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit"
+              disabled={isSubmitting || !title}
+              className="bg-emerge-gold text-black hover:bg-emerge-gold/80"
+            >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (
-                "Save"
+                <>{product ? "Update Product" : "Create Product"}</>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

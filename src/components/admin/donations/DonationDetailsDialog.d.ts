@@ -1,7 +1,9 @@
 
+import { Dispatch, SetStateAction } from 'react';
+
 export interface DonationDetailsDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  donation?: any;
-  isLocked?: boolean;
+  onOpenChange: Dispatch<SetStateAction<boolean>>;
+  donation: any;
+  isLocked: boolean;
 }

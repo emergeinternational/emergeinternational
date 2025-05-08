@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProductsTable from "./ProductsTable";
 import ProductFormDialog from "./ProductFormDialog";
-import { Product, ProductVariation } from "@/services/productTypes";
 import { RefetchOptions } from '@tanstack/react-query';
 
 interface ProductsManagerProps {
@@ -11,9 +11,9 @@ interface ProductsManagerProps {
 }
 
 const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -38,62 +38,22 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
       )
       .subscribe();
       
-    // Also listen for variation changes
-    const variationsChannel = supabase
-      .channel('variation_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'product_variations'
-        },
-        (payload) => {
-          console.log('Variation change detected:', payload);
-          fetchProducts();
-        }
-      )
-      .subscribe();
-      
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(variationsChannel);
     };
   }, []);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      // Fetch products first
-      const { data: productsData, error: productsError } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (productsError) throw productsError;
+      if (error) throw error;
       
-      // Fetch variations for all products
-      const { data: variationsData, error: variationsError } = await supabase
-        .from('product_variations')
-        .select('*');
-        
-      if (variationsError) throw variationsError;
-      
-      // Map variations to their products
-      const productsWithVariations = productsData.map((product: any) => {
-        const productVariations = variationsData.filter(
-          (variation: ProductVariation) => variation.product_id === product.id
-        );
-        
-        return {
-          ...product,
-          variations: productVariations.length > 0 
-            ? productVariations 
-            : (Array.isArray(product.variations) ? product.variations : [])
-        };
-      });
-      
-      setProducts(productsWithVariations);
+      setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -106,7 +66,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
     }
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: any) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
   };
@@ -133,9 +93,7 @@ const ProductsManager: React.FC<ProductsManagerProps> = ({ isLocked = false }) =
           onSuccess={() => {
             fetchProducts();
             setSelectedProduct(null);
-            setIsEditDialogOpen(false);
           }}
-          isLocked={isLocked}
         />
       )}
     </div>

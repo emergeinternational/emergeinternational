@@ -1,198 +1,156 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Disclosure } from '@headlessui/react';
-import { MenuIcon, XIcon } from '@heroicons/react/outline';
-import { useAuth } from '@/hooks/useAuth';
 
-const Navigation: React.FC = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isLoggedIn, logout } = useAuth();
-  
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X, ShoppingBag, User, Settings } from "lucide-react";
+import Logo from "./Logo";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+
+interface NavigationProps {
+  variant?: "dark" | "light";
+}
+
+const Navigation = ({ variant = "light" }: NavigationProps) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, hasRole, userRole } = useAuth();
+  const location = useLocation();
+  const { toast } = useToast();
+
+  const navLinks = [
+    { name: "Home", href: "/" },
+    { name: "Events", href: "/events" },
+    { name: "Shop", href: "/shop" },
+    { name: "Education", href: "/education" },
+    { name: "Talent", href: "/talent-registration" },
+  ];
+
+  const bgClass = variant === "dark" ? "bg-emerge-darkBg" : "bg-white";
+  const textClass = variant === "dark" ? "text-white" : "text-emerge-darkBg";
+  const logoVariant = variant === "dark" ? "gold" : "gold";
+
+  const handleAdminClick = () => {
+    if (!hasRole('admin')) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have admin permissions",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
-    <nav className="bg-white border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="shrink-0 flex items-center">
-              <NavLink to="/">
-                <img
-                  className="block h-8 w-auto"
-                  src="https://tailwindui.com/img/logos/workflow-mark-indigo-500.svg"
-                  alt="Workflow"
-                />
-              </NavLink>
-            </div>
-            <div className="hidden md:ml-6 md:flex md:space-x-8">
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'border-primary text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/shop"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'border-primary text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                }
-              >
-                Shop
-              </NavLink>
-              <NavLink
-                to="/account"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'border-primary text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                }
-              >
-                Account
-              </NavLink>
-              <NavLink
-                to="/shop-v2"
-                className={({ isActive }) =>
-                  isActive
-                    ? 'border-primary text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium'
-              }
+    <nav className={`${bgClass} ${textClass} fixed w-full z-50 top-0`}>
+      <div className="emerge-container py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-1 md:hidden"
+            aria-label="Toggle menu"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <Link to="/">
+            <Logo variant={logoVariant} />
+          </Link>
+        </div>
+
+        <div className="hidden md:flex items-center space-x-6">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              to={link.href}
+              className="hover:text-emerge-gold transition-colors font-medium"
             >
-              Shop V2
-            </NavLink>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                  onClick={logout}
-                >
-                  <span>Logout</span>
-                </button>
-              ) : (
-                <NavLink
-                  to="/login"
-                  className="relative inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  <span>Login</span>
-                </NavLink>
-              )}
-            </div>
-            <div className="-mr-2 flex md:hidden">
-              <Disclosure>
-                {({ open }) => (
-                  <>
-                    <Disclosure.Button className="bg-white rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
-                      <span className="sr-only">Open main menu</span>
-                      {open ? (
-                        <XIcon className="block h-6 w-6" aria-hidden="true" />
-                      ) : (
-                        <MenuIcon className="block h-6 w-6" aria-hidden="true" />
-                      )}
-                    </Disclosure.Button>
-                    <Disclosure.Panel className="md:hidden">
-                      <div className="pt-2 pb-3 space-y-1">
-                        <NavLink
-                          to="/"
-                          className={({ isActive }) =>
-                            isActive
-                              ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                          }
-                        >
-                          Dashboard
-                        </NavLink>
-                        <NavLink
-                          to="/shop"
-                          className={({ isActive }) =>
-                            isActive
-                              ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                          }
-                        >
-                          Shop
-                        </NavLink>
-                        <NavLink
-                          to="/account"
-                          className={({ isActive }) =>
-                            isActive
-                              ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                          }
-                        >
-                          Account
-                        </NavLink>
-                        <NavLink
-                          to="/shop-v2"
-                          className={({ isActive }) =>
-                            isActive
-                              ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                          }
-                        >
-                          Shop V2
-                        </NavLink>
-                      </div>
-                    </Disclosure.Panel>
-                  </>
-                )}
-              </Disclosure>
-            </div>
-          </div>
+              {link.name}
+            </Link>
+          ))}
+          
+          {user && (
+            <Link
+              to="/my-premium-courses"
+              className="hover:text-emerge-gold transition-colors font-medium"
+            >
+              My Premium Courses
+            </Link>
+          )}
+          
+          {user && hasRole(['admin', 'editor']) && (
+            <Link
+              to="/admin"
+              className="text-emerge-gold hover:text-emerge-gold/80 transition-colors font-medium flex items-center"
+              data-testid="admin-dashboard-link"
+            >
+              <Settings size={16} className="mr-1" />
+              Admin Panel
+            </Link>
+          )}
+          
+          {user && (
+            <Link
+              to="/certificates"
+              className="hover:text-emerge-gold transition-colors font-medium"
+            >
+              Certificates
+            </Link>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <Link to="/cart" className="p-1">
+            <ShoppingBag size={20} />
+          </Link>
+          <Link to={user ? "/profile" : "/login"} className="p-1">
+            <User size={20} />
+          </Link>
         </div>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="md:hidden">
-          <div className="pt-2 pb-3 space-y-1">
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                isActive
-                  ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                  : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/shop"
-              className={({ isActive }) =>
-                isActive
-                  ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                  : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-              }
-            >
-              Shop
-            </NavLink>
-            <NavLink
-              to="/account"
-              className={({ isActive }) =>
-                isActive
-                  ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                  : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-              }
-            >
-              Account
-            </NavLink>
+      {isMenuOpen && (
+        <div className={`${bgClass} absolute w-full pb-4 md:hidden z-30`}>
+          <div className="emerge-container flex flex-col space-y-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+              >
+                {link.name}
+              </Link>
+            ))}
             
-            <NavLink
-              to="/shop-v2"
-              className={({ isActive }) =>
-                isActive
-                  ? 'bg-primary-50 border-primary text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-                  : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium sm:pl-5 sm:pr-6'
-              }
-            >
-              Shop V2
-            </NavLink>
+            {user && (
+              <Link
+                to="/my-premium-courses"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+              >
+                My Premium Courses
+              </Link>
+            )}
             
+            {user && hasRole(['admin', 'editor']) && (
+              <Link
+                to="/admin"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                }}
+                className="py-2 border-b border-gray-700 text-emerge-gold flex items-center"
+              >
+                <Settings size={16} className="mr-2" />
+                Admin Panel
+              </Link>
+            )}
+            
+            {user && (
+              <Link
+                to="/certificates"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 border-b border-gray-700 hover:text-emerge-gold"
+              >
+                Certificates
+              </Link>
+            )}
           </div>
         </div>
       )}

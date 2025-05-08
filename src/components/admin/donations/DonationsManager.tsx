@@ -1,12 +1,10 @@
 
-import React, { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import DonationStats from "./DonationStats";
-import DonationsTable from "./DonationsTable";
-import DonationDetailsDialog from "./DonationDetailsDialog";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import DonationsTable from './DonationsTable';
+import DonationDetailsDialog from './DonationDetailsDialog';
+import DonationStats from './DonationStats';
 
 interface DonationsManagerProps {
   isLocked?: boolean;
@@ -14,80 +12,92 @@ interface DonationsManagerProps {
 
 const DonationsManager: React.FC<DonationsManagerProps> = ({ isLocked = false }) => {
   const [donations, setDonations] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedDonation, setSelectedDonation] = useState<any>(null);
-  const [detailsOpen, setDetailsOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDonation, setSelectedDonation] = useState<any | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Fetch donations on component mount
+  useEffect(() => {
+    fetchDonations();
+    
+    // Subscribe to changes
+    const channel = supabase
+      .channel('donation_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'donations'
+        },
+        (payload) => {
+          console.log('Donation change detected:', payload);
+          fetchDonations();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchDonations = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
-        .from("donations")
+        .from('donations')
         .select(`
           *,
-          donors (
-            full_name,
-            email,
-            phone,
-            total_donations
-          )
+          donors (full_name, email)
         `)
-        .order("created_at", { ascending: false });
-
+        .order('created_at', { ascending: false });
+      
       if (error) throw error;
-
+      
+      console.log("Fetched donations:", data);
       setDonations(data || []);
     } catch (error) {
-      console.error("Error fetching donations:", error);
+      console.error('Error fetching donations:', error);
       toast({
-        title: "Error",
-        description: "Failed to load donations data",
-        variant: "destructive",
+        title: "Error loading donations",
+        description: error instanceof Error ? error.message : "Failed to load donations",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDonations();
-  }, []);
-
   const handleViewDetails = (donation: any) => {
     setSelectedDonation(donation);
-    setDetailsOpen(true);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const handleRefresh = async () => {
+    await fetchDonations();
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Donations Dashboard</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchDonations}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
-
-      <DonationStats donations={donations} isLoading={isLoading} />
-
+    <div>
+      <DonationStats
+        donations={donations}
+        isLoading={isLoading}
+      />
+      
       <DonationsTable 
         donations={donations} 
-        isLoading={isLoading}
-        onViewDetails={handleViewDetails}
-        onRefresh={fetchDonations}
-        isLocked={isLocked}
+        isLoading={isLoading} 
+        onViewDetails={handleViewDetails} 
+        onRefresh={handleRefresh}
+        isLocked={isLocked} 
       />
-
+      
       {selectedDonation && (
         <DonationDetailsDialog
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
+          open={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
           donation={selectedDonation}
           isLocked={isLocked}
         />

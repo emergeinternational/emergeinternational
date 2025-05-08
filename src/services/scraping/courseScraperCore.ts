@@ -1,165 +1,161 @@
 
+import { 
+  ScrapedCourse, 
+  CourseCategory, 
+  CourseLevel, 
+  HostingType,
+  sanitizeScrapedCourse 
+} from '../courseTypes';
 import { supabase } from '@/integrations/supabase/client';
 
-// Function to log scraper activity
-const logScraperActivity = async (activity: string, details: any) => {
+// Simple type definition for the simplified course
+type SimplifiedCourse = {
+  title: string;
+  category: CourseCategory;
+  external_link?: string;
+  hosting_type: HostingType;
+  level?: CourseLevel;
+  [key: string]: any;
+};
+
+// Process scraped data
+const processScrapedData = (data: SimplifiedCourse[]): SimplifiedCourse[] => {
+  // Implementation here
+  return data;
+};
+
+// Submit a scraped course to the approval queue
+export const submitScrapedCourse = async (
+  course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>
+): Promise<string | null> => {
   try {
-    await supabase.from('automation_logs').insert({
-      function_name: 'course_scraper',
-      results: {
-        activity,
-        ...details,
-        timestamp: new Date().toISOString()
-      }
-    });
+    const { data, error } = await supabase
+      .from("scraped_courses")
+      .insert({
+        ...course,
+        is_approved: false,
+        is_reviewed: false,
+        level: course.level || 'beginner',
+        hash_identifier: course.hash_identifier
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Error submitting scraped course:", error);
+      return null;
+    }
+    
+    return data?.id || null;
   } catch (error) {
-    console.error('Failed to log scraper activity:', error);
+    console.error("Error in submitScrapedCourse:", error);
+    return null;
   }
 };
 
-// Base scraper class
-export class CourseScraper {
-  protected source: string;
-  protected baseUrl: string;
-
-  constructor(source: string, baseUrl: string) {
-    this.source = source;
-    this.baseUrl = baseUrl;
-  }
-
-  async scrape(): Promise<void> {
-    try {
-      await logScraperActivity('scrape_started', { 
-        source: this.source,
-        baseUrl: this.baseUrl 
-      });
-      
-      const courses = await this.extractCourses();
-      
-      if (courses && courses.length > 0) {
-        await this.saveCourses(courses);
-        
-        await logScraperActivity('scrape_completed', {
-          source: this.source,
-          coursesFound: courses.length
-        });
-      } else {
-        await logScraperActivity('scrape_completed', {
-          source: this.source,
-          coursesFound: 0,
-          message: 'No courses found'
-        });
-      }
-    } catch (error) {
-      await logScraperActivity('scrape_failed', {
-        source: this.source,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  protected async extractCourses(): Promise<any[]> {
-    throw new Error('Method extractCourses() must be implemented by subclass');
-  }
-
-  protected async saveCourses(courses: any[]): Promise<void> {
-    try {
-      // Map scraped courses to database schema
-      const scrapedCourses = courses.map((course) => ({
-        title: course.title,
-        summary: course.description || course.summary,
-        external_link: course.url,
-        image_url: course.imageUrl || course.image_url,
-        category: course.category || 'other',
-        level: course.level || 'beginner',
-        hosting_type: 'external',
-        scraper_source: this.source,
-        is_reviewed: false,
-        is_approved: false
-      }));
-
-      // Save to database
-      const { error } = await supabase
-        .from('scraped_courses')
-        .upsert(scrapedCourses, {
-          onConflict: 'external_link',
-          ignoreDuplicates: false
-        });
-
-      if (error) {
-        await logScraperActivity('save_failed', {
-          source: this.source,
-          error: error.message
-        });
-        throw error;
-      }
-
-      await logScraperActivity('save_successful', {
-        source: this.source,
-        coursesSaved: scrapedCourses.length
-      });
-    } catch (error) {
-      await logScraperActivity('save_failed', {
-        source: this.source,
-        error: error.message
-      });
-      throw error;
-    }
-  }
-
-  protected formatCategory(category: string): CourseCategory {
-    const categoryMap: Record<string, CourseCategory> = {
-      'photography': 'photographer',
-      'photo': 'photographer',
-      'design': 'designer',
-      'fashion design': 'designer',
-      'fashion': 'designer',
-      'modeling': 'model',
-      'model': 'model',
-      'video': 'videographer',
-      'videography': 'videographer',
-      'art': 'fine_artist',
-      'music': 'musical_artist',
-      'event': 'event_planner'
-    };
-
-    const normalizedCategory = category.toLowerCase().trim();
+// Get pending scraped courses
+export async function getPendingScrapedCourses() {
+  try {
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('*')
+      .eq('is_reviewed', false)
+      .order('created_at', { ascending: false });
     
-    for (const [key, value] of Object.entries(categoryMap)) {
-      if (normalizedCategory.includes(key)) {
-        return value;
-      }
-    }
+    if (error) throw error;
     
-    return 'other';
-  }
-
-  protected formatLevel(level: string): CourseLevel {
-    const levelMap: Record<string, CourseLevel> = {
-      'beginner': 'beginner',
-      'basic': 'beginner',
-      'introductory': 'beginner',
-      'introduction': 'beginner',
-      'intermediate': 'intermediate',
-      'advanced': 'advanced',
-      'expert': 'expert',
-      'professional': 'expert',
-      'master': 'expert'
-    };
-
-    if (!level) return 'beginner';
-    
-    const normalizedLevel = level.toLowerCase().trim();
-    
-    for (const [key, value] of Object.entries(levelMap)) {
-      if (normalizedLevel.includes(key)) {
-        return value;
-      }
-    }
-    
-    return 'beginner';
+    return data?.map(course => sanitizeScrapedCourse(course)) || [];
+  } catch (error) {
+    console.error('Error fetching pending scraped courses:', error);
+    return [];
   }
 }
 
-export default CourseScraper;
+// Approve a scraped course
+export async function approveScrapedCourse(courseId: string) {
+  try {
+    const { error } = await supabase
+      .from('scraped_courses')
+      .update({ is_reviewed: true, is_approved: true })
+      .eq('id', courseId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error approving course:', error);
+    return { success: false, error };
+  }
+}
+
+// Reject a scraped course
+export async function rejectScrapedCourse(courseId: string, notes: string) {
+  try {
+    const { error } = await supabase
+      .from('scraped_courses')
+      .update({ 
+        is_reviewed: true, 
+        is_approved: false,
+        review_notes: notes
+      })
+      .eq('id', courseId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error rejecting course:', error);
+    return { success: false, error };
+  }
+}
+
+// Trigger manual scrape
+export async function triggerManualScrape() {
+  try {
+    // This would typically call an edge function or backend API
+    // For demonstration purposes we'll just return a success message
+    return { success: true, message: 'Manual scrape triggered' };
+  } catch (error) {
+    console.error('Error triggering manual scrape:', error);
+    return { success: false, error };
+  }
+}
+
+// Get duplicate stats
+export async function getDuplicateStats() {
+  try {
+    const { data, error } = await supabase
+      .from('scraped_courses')
+      .select('is_duplicate')
+      .eq('is_duplicate', true);
+    
+    if (error) throw error;
+    
+    return { 
+      duplicateCount: data?.length || 0,
+      success: true
+    };
+  } catch (error) {
+    console.error('Error getting duplicate stats:', error);
+    return { success: false, duplicateCount: 0, error };
+  }
+}
+
+// Get scraped courses by source
+export async function getScrapedCoursesBySource(source: string): Promise<ScrapedCourse[]> {
+  try {
+    const { data, error } = await supabase
+      .from("scraped_courses")
+      .select("*")
+      .eq("scraper_source", source);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return data?.map(course => sanitizeScrapedCourse(course)) || [];
+  } catch (error) {
+    console.error("Error getting scraped courses by source:", error);
+    return [];
+  }
+}

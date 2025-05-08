@@ -12,20 +12,18 @@ export {
 } from './certificate';
 
 export {
-  checkEligibility,
-  getEligibilityStatus,
-  updateEligibilityStatus,
-  adminUpdateEligibility,
-  userMeetsRequirements,
+  checkUserEligibility,
+  getUsersEligibleForCertificates,
   getEligibleUsers,
   updateCertificateApproval,
+  userMeetsRequirements,
   getUsersByStatus
 } from './eligibility';
 
 export type {
   CertificateSettings,
   CertificateEligibility,
-  CertificateStatus,
   UserCertificate,
+  CertificateStatus,
   EligibleUser
 } from './types';

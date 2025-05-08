@@ -1,10 +1,9 @@
 
-import { Product } from "@/services/productTypes";
+import { Dispatch, SetStateAction } from 'react';
 
 export interface ProductFormDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  product?: Product | null;
-  onSuccess?: () => void;
-  isLocked?: boolean;
+  onOpenChange: Dispatch<SetStateAction<boolean>>;
+  product: any;
+  onSuccess: () => void;
 }

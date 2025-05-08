@@ -1,5 +1,5 @@
 
 export interface DonationStatsProps {
   donations: any[];
-  isLoading: boolean;
+  isLoading?: boolean;
 }

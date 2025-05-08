@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Eye, Tag, Package } from "lucide-react";
+import { Pencil, Eye } from "lucide-react";
 import { Product, ProductVariation } from "@/services/productTypes";
 
 interface ProductDetailsCardProps {
@@ -30,29 +30,19 @@ const ProductDetailsCard = ({ product, onEdit }: ProductDetailsCardProps) => {
         <div className="space-y-3">
           {variations.map((variation, index) => (
             <div key={index} className="border rounded p-2">
-              <div className="flex items-center gap-2 mb-1">
-                <Tag className="h-4 w-4 text-muted-foreground" />
-                <h4 className="font-medium">{variation.sku}</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                {variation.size && (
-                  <div>
-                    <span className="text-muted-foreground">Size:</span> {variation.size}
-                  </div>
-                )}
-                {variation.color && (
-                  <div>
-                    <span className="text-muted-foreground">Color:</span> {variation.color}
-                  </div>
-                )}
-                <div>
-                  <span className="text-muted-foreground">Stock:</span> {variation.stock_quantity}
-                </div>
-                {variation.price && (
-                  <div>
-                    <span className="text-muted-foreground">Price:</span> {formatPrice(variation.price)}
-                  </div>
-                )}
+              <h4 className="font-medium">{variation.name}</h4>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {variation.options.map((option, optIndex) => (
+                  <Badge key={optIndex} variant="outline" className="text-xs">
+                    {option}
+                    {variation.price_adjustments?.[optIndex] !== 0 && (
+                      <span className={variation.price_adjustments?.[optIndex] > 0 ? "text-green-600" : "text-red-600"}>
+                        {" "}({variation.price_adjustments?.[optIndex] > 0 ? "+" : ""}
+                        {formatPrice(variation.price_adjustments?.[optIndex] || 0)})
+                      </span>
+                    )}
+                  </Badge>
+                ))}
               </div>
             </div>
           ))}
@@ -120,29 +110,9 @@ const ProductDetailsCard = ({ product, onEdit }: ProductDetailsCardProps) => {
                   <p className="text-sm mt-1">{product.description}</p>
                 </div>
               )}
-
-              {product.sku && (
-                <div>
-                  <span className="text-sm text-gray-500">SKU</span>
-                  <p>{product.sku}</p>
-                </div>
-              )}
-
-              {product.stock_quantity !== undefined && (
-                <div>
-                  <span className="text-sm text-gray-500">Stock Quantity</span>
-                  <p>{product.stock_quantity}</p>
-                </div>
-              )}
               
               {product.variations && product.variations.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-gray-500">
-                      {product.variations.length} Variation{product.variations.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
                   <Button
                     variant="outline" 
                     size="sm"

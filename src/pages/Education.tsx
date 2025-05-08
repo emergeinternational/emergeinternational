@@ -13,9 +13,9 @@ import {
 import { getWorkshops, Workshop } from "../services/workshopService";
 import { 
   getAllCourses, 
-  getStaticCourses
+  getStaticCourses,
+  Course 
 } from "../services/courseService";
-import { Course } from "../services/courseTypes";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 

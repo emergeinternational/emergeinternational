@@ -12,12 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, RefreshCw, AlertTriangle } from "lucide-react";
 import { RefetchOptions } from '@tanstack/react-query';
-import { Product } from '@/services/productTypes';
 
 interface ProductsTableProps {
-  products: Product[];
+  products: any[];
   isLoading: boolean;
-  onEdit: (product: Product) => void;
+  onEdit: (product: any) => void;
   onRefresh: (options?: RefetchOptions) => void;
   isLocked?: boolean;
 }
