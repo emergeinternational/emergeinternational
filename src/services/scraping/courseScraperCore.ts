@@ -6,7 +6,7 @@ import { sanitizeScrapedCourse } from './courseScraperValidation';
 // Submit a scraped course to the approval queue
 export const submitScrapedCourse = async (
   course: Omit<ScrapedCourse, 'id' | 'created_at' | 'is_approved' | 'is_reviewed'>
-): Promise<string | null> => {
+): Promise<{success: boolean; id?: string; message?: string}> => {
   try {
     const { data, error } = await supabase
       .from("scraped_courses")
@@ -14,21 +14,20 @@ export const submitScrapedCourse = async (
         ...course,
         is_approved: false,
         is_reviewed: false,
-        level: course.level || 'beginner',
-        hash_identifier: course.hash_identifier
+        level: course.level || 'beginner'
       })
       .select()
       .single();
     
     if (error) {
       console.error("Error submitting scraped course:", error);
-      return null;
+      return { success: false, message: error.message };
     }
     
-    return data?.id || null;
+    return { success: true, id: data?.id };
   } catch (error) {
     console.error("Error in submitScrapedCourse:", error);
-    return null;
+    return { success: false, message: error instanceof Error ? error.message : "Unknown error" };
   }
 };
 
@@ -46,7 +45,7 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
       return [];
     }
     
-    return data;
+    return data || [];
   } catch (error) {
     console.error("Error in getPendingScrapedCourses:", error);
     return [];
@@ -54,7 +53,7 @@ export const getPendingScrapedCourses = async (): Promise<ScrapedCourse[]> => {
 };
 
 // Approve a scraped course
-export const approveScrapedCourse = async (id: string): Promise<string | null> => {
+export const approveScrapedCourse = async (id: string): Promise<{success: boolean; id?: string; message?: string}> => {
   try {
     const { data: scrapedCourse, error: fetchError } = await supabase
       .from("scraped_courses")
@@ -64,7 +63,7 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
     
     if (fetchError || !scrapedCourse) {
       console.error("Error fetching scraped course:", fetchError);
-      return null;
+      return { success: false, message: fetchError?.message || "Course not found" };
     }
     
     // Create a new course from the scraped data
@@ -86,7 +85,7 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
     
     if (insertError) {
       console.error("Error creating new course:", insertError);
-      return null;
+      return { success: false, message: insertError.message };
     }
     
     // Mark the scraped course as reviewed and approved
@@ -100,17 +99,18 @@ export const approveScrapedCourse = async (id: string): Promise<string | null> =
     
     if (updateError) {
       console.error("Error updating scraped course:", updateError);
+      return { success: false, message: updateError.message };
     }
     
-    return newCourse.id;
+    return { success: true, id: newCourse.id };
   } catch (error) {
     console.error("Error in approveScrapedCourse:", error);
-    return null;
+    return { success: false, message: error instanceof Error ? error.message : "Unknown error" };
   }
 };
 
 // Reject a scraped course
-export const rejectScrapedCourse = async (id: string, reason: string): Promise<boolean> => {
+export const rejectScrapedCourse = async (id: string, reason: string): Promise<{success: boolean; message?: string}> => {
   try {
     const { error } = await supabase
       .from("scraped_courses")
@@ -123,13 +123,13 @@ export const rejectScrapedCourse = async (id: string, reason: string): Promise<b
     
     if (error) {
       console.error("Error rejecting scraped course:", error);
-      return false;
+      return { success: false, message: error.message };
     }
     
-    return true;
+    return { success: true };
   } catch (error) {
     console.error("Error in rejectScrapedCourse:", error);
-    return false;
+    return { success: false, message: error instanceof Error ? error.message : "Unknown error" };
   }
 };
 
@@ -170,7 +170,7 @@ export const getScrapedCoursesBySource = async (source: string): Promise<Scraped
 };
 
 // Get duplicate statistics
-export const getDuplicateStats = async (): Promise<any> => {
+export const getDuplicateStats = async (): Promise<{success: boolean; duplicateCount?: number; recentDuplicates?: any[]}> => {
   try {
     // This is a placeholder for a more complex query that might
     // analyze duplicate courses in the system
@@ -183,17 +183,18 @@ export const getDuplicateStats = async (): Promise<any> => {
     if (error) throw error;
 
     return {
-      total: duplicates?.length || 0,
+      success: true,
+      duplicateCount: duplicates?.length || 0,
       recentDuplicates: duplicates?.slice(0, 5) || []
     };
   } catch (error) {
     console.error('Error getting duplicate stats:', error);
-    return { total: 0, recentDuplicates: [] };
+    return { success: false };
   }
 };
 
 // Trigger a manual scraping operation
-export const triggerManualScrape = async (sourceName?: string): Promise<any> => {
+export const triggerManualScrape = async (sourceName?: string): Promise<{success: boolean; message?: string}> => {
   try {
     // This would call an edge function to trigger the scraper
     const response = await fetch('/api/trigger-course-scraper', {
@@ -207,8 +208,12 @@ export const triggerManualScrape = async (sourceName?: string): Promise<any> => 
       })
     });
     
+    if (!response.ok) {
+      throw new Error(`Failed to trigger scraper: ${response.statusText}`);
+    }
+    
     const result = await response.json();
-    return result;
+    return { success: true, message: 'Scraper triggered successfully' };
   } catch (error) {
     console.error('Error triggering manual scrape:', error);
     return { success: false, message: 'Failed to trigger scraper' };

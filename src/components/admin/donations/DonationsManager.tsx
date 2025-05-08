@@ -5,6 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import DonationsTable from './DonationsTable';
 import DonationDetailsDialog from './DonationDetailsDialog';
 import DonationStats from './DonationStats';
+import { DonationStatsProps } from './DonationStats.d';
+import { DonationsTableProps } from './DonationsTable.d';
+import { DonationDetailsDialogProps } from './DonationDetailsDialog.d';
 
 interface DonationsManagerProps {
   isLocked?: boolean;

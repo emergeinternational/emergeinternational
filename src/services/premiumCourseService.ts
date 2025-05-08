@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CourseCategory, CourseLevel, CourseHostingType } from "./courseTypes";
 
@@ -67,14 +68,16 @@ export async function uploadPremiumCourseImage(file: File): Promise<string | nul
 
 export async function createPremiumCourse(data: Omit<PremiumCourse, 'id' | 'has_active_students'>): Promise<string | null> {
   try {
-    const { data: courseData, error } = await supabase
+    const courseData = {
+      ...data,
+      created_by: (await supabase.auth.getUser()).data.user?.id,
+      student_capacity: data.student_capacity || 20,
+      level: data.level || 'beginner'
+    };
+
+    const { data: insertedData, error } = await supabase
       .from('premium_courses')
-      .insert([{
-        ...data,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
-        student_capacity: data.student_capacity || 20,
-        level: data.level || 'beginner'
-      }])
+      .insert(courseData)
       .select('*')
       .single();
 
@@ -83,7 +86,7 @@ export async function createPremiumCourse(data: Omit<PremiumCourse, 'id' | 'has_
       return null;
     }
 
-    return courseData.id;
+    return insertedData.id;
   } catch (error) {
     console.error('Error in createPremiumCourse:', error);
     return null;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
@@ -56,8 +55,8 @@ const EventDetails = () => {
     }
   }, [eventId, toast]);
   
-  const handleTicketSelect = (ticketType: string, price: number) => {
-    navigate(`/event-payment/${eventId}?ticket=${ticketType}&price=${price}`);
+  const handleTicketSelect = (ticket: any) => {
+    navigate(`/event-payment/${eventId}?ticket=${ticket.type}&price=${ticket.price}`);
   };
   
   if (loading) {

@@ -93,7 +93,7 @@ export const getUsersEligibleForCertificates = async (): Promise<EligibleUser[]>
       workshops_completed: item.workshops_completed,
       is_eligible: item.is_eligible,
       admin_approved: item.admin_approved,
-      status: item.status
+      status: item.status as CertificateStatus
     }));
   } catch (error) {
     console.error("Error fetching eligible users:", error);
@@ -126,7 +126,7 @@ export const getUsersByStatus = async (status: CertificateStatus): Promise<Eligi
       workshops_completed: item.workshops_completed,
       is_eligible: item.is_eligible,
       admin_approved: item.admin_approved,
-      status: item.status
+      status: item.status as CertificateStatus
     }));
   } catch (error) {
     console.error(`Error fetching users with status ${status}:`, error);

@@ -80,6 +80,17 @@ export interface CourseProgress {
   course_category?: string;
 }
 
+// For compatibility with courseService exports
+export type Category = CourseCategory;
+export interface Review {
+  id?: string;
+  course_id: string;
+  user_id: string;
+  rating: number;
+  comment?: string;
+  created_at?: string;
+}
+
 // Helper functions for sanitization
 export function sanitizeCourseData(data: any): Course {
   return {

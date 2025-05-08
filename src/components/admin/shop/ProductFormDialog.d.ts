@@ -1,9 +1,9 @@
 
-import { Dispatch, SetStateAction } from 'react';
+import React from 'react';
 
 export interface ProductFormDialogProps {
   open: boolean;
-  onOpenChange: Dispatch<SetStateAction<boolean>>;
+  onOpenChange: (open: boolean) => void;
   product: any;
   onSuccess: () => void;
 }
