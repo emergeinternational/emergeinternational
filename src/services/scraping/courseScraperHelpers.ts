@@ -1,54 +1,60 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Course, CourseCategory, CourseLevel, CourseHostingType } from "../courseTypes";
+import { Course, ScrapedCourse, sanitizeCourseData } from "../courseTypes";
 
-// Log scraper activity
-export const logScraperActivity = async (
-  source: string, 
-  action: string, 
-  status: 'success' | 'warning' | 'error', 
-  details: any
-): Promise<void> => {
+export async function logScraperActivity(functionName: string, results: any): Promise<void> {
   try {
     await supabase
-      .from("automation_logs")
+      .from('automation_logs')
       .insert({
-        function_name: `scraper:${source}`,
-        results: {
-          action,
-          status,
-          details
-        }
+        function_name: functionName,
+        results: results
       });
   } catch (error) {
-    console.error("Error logging scraper activity:", error);
+    console.error('Error logging scraper activity:', error);
   }
-};
+}
 
-// Create a verified course directly (for manual course creation)
-export const createVerifiedCourse = async (courseData: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
+export async function createVerifiedCourse(scrapedCourse: ScrapedCourse): Promise<string | null> {
   try {
-    const validatedData = {
-      ...courseData,
-      category: courseData.category as CourseCategory,
-      level: courseData.level || 'beginner' as CourseLevel,
-      hosting_type: courseData.hosting_type as CourseHostingType
+    // Create course object from scraped course
+    const courseData = {
+      title: scrapedCourse.title,
+      summary: scrapedCourse.summary,
+      category: scrapedCourse.category,
+      hosting_type: scrapedCourse.hosting_type,
+      external_link: scrapedCourse.external_link,
+      image_url: scrapedCourse.image_url,
+      video_embed_url: scrapedCourse.video_embed_url,
+      is_published: true,
+      level: scrapedCourse.level || 'beginner'
     };
-    
+
+    // Insert as an explicitly typed object to avoid type errors
     const { data, error } = await supabase
-      .from("courses")
-      .insert(validatedData)
+      .from('courses')
+      .insert({
+        title: courseData.title,
+        summary: courseData.summary,
+        category: courseData.category,
+        hosting_type: courseData.hosting_type,
+        external_link: courseData.external_link,
+        image_url: courseData.image_url,
+        video_embed_url: courseData.video_embed_url,
+        is_published: true,
+        level: courseData.level || 'beginner'
+      })
       .select()
       .single();
-    
+
     if (error) {
-      console.error("Error creating verified course:", error);
+      console.error('Error creating verified course:', error);
       return null;
     }
-    
-    return data.id;
+
+    return data?.id || null;
   } catch (error) {
-    console.error("Error in createVerifiedCourse:", error);
+    console.error('Error in createVerifiedCourse:', error);
     return null;
   }
-};
+}

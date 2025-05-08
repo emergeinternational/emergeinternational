@@ -75,9 +75,14 @@ export async function createPremiumCourse(data: Omit<PremiumCourse, 'id' | 'has_
       level: data.level || 'beginner'
     };
 
+    // Fix type issue by explicitly casting the category to the required format
     const { data: insertedData, error } = await supabase
       .from('premium_courses')
-      .insert(courseData)
+      .insert({
+        ...courseData,
+        // Ensure category is one of the valid types from the database
+        category: courseData.category
+      })
       .select('*')
       .single();
 

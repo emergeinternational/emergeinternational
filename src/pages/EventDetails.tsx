@@ -137,7 +137,6 @@ const EventDetails = () => {
                 
                 <div className="mt-6">
                   <TicketSelector 
-                    eventId={eventId || ''} 
                     onSelectTicket={handleTicketSelect}
                     defaultPrice={event.price}
                     currency={event.currency_code || 'ETB'}
